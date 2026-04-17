@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { SonaAdaptiveBrainAdapter } from './sona-adaptive-brain-adapter.js';
 
 /**
@@ -6,7 +8,8 @@ import { SonaAdaptiveBrainAdapter } from './sona-adaptive-brain-adapter.js';
  */
 describe('SonaAdaptiveBrainAdapter integration', () => {
   it('supports query->feedback->learn roundtrip', async () => {
-    const adapter = new SonaAdaptiveBrainAdapter(8);
+    const dbPath = join(tmpdir(), `my-brain-int-${Date.now()}-${Math.random()}.db`);
+    const adapter = new SonaAdaptiveBrainAdapter(8, dbPath);
     const embedding = [0.1, 0.2, 0.3, 0.4, 0.2, 0.1, 0.5, 0.6];
 
     const interactionId = await adapter.beginInteraction('hello world', embedding);

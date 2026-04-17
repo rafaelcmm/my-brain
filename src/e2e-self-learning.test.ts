@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { HashEmbeddingAdapter } from './adapters/outbound/embeddings/hash-embedding-adapter.js';
 import { SonaAdaptiveBrainAdapter } from './adapters/outbound/sona/sona-adaptive-brain-adapter.js';
 import { QueryUseCase } from './core/application/use-cases/query-use-case.js';
@@ -11,7 +13,8 @@ import { LearnUseCase } from './core/application/use-cases/learn-use-case.js';
 describe('Self-learning e2e flow', () => {
   it('runs query -> feedback -> learn -> query sequence', async () => {
     const embeddings = new HashEmbeddingAdapter(16);
-    const brain = new SonaAdaptiveBrainAdapter(16);
+    const dbPath = join(tmpdir(), `my-brain-e2e-${Date.now()}-${Math.random()}.db`);
+    const brain = new SonaAdaptiveBrainAdapter(16, dbPath);
 
     const queryUseCase = new QueryUseCase(embeddings, brain);
     const feedbackUseCase = new FeedbackUseCase(brain);

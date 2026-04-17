@@ -5,7 +5,7 @@ Self-hosted MCP server MVP with hexagonal architecture.
 - Tools: `query`, `feedback`, `learn`
 - Embeddings: `sentence-transformers/all-MiniLM-L6-v2` via `@xenova/transformers`
 - Learning engine and adaptive storage: `@ruvector/sona`
-- Persistence: append-only SONA event log replayed on startup
+- Persistence: `@ruvector/core` vector database (`RUVECTOR_DB_PATH`)
 
 ## Architecture
 
@@ -16,7 +16,7 @@ Self-hosted MCP server MVP with hexagonal architecture.
   - SONA adaptive brain adapter
 - Composition root wires dependencies
 
-Persistence detail: SONA adapter replays append-only events from `SONA_EVENTS_FILE_PATH` at startup so learning survives restarts.
+Persistence detail: completed interaction embeddings are persisted in ruvector DB and used for similarity-backed memory retrieval in `query`.
 
 ADR: `docs/architecture/adr-001-hexagonal-mcp-brain.md`
 
@@ -48,13 +48,7 @@ src/
 ```bash
 npm install
 cp .env.example .env
-mkdir -p .data/models
 ```
-
-Local defaults in `.env.example` use workspace-writable paths:
-
-- `MODEL_CACHE_DIR=.data/models`
-- `SONA_EVENTS_FILE_PATH=.data/sona-events.ndjson`
 
 ## Run Local (stdio MCP)
 
@@ -90,7 +84,7 @@ The service runs as stdio MCP process. For direct integration, configure your MC
 
 State persistence:
 
-- `brain_data` volume: `/data/sona-events.ndjson`
+- `brain_data` volume: `/data/ruvector.db`
 - `brain_models` volume: cached embedding model files
 
 ## MCP Tool Contracts

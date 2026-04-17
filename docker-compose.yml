@@ -8,7 +8,7 @@ services:
       - .env
     environment:
       MODEL_CACHE_DIR: /models
-      SONA_EVENTS_FILE_PATH: /data/sona-events.ndjson
+      RUVECTOR_DB_PATH: /data/ruvector.db
     volumes:
       - brain_data:/data
       - brain_models:/models

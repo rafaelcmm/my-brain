@@ -22,8 +22,8 @@ export interface RuntimeConfig {
   /** Optional local cache directory for model files. */
   readonly modelCacheDir?: string;
 
-  /** Path for append-only SONA event log used for restart replay. */
-  readonly sonaEventsFilePath: string;
+  /** Path for persistent ruvector database file used for long-term memory. */
+  readonly ruvectorDbPath: string;
 }
 
 /**
@@ -40,7 +40,12 @@ function validatePathEnv(rawPath: string, envName: string): string {
   }
 
   if (normalized.startsWith('/')) {
-    if (normalized.startsWith('/data/') || normalized.startsWith('/models/')) {
+    if (
+      normalized === '/data' ||
+      normalized === '/models' ||
+      normalized.startsWith('/data/') ||
+      normalized.startsWith('/models/')
+    ) {
       return normalized;
     }
 
@@ -62,12 +67,12 @@ export function loadRuntimeConfig(): RuntimeConfig {
   }
 
   const modelCacheDir = validatePathEnv(
-    process.env.MODEL_CACHE_DIR ?? '.data/models',
+    process.env.MODEL_CACHE_DIR ?? '/models',
     'MODEL_CACHE_DIR',
   );
-  const sonaEventsFilePath = validatePathEnv(
-    process.env.SONA_EVENTS_FILE_PATH ?? '.data/sona-events.ndjson',
-    'SONA_EVENTS_FILE_PATH',
+  const ruvectorDbPath = validatePathEnv(
+    process.env.RUVECTOR_DB_PATH ?? '/data/ruvector.db',
+    'RUVECTOR_DB_PATH',
   );
 
   return {
@@ -76,6 +81,6 @@ export function loadRuntimeConfig(): RuntimeConfig {
     embeddingModelId: process.env.EMBEDDING_MODEL_ID ?? 'sentence-transformers/all-MiniLM-L6-v2',
     embeddingDim,
     modelCacheDir,
-    sonaEventsFilePath,
+    ruvectorDbPath,
   };
 }

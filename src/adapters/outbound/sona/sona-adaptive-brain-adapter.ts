@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { dirname } from 'node:path';
-import { promises as fs } from 'node:fs';
+import { VectorDb } from '@ruvector/core';
 import { SonaEngine, type JsLearnedPattern } from '@ruvector/sona';
-import { z } from 'zod';
 import type { AdaptiveBrainPort } from '../../../core/ports/adaptive-brain-port.js';
 import type { LearnedPattern } from '../../../core/domain/interaction.js';
 
@@ -10,25 +8,8 @@ interface InteractionBuffer {
   readonly queryText: string;
   readonly embedding: number[];
   readonly trajectoryId: number;
+  readonly adaptedEmbedding: number[];
 }
-
-interface PersistedLearningEvent {
-  readonly queryText: string;
-  readonly embedding: number[];
-  readonly qualityScore: number;
-  readonly route?: string;
-}
-
-/**
- * Build-time schema factory is required because embedding length is dynamic.
- */
-const persistedLearningEventSchema = (embeddingDim: number): z.ZodType<PersistedLearningEvent> =>
-  z.object({
-    queryText: z.string().min(1).max(10_000),
-    embedding: z.array(z.number()).length(embeddingDim),
-    qualityScore: z.number().min(0).max(1),
-    route: z.string().max(100).optional(),
-  });
 
 /**
  * SonaAdaptiveBrainAdapter bridges core learning port to @ruvector/sona engine.
@@ -40,16 +21,17 @@ const persistedLearningEventSchema = (embeddingDim: number): z.ZodType<Persisted
 export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
   private readonly interactionToTrajectory = new Map<string, number>();
   private readonly interactionBuffer = new Map<string, InteractionBuffer>();
+  private readonly interactionQuality = new Map<string, number>();
   private readonly engine: SonaEngine;
-  private readonly initialized: Promise<void>;
+  private readonly vectorDb: VectorDb;
 
   /**
    * @param embeddingDim Embedding dimensionality expected by engine.
-   * @param eventsFilePath File path used for append-only learning events.
+   * @param ruvectorDbPath Persistent ruvector DB file path.
    */
   public constructor(
     private readonly embeddingDim: number,
-    private readonly eventsFilePath = '.data/sona-events.ndjson',
+    private readonly ruvectorDbPath = '/data/ruvector.db',
   ) {
     this.engine = SonaEngine.withConfig({
       hiddenDim: embeddingDim,
@@ -61,14 +43,16 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
       patternClusters: 100,
       ewcLambda: 2000,
     });
-    this.initialized = this.initializeFromDisk();
+    this.vectorDb = new VectorDb({
+      dimensions: embeddingDim,
+      storagePath: ruvectorDbPath,
+    });
   }
 
   /**
    * Begins SONA trajectory and returns externally-visible interaction ID.
    */
   public async beginInteraction(queryText: string, embedding: number[]): Promise<string> {
-    await this.initialized;
     this.assertEmbedding(embedding);
 
     const trajectoryId = this.engine.beginTrajectory(embedding);
@@ -80,6 +64,7 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
       queryText,
       embedding,
       trajectoryId,
+      adaptedEmbedding: embedding,
     });
 
     return interactionId;
@@ -93,7 +78,6 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     qualityScore: number,
     route?: string,
   ): Promise<void> {
-    await this.initialized;
     const trajectoryId = this.interactionToTrajectory.get(interactionId);
     const buffer = this.interactionBuffer.get(interactionId);
     if (trajectoryId === undefined) {
@@ -108,11 +92,11 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     }
 
     this.engine.endTrajectory(trajectoryId, qualityScore);
-    await this.appendEvent({
-      queryText: buffer.queryText,
-      embedding: buffer.embedding,
-      qualityScore,
-      route,
+    this.interactionQuality.set(interactionId, qualityScore);
+
+    await this.vectorDb.insert({
+      id: interactionId,
+      vector: Float32Array.from(buffer.adaptedEmbedding),
     });
 
     this.interactionToTrajectory.delete(interactionId);
@@ -123,7 +107,6 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
    * Applies micro-LoRA online adaptation and records lightweight trace step.
    */
   public async applyInstantLearning(interactionId: string, embedding: number[]): Promise<number[]> {
-    await this.initialized;
     this.assertEmbedding(embedding);
     const trajectoryId = this.interactionToTrajectory.get(interactionId);
     if (trajectoryId === undefined) {
@@ -139,6 +122,14 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
       0.8,
     );
 
+    const existing = this.interactionBuffer.get(interactionId);
+    if (existing) {
+      this.interactionBuffer.set(interactionId, {
+        ...existing,
+        adaptedEmbedding: adapted,
+      });
+    }
+
     return adapted;
   }
 
@@ -146,18 +137,30 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
    * Returns nearest learned pattern summaries.
    */
   public async findPatterns(embedding: number[], limit: number): Promise<LearnedPattern[]> {
-    await this.initialized;
     this.assertEmbedding(embedding);
 
-    const patterns = this.engine.findPatterns(embedding, limit);
-    return patterns.map((pattern) => this.toLearnedPattern(pattern));
+    const patterns = this.engine
+      .findPatterns(embedding, limit)
+      .map((pattern) => this.toLearnedPattern(pattern));
+    const vectorMatches = await this.vectorDb.search({
+      vector: Float32Array.from(embedding),
+      k: limit,
+    });
+
+    const dbPatterns = vectorMatches.map((match) => ({
+      id: match.id,
+      avgQuality: this.interactionQuality.get(match.id) ?? this.normalizeScore(match.score),
+      clusterSize: 1,
+      patternType: 'VectorMemory',
+    }));
+
+    return [...patterns, ...dbPatterns].slice(0, limit);
   }
 
   /**
    * Forces background learning cycle.
    */
   public async forceLearn(): Promise<string> {
-    await this.initialized;
     return this.engine.forceLearn();
   }
 
@@ -165,12 +168,15 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
    * Parses JSON stats string from engine into object.
    */
   public async getStats(): Promise<Record<string, unknown>> {
-    await this.initialized;
     const raw = this.engine.getStats();
+    const vectorCount = await this.vectorDb.len();
     try {
-      return JSON.parse(raw) as Record<string, unknown>;
+      return {
+        ...(JSON.parse(raw) as Record<string, unknown>),
+        ruvector_entries: vectorCount,
+      };
     } catch {
-      return { rawStats: raw };
+      return { rawStats: raw, ruvector_entries: vectorCount };
     }
   }
 
@@ -206,62 +212,9 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
   }
 
   /**
-   * Replays persisted learning events to rebuild state after process restart.
+   * Converts engine-specific score to normalized quality-like range [0, 1].
    */
-  private async initializeFromDisk(): Promise<void> {
-    await fs.mkdir(dirname(this.eventsFilePath), { recursive: true });
-
-    try {
-      const raw = await fs.readFile(this.eventsFilePath, 'utf-8');
-      const lines = raw
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-
-      const schema = persistedLearningEventSchema(this.embeddingDim);
-
-      for (const line of lines) {
-        let event: PersistedLearningEvent;
-        try {
-          const parsed = JSON.parse(line) as unknown;
-          event = schema.parse(parsed);
-        } catch {
-          // Old/corrupted records are skipped to keep startup resilient.
-          continue;
-        }
-
-        const trajectoryId = this.engine.beginTrajectory(event.embedding);
-        if (event.route) {
-          this.engine.setTrajectoryRoute(trajectoryId, event.route);
-        }
-
-        this.engine.addTrajectoryContext(trajectoryId, event.queryText.slice(0, 256));
-        this.engine.addTrajectoryStep(
-          trajectoryId,
-          event.embedding.map((value) => Math.tanh(value)),
-          this.buildUniformAttention(64),
-          event.qualityScore,
-        );
-        this.engine.endTrajectory(trajectoryId, event.qualityScore);
-      }
-    } catch (error) {
-      const isMissingFile =
-        error instanceof Error &&
-        'code' in error &&
-        (error as NodeJS.ErrnoException).code === 'ENOENT';
-      if (isMissingFile) {
-        await fs.writeFile(this.eventsFilePath, '', 'utf-8');
-        return;
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Appends one completed interaction event to disk-backed replay log.
-   */
-  private async appendEvent(event: PersistedLearningEvent): Promise<void> {
-    const line = `${JSON.stringify(event)}\n`;
-    await fs.appendFile(this.eventsFilePath, line, 'utf-8');
+  private normalizeScore(score: number): number {
+    return Math.max(0, Math.min(1, score));
   }
 }

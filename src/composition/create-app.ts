@@ -25,7 +25,7 @@ export function createApp(): McpBrainServer {
 
   const adaptiveBrainPort = new SonaAdaptiveBrainAdapter(
     embeddingsPort.getDimension(),
-    config.sonaEventsFilePath,
+    config.ruvectorDbPath,
   );
 
   const queryUseCase = new QueryUseCase(embeddingsPort, adaptiveBrainPort);
