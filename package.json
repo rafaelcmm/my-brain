@@ -2,7 +2,7 @@
   "name": "my-brain",
   "version": "0.0.1",
   "description": "A self learning system to improve LLMs with feedback",
-  "type": "module",
+  "type": "commonjs",
   "license": "MIT",
   "packageManager": "yarn@1.22.22",
   "scripts": {
@@ -32,6 +32,9 @@
     "helmet": "^8.1.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
+  },
+  "overrides": {
+    "protobufjs": "^7.5.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

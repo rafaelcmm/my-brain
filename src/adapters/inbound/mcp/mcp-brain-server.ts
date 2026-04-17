@@ -4,7 +4,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
 import cors from 'cors';
 import helmet from 'helmet';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import type { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
@@ -16,6 +16,9 @@ import type { LearnUseCase } from '../../../core/application/use-cases/learn-use
  * HTTP transport hardening options passed from runtime configuration.
  */
 export interface HttpSecurityOptions {
+  /** Bearer token required by HTTP MCP endpoint. */
+  readonly authToken?: string;
+
   /** Optional explicit CORS allow-list. Empty disables CORS headers. */
   readonly allowedOrigins: readonly string[];
 
@@ -42,6 +45,8 @@ export class McpBrainServer {
    * @param queryUseCase Query application use-case.
    * @param feedbackUseCase Feedback application use-case.
    * @param learnUseCase Learn application use-case.
+   * @param httpSecurityOptions HTTP hardening contract, including optional bearer
+   * token auth, CORS allow-list, request-size ceiling, and rate-limiting controls.
    */
   public constructor(
     name: string,
@@ -76,6 +81,9 @@ export class McpBrainServer {
     await this.server.connect(this.httpTransport);
 
     const app = createMcpExpressApp({ host });
+
+    // Honor upstream proxy headers to make per-client rate limiting accurate behind reverse proxies.
+    app.set('trust proxy', 1);
 
     app.use(helmet());
 
@@ -117,6 +125,43 @@ export class McpBrainServer {
         legacyHeaders: false,
       }),
     );
+
+    app.use('/mcp', (req: Request, res: Response, next: () => void) => {
+      const expectedToken = this.httpSecurityOptions.authToken;
+      if (!expectedToken) {
+        next();
+        return;
+      }
+
+      const authHeader = req.header('authorization');
+      const bearerPrefix = 'Bearer ';
+      const providedToken =
+        typeof authHeader === 'string' && authHeader.startsWith(bearerPrefix)
+          ? authHeader.slice(bearerPrefix.length).trim()
+          : '';
+
+      const expectedBuffer = Buffer.from(expectedToken, 'utf8');
+      const providedBuffer = Buffer.from(providedToken, 'utf8');
+      // Match lengths first to avoid timingSafeEqual throwing on unequal buffer sizes.
+      const isTokenValid =
+        // Constant-time compare reduces token-check timing side-channel leakage.
+        expectedBuffer.length === providedBuffer.length &&
+        timingSafeEqual(expectedBuffer, providedBuffer);
+
+      if (!isTokenValid) {
+        res.status(401).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32001,
+            message: 'Unauthorized',
+          },
+          id: null,
+        });
+        return;
+      }
+
+      next();
+    });
 
     app.post('/mcp', async (req: Request, res: Response) => {
       try {

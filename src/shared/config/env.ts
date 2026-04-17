@@ -34,6 +34,9 @@ export interface RuntimeConfig {
   /** HTTP bind port when using HTTP transport. */
   readonly mcpHttpPort: number;
 
+  /** Bearer token required for HTTP MCP requests. Required in HTTP transport. */
+  readonly mcpAuthToken?: string;
+
   /** Optional CORS origin allow-list for HTTP transport. */
   readonly mcpAllowedOrigins: readonly string[];
 
@@ -186,6 +189,13 @@ export function loadRuntimeConfig(): RuntimeConfig {
     throw new Error("MCP_TRANSPORT must be either 'stdio' or 'http'.");
   }
 
+  const mcpAuthToken = process.env.MCP_AUTH_TOKEN?.trim();
+  if (mcpTransportRaw === 'http' && (!mcpAuthToken || mcpAuthToken.length < 16)) {
+    throw new Error(
+      'MCP_AUTH_TOKEN is required in HTTP transport and must be at least 16 characters.',
+    );
+  }
+
   const embeddingProviderRaw = (process.env.EMBEDDING_PROVIDER ?? 'minilm').toLowerCase();
   if (embeddingProviderRaw !== 'minilm' && embeddingProviderRaw !== 'hash') {
     throw new Error("EMBEDDING_PROVIDER must be either 'minilm' or 'hash'.");
@@ -208,8 +218,9 @@ export function loadRuntimeConfig(): RuntimeConfig {
     modelCacheDir,
     ruvectorDbPath,
     mcpTransport: mcpTransportRaw,
-    mcpHttpHost: process.env.MCP_HTTP_HOST ?? '0.0.0.0',
+    mcpHttpHost: process.env.MCP_HTTP_HOST ?? '127.0.0.1',
     mcpHttpPort,
+    mcpAuthToken,
     mcpAllowedOrigins: parseAllowedOrigins(process.env.MCP_ALLOWED_ORIGINS),
     mcpMaxBodyBytes,
     mcpRateLimitWindowMs,

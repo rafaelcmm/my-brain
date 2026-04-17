@@ -41,27 +41,28 @@ src/
 ## Requirements
 
 - Node.js >= 22
-- npm >= 10
+- Corepack-enabled Yarn 1.22.x
 
 ## Setup
 
 ```bash
-npm install
+corepack enable
+yarn install --frozen-lockfile
 ```
 
 Container deployment has built-in defaults inside image/compose.
-`.env.example` is optional and only needed if you want overrides.
+For HTTP transport with Docker Compose, `MCP_AUTH_TOKEN` is mandatory.
 
 ## Run Local (stdio MCP)
 
 ```bash
-npm run dev
+yarn dev
 ```
 
 To run HTTP transport locally without Docker:
 
 ```bash
-MCP_TRANSPORT=http MCP_HTTP_HOST=0.0.0.0 MCP_HTTP_PORT=3737 npm run dev
+MCP_TRANSPORT=http MCP_HTTP_HOST=127.0.0.1 MCP_HTTP_PORT=3737 MCP_AUTH_TOKEN=replace-with-16-plus-char-secret yarn dev
 ```
 
 For browser-originated traffic, set `MCP_ALLOWED_ORIGINS` (comma-separated origins).
@@ -69,27 +70,45 @@ For browser-originated traffic, set `MCP_ALLOWED_ORIGINS` (comma-separated origi
 ## Build + Start
 
 ```bash
-npm run build
-npm start
+yarn build
+yarn start
 ```
 
 ## Test and Quality
 
 ```bash
-npm run test
-npm run lint
-npm run typecheck
-npm run format:check
-npm run build
+yarn test
+yarn lint
+yarn typecheck
+yarn format:check
+yarn build
 ```
 
 ## Docker Compose (self-hosted)
 
+Prepare required environment:
+
 ```bash
-npm run docker:up
+cp .env.example .env
+# set MCP_AUTH_TOKEN in .env to a 16+ character secret
+```
+
+```bash
+yarn docker:up
 ```
 
 The container runs MCP over HTTP at `http://localhost:3737/mcp`.
+
+HTTP transport requires a bearer token. Send:
+
+```text
+Authorization: Bearer <MCP_AUTH_TOKEN>
+```
+
+The example client in `examples/mcp.example.json` expects `MCP_AUTH_TOKEN` in your shell environment.
+
+Security defaults in compose now bind to localhost and run hardened container settings (`read_only`, `cap_drop: ALL`, `no-new-privileges`, resource and log limits).
+Compose fails fast during config/load if `MCP_AUTH_TOKEN` is missing.
 
 State persistence:
 
@@ -99,8 +118,8 @@ State persistence:
 Useful Docker commands:
 
 ```bash
-npm run docker:down
-npm run docker:restart
+yarn docker:down
+yarn docker:restart
 ```
 
 ## MCP Tool Contracts
@@ -174,4 +193,5 @@ Output:
 - For fast tests without model download, set `EMBEDDING_PROVIDER=hash`.
 - Security boundary validates MCP tool inputs with Zod schemas.
 - HTTP hardening uses `helmet`, rate limiting, and request-size limits configurable via env (`MCP_RATE_LIMIT_*`, `MCP_MAX_BODY_BYTES`).
+- HTTP MCP auth is enforced with bearer token via `MCP_AUTH_TOKEN` when transport is `http`.
 - `examples/mcp.example.json` requires HTTP transport (`MCP_TRANSPORT=http`).

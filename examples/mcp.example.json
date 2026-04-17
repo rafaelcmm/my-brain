@@ -2,7 +2,10 @@
   "mcpServers": {
     "my-brain": {
       "transport": "http",
-      "url": "http://localhost:3737/mcp"
+      "url": "http://localhost:3737/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_AUTH_TOKEN}"
+      }
     }
   }
 }

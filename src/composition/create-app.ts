@@ -47,6 +47,7 @@ export function createApp(): McpBrainServer {
     feedbackUseCase,
     learnUseCase,
     {
+      authToken: config.mcpAuthToken,
       allowedOrigins: config.mcpAllowedOrigins,
       maxBodyBytes: config.mcpMaxBodyBytes,
       rateLimitWindowMs: config.mcpRateLimitWindowMs,
