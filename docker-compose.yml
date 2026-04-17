@@ -4,26 +4,38 @@ services:
       context: .
       dockerfile: Dockerfile
     image: my-brain-mcp:latest
-    env_file:
-      - .env
     environment:
-      MODEL_CACHE_DIR: /models
-      RUVECTOR_DB_PATH: /data/ruvector.db
+      MCP_SERVER_NAME: ${MCP_SERVER_NAME:-my-brain}
+      MCP_SERVER_VERSION: ${MCP_SERVER_VERSION:-0.1.0}
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-http}
+      MCP_HTTP_HOST: ${MCP_HTTP_HOST:-0.0.0.0}
+      MCP_HTTP_PORT: ${MCP_HTTP_PORT:-3737}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-minilm}
+      EMBEDDING_MODEL_ID: ${EMBEDDING_MODEL_ID:-sentence-transformers/all-MiniLM-L6-v2}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-384}
+      EMBEDDING_QUANTIZED: ${EMBEDDING_QUANTIZED:-false}
+      MODEL_CACHE_DIR: ${MODEL_CACHE_DIR:-/models}
+      SONA_MICRO_LORA_RANK: ${SONA_MICRO_LORA_RANK:-2}
+      SONA_BASE_LORA_RANK: ${SONA_BASE_LORA_RANK:-16}
+      SONA_MICRO_LORA_LR: ${SONA_MICRO_LORA_LR:-0.002}
+      SONA_QUALITY_THRESHOLD: ${SONA_QUALITY_THRESHOLD:-0.3}
+      SONA_PATTERN_CLUSTERS: ${SONA_PATTERN_CLUSTERS:-100}
+      SONA_EWC_LAMBDA: ${SONA_EWC_LAMBDA:-2000}
+      RUVECTOR_DB_PATH: ${RUVECTOR_DB_PATH:-/data/ruvector.db}
+    ports:
+      - '${MCP_HTTP_PORT:-3737}:${MCP_HTTP_PORT:-3737}'
     volumes:
       - brain_data:/data
       - brain_models:/models
     restart: unless-stopped
     init: true
-    stdin_open: true
-    tty: true
     healthcheck:
-      # Stdio MCP has no network endpoint; this liveness check verifies writable persistence paths.
       test:
         [
           'CMD',
           'node',
           '-e',
-          "const fs=require('node:fs');fs.accessSync('/data', fs.constants.W_OK);fs.accessSync('/models', fs.constants.W_OK);",
+          "fetch('http://127.0.0.1:' + (process.env.MCP_HTTP_PORT || '3737') + '/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 3s

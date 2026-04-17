@@ -10,7 +10,7 @@ Self-hosted MCP server MVP with hexagonal architecture.
 ## Architecture
 
 - Core: domain + ports + use-cases (framework-agnostic)
-- Inbound adapter: MCP stdio server
+- Inbound adapter: MCP server (stdio and streamable HTTP)
 - Outbound adapters:
   - MiniLM embedding adapter
   - SONA adaptive brain adapter
@@ -47,14 +47,24 @@ src/
 
 ```bash
 npm install
-cp .env.example .env
 ```
+
+Container deployment has built-in defaults inside image/compose.
+`.env.example` is optional and only needed if you want overrides.
 
 ## Run Local (stdio MCP)
 
 ```bash
 npm run dev
 ```
+
+To run HTTP transport locally without Docker:
+
+```bash
+MCP_TRANSPORT=http MCP_HTTP_HOST=0.0.0.0 MCP_HTTP_PORT=3737 npm run dev
+```
+
+For browser-originated traffic, set `MCP_ALLOWED_ORIGINS` (comma-separated origins).
 
 ## Build + Start
 
@@ -76,16 +86,22 @@ npm run build
 ## Docker Compose (self-hosted)
 
 ```bash
-cp .env.example .env
-docker compose up --build
+npm run docker:up
 ```
 
-The service runs as stdio MCP process. For direct integration, configure your MCP client to use container process attach or run local binary via stdio.
+The container runs MCP over HTTP at `http://localhost:3737/mcp`.
 
 State persistence:
 
 - `brain_data` volume: `/data/ruvector.db`
 - `brain_models` volume: cached embedding model files
+
+Useful Docker commands:
+
+```bash
+npm run docker:down
+npm run docker:restart
+```
 
 ## MCP Tool Contracts
 
@@ -157,3 +173,5 @@ Output:
 - First startup with MiniLM downloads model artifacts. Keep `brain_models` volume to avoid repeated downloads.
 - For fast tests without model download, set `EMBEDDING_PROVIDER=hash`.
 - Security boundary validates MCP tool inputs with Zod schemas.
+- HTTP hardening uses `helmet`, rate limiting, and request-size limits configurable via env (`MCP_RATE_LIMIT_*`, `MCP_MAX_BODY_BYTES`).
+- `examples/mcp.example.json` requires HTTP transport (`MCP_TRANSPORT=http`).

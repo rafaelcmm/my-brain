@@ -1,10 +1,18 @@
 import { createApp } from './composition/create-app.js';
+import { loadRuntimeConfig } from './shared/config/env.js';
 
 /**
  * Runtime entrypoint for stdio MCP server process.
  */
 async function main(): Promise<void> {
+  const config = loadRuntimeConfig();
   const app = createApp();
+
+  if (config.mcpTransport === 'http') {
+    await app.startHttp(config.mcpHttpPort, config.mcpHttpHost);
+    return;
+  }
+
   await app.startStdio();
 }
 

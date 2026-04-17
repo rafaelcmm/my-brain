@@ -69,6 +69,12 @@ describe('McpBrainServer integration', () => {
       new QueryUseCase(embeddings, brain),
       new FeedbackUseCase(brain),
       new LearnUseCase(brain),
+      {
+        allowedOrigins: [],
+        maxBodyBytes: 1_048_576,
+        rateLimitWindowMs: 60_000,
+        rateLimitMax: 120,
+      },
     );
 
     const query = await server.executeQueryTool('hello', 3);

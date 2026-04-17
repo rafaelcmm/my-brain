@@ -12,20 +12,28 @@ import { loadRuntimeConfig } from '../shared/config/env.js';
  */
 export function createApp(): McpBrainServer {
   const config = loadRuntimeConfig();
-  const embeddingProvider = process.env.EMBEDDING_PROVIDER ?? 'minilm';
 
   const embeddingsPort =
-    embeddingProvider === 'hash'
+    config.embeddingProvider === 'hash'
       ? new HashEmbeddingAdapter(config.embeddingDim)
       : new MiniLmEmbeddingAdapter(
           config.embeddingModelId,
           config.embeddingDim,
           config.modelCacheDir,
+          config.embeddingQuantized,
         );
 
   const adaptiveBrainPort = new SonaAdaptiveBrainAdapter(
     embeddingsPort.getDimension(),
     config.ruvectorDbPath,
+    {
+      microLoraRank: config.sonaMicroLoraRank,
+      baseLoraRank: config.sonaBaseLoraRank,
+      microLoraLr: config.sonaMicroLoraLr,
+      qualityThreshold: config.sonaQualityThreshold,
+      patternClusters: config.sonaPatternClusters,
+      ewcLambda: config.sonaEwcLambda,
+    },
   );
 
   const queryUseCase = new QueryUseCase(embeddingsPort, adaptiveBrainPort);
@@ -38,5 +46,11 @@ export function createApp(): McpBrainServer {
     queryUseCase,
     feedbackUseCase,
     learnUseCase,
+    {
+      allowedOrigins: config.mcpAllowedOrigins,
+      maxBodyBytes: config.mcpMaxBodyBytes,
+      rateLimitWindowMs: config.mcpRateLimitWindowMs,
+      rateLimitMax: config.mcpRateLimitMax,
+    },
   );
 }

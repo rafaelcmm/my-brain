@@ -4,6 +4,15 @@ import { SonaEngine, type JsLearnedPattern } from '@ruvector/sona';
 import type { AdaptiveBrainPort } from '../../../core/ports/adaptive-brain-port.js';
 import type { LearnedPattern } from '../../../core/domain/interaction.js';
 
+export interface SonaRuntimeConfig {
+  readonly microLoraRank: number;
+  readonly baseLoraRank: number;
+  readonly microLoraLr: number;
+  readonly qualityThreshold: number;
+  readonly patternClusters: number;
+  readonly ewcLambda: number;
+}
+
 interface InteractionBuffer {
   readonly queryText: string;
   readonly embedding: number[];
@@ -32,16 +41,24 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
   public constructor(
     private readonly embeddingDim: number,
     private readonly ruvectorDbPath = '/data/ruvector.db',
-  ) {
-    this.engine = SonaEngine.withConfig({
-      hiddenDim: embeddingDim,
-      embeddingDim,
+    private readonly sonaConfig: SonaRuntimeConfig = {
       microLoraRank: 2,
       baseLoraRank: 16,
       microLoraLr: 0.002,
       qualityThreshold: 0.3,
       patternClusters: 100,
       ewcLambda: 2000,
+    },
+  ) {
+    this.engine = SonaEngine.withConfig({
+      hiddenDim: embeddingDim,
+      embeddingDim,
+      microLoraRank: this.sonaConfig.microLoraRank,
+      baseLoraRank: this.sonaConfig.baseLoraRank,
+      microLoraLr: this.sonaConfig.microLoraLr,
+      qualityThreshold: this.sonaConfig.qualityThreshold,
+      patternClusters: this.sonaConfig.patternClusters,
+      ewcLambda: this.sonaConfig.ewcLambda,
     });
     this.vectorDb = new VectorDb({
       dimensions: embeddingDim,

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "my-brain": {
+      "transport": "http",
+      "url": "http://localhost:3737/mcp"
+    }
+  }
+}

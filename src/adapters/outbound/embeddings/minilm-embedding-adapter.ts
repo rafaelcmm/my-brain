@@ -19,6 +19,7 @@ export class MiniLmEmbeddingAdapter implements EmbeddingsPort {
     private readonly modelId: string,
     private readonly dimension: number,
     private readonly cacheDir?: string,
+    private readonly quantized = false,
   ) {}
 
   /**
@@ -56,7 +57,7 @@ export class MiniLmEmbeddingAdapter implements EmbeddingsPort {
   private getExtractor(): Promise<FeatureExtractionPipeline> {
     if (!this.extractorPromise) {
       this.extractorPromise = pipeline('feature-extraction', this.modelId, {
-        quantized: false,
+        quantized: this.quantized,
         cache_dir: this.cacheDir,
       });
     }
