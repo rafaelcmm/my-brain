@@ -1,0 +1,10 @@
+# Folders
+node_modules/
+dist/
+build/
+coverage/
+
+# Files
+.env
+.env.*
+!.env.example
