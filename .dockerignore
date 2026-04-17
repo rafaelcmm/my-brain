@@ -1,0 +1,22 @@
+# VCS
+.git
+.gitignore
+
+# Dependencies and outputs
+node_modules
+dist
+coverage
+
+# Env and local state
+.env
+.env.*
+!/.env.example
+
+# Editor and OS
+.vscode
+.idea
+.DS_Store
+
+# Docs and metadata not needed in image
+README.md
+LICENSE.md

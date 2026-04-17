@@ -1,0 +1,35 @@
+services:
+  brain-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: my-brain-mcp:latest
+    env_file:
+      - .env
+    environment:
+      MODEL_CACHE_DIR: /models
+      SONA_EVENTS_FILE_PATH: /data/sona-events.ndjson
+    volumes:
+      - brain_data:/data
+      - brain_models:/models
+    restart: unless-stopped
+    init: true
+    stdin_open: true
+    tty: true
+    healthcheck:
+      # Stdio MCP has no network endpoint; this liveness check verifies writable persistence paths.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "const fs=require('node:fs');fs.accessSync('/data', fs.constants.W_OK);fs.accessSync('/models', fs.constants.W_OK);",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 45s
+
+volumes:
+  brain_data:
+  brain_models:
