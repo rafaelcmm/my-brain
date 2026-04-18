@@ -61,4 +61,39 @@ describe('SonaAdaptiveBrainAdapter integration', () => {
     expect(evidence.some((item) => item.interactionId === knowledgeInteractionId)).toBe(true);
     expect(evidence[0]?.text).toContain('Open account security settings');
   });
+
+  it('allows post-hoc feedback quality update for persisted evidence interaction ids', async () => {
+    const dbPath = join(tmpdir(), `my-brain-int-${Date.now()}-${Math.random()}.db`);
+    const adapter = new SonaAdaptiveBrainAdapter(8, dbPath);
+    const embedding = [0.1, 0.2, 0.3, 0.4, 0.2, 0.1, 0.5, 0.6];
+
+    const interactionId = await adapter.beginInteraction('password reset policy answer', embedding);
+    await adapter.completeInteraction(
+      interactionId,
+      0.6,
+      'seed-qa-bulk',
+      'Open account security settings, run reset password, then confirm policy checks.',
+    );
+
+    const evidence = await adapter.findMatchedEvidence(embedding, 1);
+    const evidenceId = evidence[0]?.interactionId;
+
+    expect(evidenceId).toBe(interactionId);
+
+    await adapter.completeInteraction(interactionId, 0.98, 'operator-verified');
+
+    const updated = await adapter.getInteractionRecord(interactionId);
+    expect(updated.qualityScore).toBe(0.98);
+    expect(updated.route).toBe('operator-verified');
+    expect(updated.status).toBe('completed');
+  });
+
+  it('rejects feedback for unknown interaction id', async () => {
+    const dbPath = join(tmpdir(), `my-brain-int-${Date.now()}-${Math.random()}.db`);
+    const adapter = new SonaAdaptiveBrainAdapter(8, dbPath);
+
+    await expect(
+      adapter.completeInteraction('00000000-0000-4000-8000-000000000001', 0.9),
+    ).rejects.toThrow('Unknown interactionId: 00000000-0000-4000-8000-000000000001');
+  });
 });

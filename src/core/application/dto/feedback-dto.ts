@@ -2,7 +2,13 @@
  * Input payload for feedback use-case.
  */
 export interface FeedbackInput {
-  /** Interaction ID returned by prior query call. */
+  /**
+   * Interaction ID to receive feedback updates.
+   *
+   * Accepted values are:
+   * - Live query interaction IDs returned by `query`.
+   * - Persisted evidence interaction IDs returned in `matchedEvidence`.
+   */
   readonly interactionId: string;
 
   /** Final quality score in closed interval [0, 1]. */

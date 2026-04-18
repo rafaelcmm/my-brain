@@ -143,9 +143,31 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     await this.ensureInteractionStoreLoaded();
     const trajectoryId = this.interactionToTrajectory.get(interactionId);
     const buffer = this.interactionBuffer.get(interactionId);
+    const existingRecord = this.interactionStore.get(interactionId);
+
     if (trajectoryId === undefined) {
-      throw new Error(`Unknown interactionId: ${interactionId}`);
+      if (!existingRecord) {
+        throw new Error(`Unknown interactionId: ${interactionId}`);
+      }
+
+      if (knowledgeText) {
+        throw new Error(
+          'knowledgeText can only be persisted while interaction is active in current process.',
+        );
+      }
+
+      const nowIso = new Date().toISOString();
+      await this.upsertInteractionRecord({
+        ...existingRecord,
+        status: 'completed',
+        qualityScore,
+        route: route ?? existingRecord.route,
+        updatedAtIso: nowIso,
+        completedAtIso: existingRecord.completedAtIso ?? nowIso,
+      });
+      return;
     }
+
     if (!buffer) {
       throw new Error(`Missing buffered interaction data for ${interactionId}`);
     }
@@ -170,7 +192,6 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
       });
     }
     const completedAtIso = new Date().toISOString();
-    const existingRecord = this.interactionStore.get(interactionId);
     await this.upsertInteractionRecord({
       interactionId,
       queryText: existingRecord?.queryText ?? buffer.queryText,

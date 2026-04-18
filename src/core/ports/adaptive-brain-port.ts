@@ -18,10 +18,12 @@ export interface AdaptiveBrainPort {
   /**
    * Completes interaction with final quality and optional route metadata.
    *
-   * @param interactionId ID returned by beginInteraction.
+   * @param interactionId ID returned by beginInteraction, or persisted evidence ID
+   * from a previous query result when only post-hoc quality metadata should change.
    * @param qualityScore Normalized quality score in range [0, 1].
    * @param route Optional route metadata for future pattern inspection.
-   * @param knowledgeText Optional validated knowledge payload that can be reused as evidence.
+   * @param knowledgeText Optional validated knowledge payload that can be reused as
+   * evidence. Implementations may reject this field when interaction is no longer active.
    */
   completeInteraction(
     interactionId: string,

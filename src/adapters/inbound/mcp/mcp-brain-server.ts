@@ -376,7 +376,8 @@ export class McpBrainServer {
   /**
    * Executes feedback use-case directly for test and adapter-level callers.
    *
-   * @param interactionId Durable interaction identifier returned by query.
+   * @param interactionId Durable interaction identifier returned by query or one
+   * of the interaction IDs returned in query matchedEvidence results.
    * @param qualityScore Normalized score in [0, 1] used to finalize learning quality.
    * @param route Optional route label attached to trajectory metadata.
    * @param knowledgeText Optional validated answer text that can become retrieval evidence.
