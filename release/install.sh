@@ -110,7 +110,7 @@ upsert_env() {
 main() {
   umask 077
 
-  local repo="${MY_BRAIN_REPO:-rafaelmonteiro/my-brain}"
+  local repo="${MY_BRAIN_REPO:-rafaelcmm/my-brain}"
   local install_dir="${MY_BRAIN_HOME:-${HOME}/.my-brain}"
 
   require_cmd docker

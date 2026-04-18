@@ -19,7 +19,7 @@
 
 ```bash
 export MY_BRAIN_VERSION="vX.Y.Z" && \
-  curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/${MY_BRAIN_VERSION}/release/install.sh" | bash
+  curl -fsSL "https://raw.githubusercontent.com/rafaelcmm/my-brain/${MY_BRAIN_VERSION}/release/install.sh" | bash
 ```
 
 Release bundle and operations runbook:

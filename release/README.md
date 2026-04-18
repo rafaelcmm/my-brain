@@ -30,14 +30,14 @@ Pinned tag installer:
 
 ```bash
 export MY_BRAIN_VERSION="vX.Y.Z" && \
-  curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/${MY_BRAIN_VERSION}/release/install.sh" | bash
+  curl -fsSL "https://raw.githubusercontent.com/rafaelcmm/my-brain/${MY_BRAIN_VERSION}/release/install.sh" | bash
 ```
 
 Latest installer from main branch:
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/main/release/install.sh" \
-  | MY_BRAIN_REPO="rafaelmonteiro/my-brain" bash
+curl -fsSL "https://raw.githubusercontent.com/rafaelcmm/my-brain/main/release/install.sh" \
+  | MY_BRAIN_REPO="rafaelcmm/my-brain" bash
 ```
 
 Full operator procedure: `INSTALL.md`.
