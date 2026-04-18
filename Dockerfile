@@ -20,7 +20,12 @@ RUN groupadd -r appuser && useradd --no-log-init -r -g appuser appuser
 
 COPY package.json yarn.lock ./
 RUN --mount=type=cache,target=/root/.cache/yarn \
-  corepack enable && yarn install --frozen-lockfile --production=true
+  corepack enable \
+  && yarn install --frozen-lockfile --production=true \
+  && yarn cache clean \
+  && rm -rf /usr/local/share/.cache/yarn /root/.npm \
+  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 
 COPY --from=build /app/dist ./dist
 
