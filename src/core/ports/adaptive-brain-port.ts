@@ -1,4 +1,4 @@
-import type { LearnedPattern } from '../domain/interaction.js';
+import type { InteractionRecord, LearnedPattern, QueryEvidence } from '../domain/interaction.js';
 
 /**
  * AdaptiveBrainPort defines learning engine operations required by use-cases.
@@ -34,8 +34,45 @@ export interface AdaptiveBrainPort {
 
   /**
    * Returns nearest learned patterns for query-time context.
+   *
+   * Results are ordered from strongest to weakest engine affinity and may
+   * contain fewer than `limit` entries when the engine has not yet formed
+   * enough learned pattern clusters near the supplied embedding.
    */
   findPatterns(embedding: number[], limit: number): Promise<LearnedPattern[]>;
+
+  /**
+   * Returns concrete interaction memories for an embedding neighborhood.
+   *
+   * @param embedding Query or replay embedding used for evidence retrieval.
+   * @param limit Maximum number of evidence rows to return.
+   * @param excludeInteractionIds Optional interaction IDs to omit from results.
+   * @returns Evidence rows ordered from strongest to weakest vector similarity.
+   * The returned array may be shorter than `limit` when exclusions or missing
+   * persisted metadata remove candidates from the result set.
+   */
+  findMatchedEvidence(
+    embedding: number[],
+    limit: number,
+    excludeInteractionIds?: readonly string[],
+  ): Promise<QueryEvidence[]>;
+
+  /**
+   * Looks up durable metadata for a previously tracked interaction.
+   *
+   * Implementations must reject when the interaction ID is unknown so callers
+   * can distinguish nonexistent records from empty retrieval neighborhoods.
+   */
+  getInteractionRecord(interactionId: string): Promise<InteractionRecord>;
+
+  /**
+   * Returns the adapted embedding for an active interaction when still buffered.
+   *
+   * This lets inspection reuse the exact query-time representation while the
+   * interaction is still live, and fall back to replay when it has already been
+   * finalized or the process restarted.
+   */
+  getBufferedAdaptedEmbedding(interactionId: string): Promise<number[] | undefined>;
 
   /**
    * Forces background learning cycle and returns engine status string.
