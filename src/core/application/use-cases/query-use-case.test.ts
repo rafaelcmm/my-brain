@@ -54,6 +54,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
       retrievalRank: number;
       createdAtIso: string;
       status: 'completed';
+      learningKind: 'knowledge-answer';
     }>
   > {
     return [
@@ -67,6 +68,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
         retrievalRank: 1,
         createdAtIso: '2026-01-01T00:00:00.000Z',
         status: 'completed',
+        learningKind: 'knowledge-answer',
       },
     ];
   }
@@ -74,6 +76,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
   public async getInteractionRecord(): Promise<{
     interactionId: string;
     queryText: string;
+    learningKind: 'query-only';
     createdAtIso: string;
     updatedAtIso: string;
     status: 'pending';
@@ -81,6 +84,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
     return {
       interactionId: '11111111-1111-4111-8111-111111111111',
       queryText: 'hello',
+      learningKind: 'query-only',
       createdAtIso: '2026-01-01T00:00:00.000Z',
       updatedAtIso: '2026-01-01T00:00:00.000Z',
       status: 'pending',

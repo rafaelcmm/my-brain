@@ -34,10 +34,20 @@ export interface SonaRuntimeConfig {
   readonly ewcLambda: number;
 }
 
+/**
+ * Ephemeral per-interaction state retained only while trajectory is active.
+ *
+ * Buffer links external interaction IDs to in-flight SONA trajectory data so
+ * feedback completion and inspection can reuse query-time context safely.
+ */
 interface InteractionBuffer {
+  /** Original user query text from beginInteraction call. */
   readonly queryText: string;
+  /** Stable semantic embedding persisted for retrieval when interaction becomes knowledge. */
   readonly embedding: number[];
+  /** In-process SONA trajectory identifier for immediate learning operations. */
   readonly trajectoryId: number;
+  /** Most recent adapted embedding reused by inspection while interaction remains buffered. */
   readonly adaptedEmbedding: number[];
 }
 
@@ -112,6 +122,7 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     await this.upsertInteractionRecord({
       interactionId,
       queryText,
+      learningKind: 'query-only',
       createdAtIso: new Date().toISOString(),
       updatedAtIso: new Date().toISOString(),
       status: 'pending',
@@ -127,6 +138,7 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     interactionId: string,
     qualityScore: number,
     route?: string,
+    knowledgeText?: string,
   ): Promise<void> {
     await this.ensureInteractionStoreLoaded();
     const trajectoryId = this.interactionToTrajectory.get(interactionId);
@@ -145,16 +157,25 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     this.engine.endTrajectory(trajectoryId, qualityScore);
     this.interactionQuality.set(interactionId, qualityScore);
 
-    await this.vectorDb.insert({
-      id: interactionId,
-      // Persist stable base semantic embedding for retrieval.
-      vector: Float32Array.from(buffer.embedding),
-    });
+    if (knowledgeText && knowledgeText.length > 50_000) {
+      throw new Error('knowledgeText exceeds adapter safety limit of 50,000 characters.');
+    }
+
+    // Only persist retrieval vector when caller provides validated knowledge payload.
+    if (knowledgeText) {
+      await this.vectorDb.insert({
+        id: interactionId,
+        // Persist stable base semantic embedding for retrieval.
+        vector: Float32Array.from(buffer.embedding),
+      });
+    }
     const completedAtIso = new Date().toISOString();
     const existingRecord = this.interactionStore.get(interactionId);
     await this.upsertInteractionRecord({
       interactionId,
       queryText: existingRecord?.queryText ?? buffer.queryText,
+      learningKind: knowledgeText ? 'knowledge-answer' : 'query-only',
+      knowledgeText,
       createdAtIso: existingRecord?.createdAtIso ?? completedAtIso,
       updatedAtIso: completedAtIso,
       status: 'completed',
@@ -328,8 +349,9 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     this.storeLoadPromise ??= (async () => {
       try {
         const raw = await readFile(this.interactionStorePath, 'utf8');
-        const parsed = JSON.parse(raw) as InteractionRecord[];
-        for (const record of parsed) {
+        const parsed = JSON.parse(raw) as Array<Record<string, unknown>>;
+        for (const rawRecord of parsed) {
+          const record = this.normalizeInteractionRecord(rawRecord);
           this.interactionStore.set(record.interactionId, record);
           if (record.qualityScore !== undefined) {
             this.interactionQuality.set(record.interactionId, record.qualityScore);
@@ -377,7 +399,7 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
     retrievalRank: number,
   ): QueryEvidence | undefined {
     const record = this.interactionStore.get(interactionId);
-    if (!record) {
+    if (!record || record.learningKind !== 'knowledge-answer' || !record.knowledgeText) {
       return undefined;
     }
 
@@ -391,7 +413,7 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
 
     return {
       interactionId,
-      text: record.queryText,
+      text: record.knowledgeText,
       score,
       rawScore,
       scoreType: 'vectorSimilarity',
@@ -402,6 +424,47 @@ export class SonaAdaptiveBrainAdapter implements AdaptiveBrainPort {
       qualityScore: record.qualityScore,
       createdAtIso: record.createdAtIso,
       status: record.status,
+      learningKind: 'knowledge-answer',
+    };
+  }
+
+  /**
+   * Normalizes persisted sidecar rows across schema versions.
+   *
+   * Legacy rows before learning-kind support are treated as `query-only` so
+   * old question-only memories do not pollute evidence retrieval.
+   */
+  private normalizeInteractionRecord(rawRecord: Record<string, unknown>): InteractionRecord {
+    const interactionId = String(rawRecord.interactionId ?? '');
+    const queryText = String(rawRecord.queryText ?? '');
+    const createdAtIso = String(rawRecord.createdAtIso ?? new Date().toISOString());
+    const updatedAtIso = String(rawRecord.updatedAtIso ?? createdAtIso);
+    const status = rawRecord.status === 'completed' ? 'completed' : 'pending';
+    const route = typeof rawRecord.route === 'string' ? rawRecord.route : undefined;
+    const completedAtIso =
+      typeof rawRecord.completedAtIso === 'string' ? rawRecord.completedAtIso : undefined;
+    const qualityScore =
+      typeof rawRecord.qualityScore === 'number' ? rawRecord.qualityScore : undefined;
+    const knowledgeText =
+      typeof rawRecord.knowledgeText === 'string' && rawRecord.knowledgeText.trim().length > 0
+        ? rawRecord.knowledgeText
+        : undefined;
+    const learningKind =
+      rawRecord.learningKind === 'knowledge-answer' && knowledgeText
+        ? 'knowledge-answer'
+        : 'query-only';
+
+    return {
+      interactionId,
+      queryText,
+      learningKind,
+      knowledgeText,
+      createdAtIso,
+      updatedAtIso,
+      status,
+      qualityScore,
+      route,
+      completedAtIso,
     };
   }
 }

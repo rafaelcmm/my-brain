@@ -78,10 +78,12 @@ export class McpBrainServer {
   }
 
   /**
-   * Starts streamable HTTP MCP transport for local or cloud deployment.
+   * Starts streamable HTTP MCP transport with auth, body-size, and rate-limit guards.
    *
    * @param port TCP port to listen on.
    * @param host Interface binding host.
+   * @throws Error when auth token verifier is not configured for HTTP mode.
+   * @throws Error when underlying HTTP server fails to bind.
    */
   public async startHttp(port: number, host: string): Promise<void> {
     const app = createMcpExpressApp({ host });
@@ -356,7 +358,12 @@ export class McpBrainServer {
   }
 
   /**
-   * Executes interaction inspection logic without transport layer.
+   * Executes inspection use-case directly for test and adapter-level callers.
+   *
+   * @param interactionId Durable interaction identifier previously returned by query.
+   * @param topK Maximum evidence/pattern rows requested for inspection.
+   * @returns Serializable inspection payload mirrored from MCP structuredContent.
+   * @throws Error when interactionId is unknown or topK fails downstream validation.
    */
   public async executeInspectInteractionTool(
     interactionId: string,
@@ -367,18 +374,28 @@ export class McpBrainServer {
   }
 
   /**
-   * Executes feedback tool logic without transport layer.
+   * Executes feedback use-case directly for test and adapter-level callers.
+   *
+   * @param interactionId Durable interaction identifier returned by query.
+   * @param qualityScore Normalized score in [0, 1] used to finalize learning quality.
+   * @param route Optional route label attached to trajectory metadata.
+   * @param knowledgeText Optional validated answer text that can become retrieval evidence.
+   * @param forceLearnAfterFeedback Whether to trigger immediate learning after persistence.
+   * @returns Serializable feedback payload mirrored from MCP structuredContent.
+   * @throws Error when input validation fails or interaction cannot be completed.
    */
   public async executeFeedbackTool(
     interactionId: string,
     qualityScore: number,
     route: string | undefined,
+    knowledgeText: string | undefined,
     forceLearnAfterFeedback: boolean,
   ): Promise<Record<string, unknown>> {
     const result = await this.feedbackUseCase.execute({
       interactionId,
       qualityScore,
       route,
+      knowledgeText,
       forceLearnAfterFeedback,
     });
 
@@ -386,7 +403,10 @@ export class McpBrainServer {
   }
 
   /**
-   * Executes learn tool logic without transport layer.
+   * Executes forced learning directly for test and adapter-level callers.
+   *
+   * @returns Serializable learning status payload mirrored from MCP structuredContent.
+   * @throws Error when underlying learning engine reports failure.
    */
   public async executeLearnTool(): Promise<Record<string, unknown>> {
     const result = await this.learnUseCase.execute();
@@ -394,7 +414,7 @@ export class McpBrainServer {
   }
 
   /**
-   * Registers query, feedback, and learn tools with strict schemas.
+   * Registers query, inspect_interaction, feedback, and learn tools with strict schemas.
    */
   private registerTools(server: McpServer): void {
     server.registerTool(
@@ -449,19 +469,21 @@ export class McpBrainServer {
       'feedback',
       {
         description:
-          'Attach quality signal to prior interaction and optionally trigger immediate learning.',
+          'Attach quality signal to prior interaction, optionally persist validated knowledge text, and optionally trigger immediate learning.',
         inputSchema: {
           interactionId: z.string().uuid(),
           qualityScore: z.number().min(0).max(1),
           route: z.string().max(100).optional(),
+          knowledgeText: z.string().min(1).max(20_000).optional(),
           forceLearnAfterFeedback: z.boolean().default(false),
         },
       },
-      async ({ interactionId, qualityScore, route, forceLearnAfterFeedback }) => {
+      async ({ interactionId, qualityScore, route, knowledgeText, forceLearnAfterFeedback }) => {
         const result = await this.executeFeedbackTool(
           interactionId,
           qualityScore,
           route,
+          knowledgeText,
           forceLearnAfterFeedback,
         );
 

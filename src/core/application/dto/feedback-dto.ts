@@ -11,6 +11,14 @@ export interface FeedbackInput {
   /** Optional semantic route label for trajectory metadata. */
   readonly route?: string;
 
+  /**
+   * Optional validated answer payload captured as reusable knowledge evidence.
+   *
+   * When omitted, feedback updates quality telemetry only and keeps interaction
+   * out of evidence retrieval to avoid question-only memory noise.
+   */
+  readonly knowledgeText?: string;
+
   /** Whether to trigger immediate forced learning cycle after feedback. */
   readonly forceLearnAfterFeedback: boolean;
 }

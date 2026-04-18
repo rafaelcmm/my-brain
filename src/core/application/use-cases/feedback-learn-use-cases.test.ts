@@ -8,7 +8,9 @@ import type { AdaptiveBrainPort } from '../../ports/adaptive-brain-port.js';
  * use-case interaction contract without real engine dependency.
  */
 class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
-  public lastComplete: { id: string; quality: number; route?: string } | undefined;
+  public lastComplete:
+    | { id: string; quality: number; route?: string; knowledgeText?: string }
+    | undefined;
 
   public async beginInteraction(): Promise<string> {
     return '11111111-1111-4111-8111-111111111111';
@@ -18,8 +20,9 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
     interactionId: string,
     qualityScore: number,
     route?: string,
+    knowledgeText?: string,
   ): Promise<void> {
-    this.lastComplete = { id: interactionId, quality: qualityScore, route };
+    this.lastComplete = { id: interactionId, quality: qualityScore, route, knowledgeText };
   }
 
   public async applyInstantLearning(
@@ -46,6 +49,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
       retrievalRank: number;
       createdAtIso: string;
       status: 'completed';
+      learningKind: 'knowledge-answer';
     }>
   > {
     return [];
@@ -54,6 +58,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
   public async getInteractionRecord(): Promise<{
     interactionId: string;
     queryText: string;
+    learningKind: 'query-only';
     createdAtIso: string;
     updatedAtIso: string;
     status: 'pending';
@@ -61,6 +66,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
     return {
       interactionId: '11111111-1111-4111-8111-111111111111',
       queryText: 'hello',
+      learningKind: 'query-only',
       createdAtIso: '2026-01-01T00:00:00.000Z',
       updatedAtIso: '2026-01-01T00:00:00.000Z',
       status: 'pending',
@@ -92,6 +98,7 @@ describe('FeedbackUseCase and LearnUseCase', () => {
       interactionId: '11111111-1111-4111-8111-111111111111',
       qualityScore: 0.8,
       route: 'router-a',
+      knowledgeText: 'Use account settings reset flow and verify MFA challenge.',
       forceLearnAfterFeedback: true,
     });
 
@@ -99,6 +106,7 @@ describe('FeedbackUseCase and LearnUseCase', () => {
       id: '11111111-1111-4111-8111-111111111111',
       quality: 0.8,
       route: 'router-a',
+      knowledgeText: 'Use account settings reset flow and verify MFA challenge.',
     });
     expect(output.status).toBe('feedback-recorded-and-learned');
     expect(output.learnStatus).toBe('forced');

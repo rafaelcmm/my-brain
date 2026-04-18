@@ -56,6 +56,8 @@ describe('Self-learning e2e flow', () => {
       interactionId: firstQuery.interactionId,
       qualityScore: 0.95,
       route: 'support-flow',
+      knowledgeText:
+        'Open account security settings, execute password reset, and verify tenant policy guardrails.',
       forceLearnAfterFeedback: true,
     });
     expect(feedback.status).toContain('learned');
@@ -70,7 +72,8 @@ describe('Self-learning e2e flow', () => {
     expect(inspection.interaction.interactionId).toBe(firstQuery.interactionId);
 
     const secondQuery = await queryUseCase.execute({ text: 'password recovery steps', topK: 5 });
-    expect(secondQuery.matchedEvidence.length).toBeGreaterThanOrEqual(0);
+    expect(secondQuery.matchedEvidence.length).toBeGreaterThanOrEqual(1);
+    expect(secondQuery.matchedEvidence[0]?.learningKind).toBe('knowledge-answer');
     expect(secondQuery.patternSummaries.length).toBeGreaterThanOrEqual(0);
   });
 });

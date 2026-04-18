@@ -21,23 +21,32 @@ export interface AdaptiveBrainPort {
    * @param interactionId ID returned by beginInteraction.
    * @param qualityScore Normalized quality score in range [0, 1].
    * @param route Optional route metadata for future pattern inspection.
+   * @param knowledgeText Optional validated knowledge payload that can be reused as evidence.
    */
-  completeInteraction(interactionId: string, qualityScore: number, route?: string): Promise<void>;
+  completeInteraction(
+    interactionId: string,
+    qualityScore: number,
+    route?: string,
+    knowledgeText?: string,
+  ): Promise<void>;
 
   /**
    * Applies immediate micro-learning transform for query-time adaptation.
    *
    * @param interactionId Active interaction to which step trace should attach.
-   * @param embedding Query embedding.
+   * @param embedding Query embedding to adapt.
+   * @returns Adapted embedding used for downstream retrieval and pattern lookup.
+   * @throws Error when interactionId is unknown to the active adapter buffer.
    */
   applyInstantLearning(interactionId: string, embedding: number[]): Promise<number[]>;
 
   /**
    * Returns nearest learned patterns for query-time context.
    *
-   * Results are ordered from strongest to weakest engine affinity and may
-   * contain fewer than `limit` entries when the engine has not yet formed
-   * enough learned pattern clusters near the supplied embedding.
+   * @param embedding Query embedding used for neighborhood lookup.
+   * @param limit Maximum pattern rows requested.
+   * @returns Pattern summaries ordered from strongest to weakest engine affinity.
+   * May contain fewer than limit rows when local pattern density is low.
    */
   findPatterns(embedding: number[], limit: number): Promise<LearnedPattern[]>;
 
@@ -75,12 +84,17 @@ export interface AdaptiveBrainPort {
   getBufferedAdaptedEmbedding(interactionId: string): Promise<number[] | undefined>;
 
   /**
-   * Forces background learning cycle and returns engine status string.
+   * Forces background learning cycle and returns engine status.
+   *
+   * @returns Engine status string describing result of forced learning pass.
    */
   forceLearn(): Promise<string>;
 
   /**
-   * Returns engine stats in parsed object form for diagnostics.
+   * Returns diagnostic engine stats.
+   *
+   * @returns Parsed stats object. Implementations may include adapter-specific
+   * fields in addition to engine-native metrics.
    */
   getStats(): Promise<Record<string, unknown>>;
 }

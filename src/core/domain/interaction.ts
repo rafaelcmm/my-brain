@@ -35,6 +35,22 @@ export interface InteractionRecord {
   /** Original user query text used as the human-readable retrieval artifact. */
   readonly queryText: string;
 
+  /**
+   * Classifies whether interaction produced reusable knowledge or only telemetry.
+   *
+   * `query-only` interactions remain inspectable but must not become retrieval evidence.
+   * `knowledge-answer` interactions include validated response text suitable for reuse.
+   */
+  readonly learningKind: 'query-only' | 'knowledge-answer';
+
+  /**
+   * Optional knowledge payload captured during feedback when interaction is reusable.
+   *
+   * This field is intentionally absent for `query-only` interactions so retrieval code can
+   * avoid promoting raw user questions as high-confidence memory evidence.
+   */
+  readonly knowledgeText?: string;
+
   /** UTC timestamp for when the interaction was first registered. */
   readonly createdAtIso: string;
 
@@ -110,6 +126,9 @@ export interface QueryEvidence {
 
   /** Current lifecycle state of the matched interaction. */
   readonly status: InteractionRecord['status'];
+
+  /** Indicates evidence was derived from validated knowledge payload. */
+  readonly learningKind: Extract<InteractionRecord['learningKind'], 'knowledge-answer'>;
 }
 
 /**
