@@ -2,7 +2,7 @@
 
 Self-hosted MCP server MVP with hexagonal architecture.
 
-- Tools: `query`, `feedback`, `learn`
+- Tools: `query`, `inspect_interaction`, `feedback`, `learn`
 - Embeddings: `sentence-transformers/all-MiniLM-L6-v2` via `@xenova/transformers`
 - Learning engine and adaptive storage: `@ruvector/sona`
 - Persistence: `@ruvector/core` vector database (`RUVECTOR_DB_PATH`)
@@ -16,7 +16,7 @@ Self-hosted MCP server MVP with hexagonal architecture.
   - SONA adaptive brain adapter
 - Composition root wires dependencies
 
-Persistence detail: completed interaction embeddings are persisted in ruvector DB and used for similarity-backed memory retrieval in `query`.
+Persistence detail: completed interaction embeddings are persisted in ruvector DB, while readable interaction metadata is persisted alongside it for explainable similarity-backed retrieval in `query` and `inspect_interaction`.
 
 ADR: `docs/architecture/adr-001-hexagonal-mcp-brain.md`
 
@@ -53,26 +53,23 @@ yarn install --frozen-lockfile
 Container deployment has built-in defaults inside image/compose.
 For HTTP transport with Docker Compose, `MCP_AUTH_TOKEN` is mandatory.
 
-## Run Local (stdio MCP)
+## Development Runtime
 
 ```bash
 yarn dev
 ```
 
-To run HTTP transport locally without Docker:
+This project is intended to run through Docker Compose during development. `yarn dev` starts the Compose stack in the foreground, and `yarn start` starts it detached.
 
-```bash
-MCP_TRANSPORT=http MCP_HTTP_HOST=127.0.0.1 MCP_HTTP_PORT=3737 MCP_AUTH_TOKEN=replace-with-16-plus-char-secret yarn dev
-```
+For browser-originated traffic, set `MCP_ALLOWED_ORIGINS` in `.env` before you start the stack.
 
-For browser-originated traffic, set `MCP_ALLOWED_ORIGINS` (comma-separated origins).
-
-## Build + Start
+## App Build
 
 ```bash
 yarn build
-yarn start
 ```
+
+Use `yarn start` when you want the Docker stack running detached after the image builds.
 
 ## Test and Quality
 
@@ -122,6 +119,14 @@ yarn docker:down
 yarn docker:restart
 ```
 
+Local persistence reset:
+
+```bash
+yarn db:clear --force
+```
+
+Use `yarn db:clear --dry-run` first if you want to confirm which Docker actions and mounted files will be targeted.
+
 ## MCP Tool Contracts
 
 ### `query`
@@ -140,7 +145,22 @@ Output (shape):
 ```json
 {
   "interactionId": "uuid",
-  "patterns": [
+  "matchedEvidence": [
+    {
+      "interactionId": "uuid",
+      "text": "how do I unlock a locked account",
+      "score": 0.91,
+      "rawScore": 0.912345,
+      "scoreType": "vectorSimilarity",
+      "whyMatched": "Rank #1, raw score 0.912345, normalized similarity 91%. Route support-flow. Feedback quality 0.95.",
+      "retrievalRank": 1,
+      "route": "support-flow",
+      "qualityScore": 0.95,
+      "createdAtIso": "2026-04-17T12:00:00.000Z",
+      "status": "completed"
+    }
+  ],
+  "patternSummaries": [
     {
       "id": "pattern-id",
       "avgQuality": 0.91,
@@ -148,6 +168,38 @@ Output (shape):
       "patternType": "General"
     }
   ],
+  "stats": {}
+}
+```
+
+### `inspect_interaction`
+
+Input:
+
+```json
+{
+  "interactionId": "uuid-from-query",
+  "topK": 5
+}
+```
+
+Output (shape):
+
+```json
+{
+  "interaction": {
+    "interactionId": "uuid-from-query",
+    "queryText": "how do I unlock a locked account",
+    "createdAtIso": "2026-04-17T12:00:00.000Z",
+    "updatedAtIso": "2026-04-17T12:01:00.000Z",
+    "status": "completed",
+    "qualityScore": 0.95,
+    "route": "support-flow",
+    "completedAtIso": "2026-04-17T12:01:00.000Z"
+  },
+  "inspectionMode": "re-embedded-query",
+  "matchedEvidence": [],
+  "patternSummaries": [],
   "stats": {}
 }
 ```
@@ -190,7 +242,8 @@ Output:
 ## Notes
 
 - First startup with MiniLM downloads model artifacts. Keep `brain_models` volume to avoid repeated downloads.
-- For fast tests without model download, set `EMBEDDING_PROVIDER=hash`.
+- Semantic retrieval is model-only; hash embedding fallback is intentionally unsupported.
+- Query text is persisted for explainable retrieval. Treat this as a single-tenant trusted-memory feature unless you add redaction, retention, and tenant isolation.
 - Security boundary validates MCP tool inputs with Zod schemas.
 - HTTP hardening uses `helmet`, rate limiting, and request-size limits configurable via env (`MCP_RATE_LIMIT_*`, `MCP_MAX_BODY_BYTES`).
 - HTTP MCP auth is enforced with bearer token via `MCP_AUTH_TOKEN` when transport is `http`.
