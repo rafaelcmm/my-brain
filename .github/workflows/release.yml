@@ -111,6 +111,8 @@ jobs:
           cp release/docker-compose.release.yml "${RELEASE_DIR}/docker-compose.release.yml"
           cp release/env.release.example "${RELEASE_DIR}/env.release.example"
           cp release/INSTALL.md "${RELEASE_DIR}/INSTALL.md"
+          cp release/install.sh "${RELEASE_DIR}/install.sh"
+          chmod +x "${RELEASE_DIR}/install.sh"
 
           sed -i "s|ghcr.io/ORG/my-brain:v1.0.0|${{ steps.meta.outputs.image }}:v${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/env.release.example"
           sed -i "s|MCP_SERVER_VERSION=1.0.0|MCP_SERVER_VERSION=${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/env.release.example"
