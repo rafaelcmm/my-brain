@@ -49,9 +49,6 @@ export interface RuntimeConfig {
   /** Max requests per rate-limit window for MCP endpoint. */
   readonly mcpRateLimitMax: number;
 
-  /** Embedding provider implementation key. */
-  readonly embeddingProvider: 'minilm' | 'hash';
-
   /** Use quantized model weights in transformers pipeline. */
   readonly embeddingQuantized: boolean;
 
@@ -196,11 +193,6 @@ export function loadRuntimeConfig(): RuntimeConfig {
     );
   }
 
-  const embeddingProviderRaw = (process.env.EMBEDDING_PROVIDER ?? 'minilm').toLowerCase();
-  if (embeddingProviderRaw !== 'minilm' && embeddingProviderRaw !== 'hash') {
-    throw new Error("EMBEDDING_PROVIDER must be either 'minilm' or 'hash'.");
-  }
-
   const modelCacheDir = validatePathEnv(
     process.env.MODEL_CACHE_DIR ?? '/models',
     'MODEL_CACHE_DIR',
@@ -225,7 +217,6 @@ export function loadRuntimeConfig(): RuntimeConfig {
     mcpMaxBodyBytes,
     mcpRateLimitWindowMs,
     mcpRateLimitMax,
-    embeddingProvider: embeddingProviderRaw,
     embeddingQuantized: parseBooleanEnv(process.env.EMBEDDING_QUANTIZED, false),
     sonaMicroLoraRank,
     sonaBaseLoraRank,
