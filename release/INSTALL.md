@@ -2,6 +2,38 @@
 
 This release bundle targets one Docker host with local persistent volumes.
 
+## 0) One-command installer (curl|bash)
+
+Pinned version install (recommended):
+
+```bash
+curl -fsSL "https://github.com/rafaelmonteiro/my-brain/releases/download/vX.Y.Z/install.sh" \
+  | MY_BRAIN_VERSION="vX.Y.Z" bash
+```
+
+Latest release install:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/main/release/install.sh" \
+  | MY_BRAIN_REPO="rafaelmonteiro/my-brain" bash
+```
+
+Optional overrides:
+
+- `MY_BRAIN_HOME` install directory (default `~/.my-brain`)
+- `MY_BRAIN_HTTP_PORT` MCP HTTP port written into `.env`
+- `MY_BRAIN_IMAGE` explicit image override (for mirrors/private registries)
+
+Installer behavior summary:
+
+- Downloads release `tar.gz` + `.sha256`
+- Verifies checksum before extraction
+- Initializes token store with ephemeral env-only bootstrap token
+- Starts hardened compose service
+- Rotates token and prints plaintext token once
+
+Keep printed token in secret manager. Do not store plaintext token in shell history.
+
 ## Prerequisites
 
 - Docker Engine 24+

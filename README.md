@@ -88,6 +88,15 @@ Release pipeline gates:
 - build
 - container vulnerability scan (blocks HIGH/CRITICAL)
 
+One-command install (curl|bash):
+
+```bash
+curl -fsSL "https://github.com/rafaelmonteiro/my-brain/releases/download/vX.Y.Z/install.sh" \
+  | MY_BRAIN_VERSION="vX.Y.Z" bash
+```
+
+Installer does checksum verification, secure bootstrap init (env-only token), hardened startup, and initial rotate; then prints usable token once.
+
 Install from release bundle:
 
 1. Download `tar.gz` and `.sha256` from GitHub Releases.
