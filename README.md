@@ -1,7 +1,5 @@
 # my-brain
 
-## Concept
-
 `my-brain` is self-hosted MCP memory server with adaptive learning, semantic retrieval, and explainable evidence output.
 
 ## Functionality
@@ -10,13 +8,6 @@
 - Embeddings: `sentence-transformers/all-MiniLM-L6-v2` via `@xenova/transformers`
 - Adaptive learning engine: `@ruvector/sona`
 - Persistent vector memory: `@ruvector/core`
-
-Technical details moved to folder READMEs:
-
-- `docs/README.md`
-- `src/README.md`
-- `release/README.md`
-- `examples/README.md`
 
 ## Prerequisites
 
