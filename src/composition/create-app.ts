@@ -1,8 +1,8 @@
-import { HashEmbeddingAdapter } from '../adapters/outbound/embeddings/hash-embedding-adapter.js';
 import { MiniLmEmbeddingAdapter } from '../adapters/outbound/embeddings/minilm-embedding-adapter.js';
 import { SonaAdaptiveBrainAdapter } from '../adapters/outbound/sona/sona-adaptive-brain-adapter.js';
 import { McpBrainServer } from '../adapters/inbound/mcp/mcp-brain-server.js';
 import { FeedbackUseCase } from '../core/application/use-cases/feedback-use-case.js';
+import { InspectInteractionUseCase } from '../core/application/use-cases/inspect-interaction-use-case.js';
 import { LearnUseCase } from '../core/application/use-cases/learn-use-case.js';
 import { QueryUseCase } from '../core/application/use-cases/query-use-case.js';
 import { loadRuntimeConfig } from '../shared/config/env.js';
@@ -13,15 +13,12 @@ import { loadRuntimeConfig } from '../shared/config/env.js';
 export function createApp(): McpBrainServer {
   const config = loadRuntimeConfig();
 
-  const embeddingsPort =
-    config.embeddingProvider === 'hash'
-      ? new HashEmbeddingAdapter(config.embeddingDim)
-      : new MiniLmEmbeddingAdapter(
-          config.embeddingModelId,
-          config.embeddingDim,
-          config.modelCacheDir,
-          config.embeddingQuantized,
-        );
+  const embeddingsPort = new MiniLmEmbeddingAdapter(
+    config.embeddingModelId,
+    config.embeddingDim,
+    config.modelCacheDir,
+    config.embeddingQuantized,
+  );
 
   const adaptiveBrainPort = new SonaAdaptiveBrainAdapter(
     embeddingsPort.getDimension(),
@@ -37,6 +34,10 @@ export function createApp(): McpBrainServer {
   );
 
   const queryUseCase = new QueryUseCase(embeddingsPort, adaptiveBrainPort);
+  const inspectInteractionUseCase = new InspectInteractionUseCase(
+    embeddingsPort,
+    adaptiveBrainPort,
+  );
   const feedbackUseCase = new FeedbackUseCase(adaptiveBrainPort);
   const learnUseCase = new LearnUseCase(adaptiveBrainPort);
 
@@ -44,6 +45,7 @@ export function createApp(): McpBrainServer {
     config.serverName,
     config.serverVersion,
     queryUseCase,
+    inspectInteractionUseCase,
     feedbackUseCase,
     learnUseCase,
     {

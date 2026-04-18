@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { McpBrainServer } from './mcp-brain-server.js';
 import { QueryUseCase } from '../../../core/application/use-cases/query-use-case.js';
 import { FeedbackUseCase } from '../../../core/application/use-cases/feedback-use-case.js';
+import { InspectInteractionUseCase } from '../../../core/application/use-cases/inspect-interaction-use-case.js';
 import { LearnUseCase } from '../../../core/application/use-cases/learn-use-case.js';
 import type { EmbeddingsPort } from '../../../core/ports/embeddings-port.js';
 import type { AdaptiveBrainPort } from '../../../core/ports/adaptive-brain-port.js';
@@ -46,6 +47,54 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
     return [{ id: 'p1', avgQuality: 0.9, clusterSize: 7, patternType: 'General' }];
   }
 
+  public async findMatchedEvidence(): Promise<
+    Array<{
+      interactionId: string;
+      text: string;
+      score: number;
+      rawScore: number;
+      scoreType: 'vectorSimilarity';
+      whyMatched: string;
+      retrievalRank: number;
+      createdAtIso: string;
+      status: 'completed';
+    }>
+  > {
+    return [
+      {
+        interactionId: '22222222-2222-4222-8222-222222222222',
+        text: 'prior unlock procedure',
+        score: 0.84,
+        rawScore: 0.84,
+        scoreType: 'vectorSimilarity',
+        whyMatched: 'Nearest stored interaction.',
+        retrievalRank: 1,
+        createdAtIso: '2026-01-01T00:00:00.000Z',
+        status: 'completed',
+      },
+    ];
+  }
+
+  public async getInteractionRecord(): Promise<{
+    interactionId: string;
+    queryText: string;
+    createdAtIso: string;
+    updatedAtIso: string;
+    status: 'pending';
+  }> {
+    return {
+      interactionId: '11111111-1111-4111-8111-111111111111',
+      queryText: 'hello',
+      createdAtIso: '2026-01-01T00:00:00.000Z',
+      updatedAtIso: '2026-01-01T00:00:00.000Z',
+      status: 'pending',
+    };
+  }
+
+  public async getBufferedAdaptedEmbedding(): Promise<number[] | undefined> {
+    return [5, 1, 0];
+  }
+
   public async forceLearn(): Promise<string> {
     return 'forced';
   }
@@ -67,6 +116,7 @@ describe('McpBrainServer integration', () => {
       'test-server',
       '0.1.0',
       new QueryUseCase(embeddings, brain),
+      new InspectInteractionUseCase(embeddings, brain),
       new FeedbackUseCase(brain),
       new LearnUseCase(brain),
       {
@@ -79,6 +129,13 @@ describe('McpBrainServer integration', () => {
 
     const query = await server.executeQueryTool('hello', 3);
     expect(query.interactionId).toBe('11111111-1111-4111-8111-111111111111');
+    expect(query.matchedEvidence).toHaveLength(1);
+
+    const inspection = await server.executeInspectInteractionTool(
+      '11111111-1111-4111-8111-111111111111',
+      3,
+    );
+    expect(inspection.inspectionMode).toBe('active-buffer');
 
     const feedback = await server.executeFeedbackTool(
       '11111111-1111-4111-8111-111111111111',

@@ -6,7 +6,7 @@ import type { QueryInput, QueryOutput } from '../dto/query-dto.js';
  * QueryUseCase handles query tool orchestration.
  *
  * Flow: embed text, register interaction, apply instant learning transform,
- * fetch nearest learned patterns, return stats for visibility.
+ * fetch explainable evidence plus learned pattern summaries, return stats.
  */
 export class QueryUseCase {
   /**
@@ -19,7 +19,7 @@ export class QueryUseCase {
   ) {}
 
   /**
-   * Executes query workflow and returns interaction metadata for feedback step.
+   * Executes query workflow and returns explainable retrieval evidence for the caller.
    */
   public async execute(input: QueryInput): Promise<QueryOutput> {
     const trimmed = input.text.trim();
@@ -35,12 +35,14 @@ export class QueryUseCase {
     const interactionId = await this.adaptiveBrainPort.beginInteraction(trimmed, embedding);
 
     const adapted = await this.adaptiveBrainPort.applyInstantLearning(interactionId, embedding);
-    const patterns = await this.adaptiveBrainPort.findPatterns(adapted, input.topK);
+    const matchedEvidence = await this.adaptiveBrainPort.findMatchedEvidence(embedding, input.topK);
+    const patternSummaries = await this.adaptiveBrainPort.findPatterns(adapted, input.topK);
     const stats = await this.adaptiveBrainPort.getStats();
 
     return {
       interactionId,
-      patterns,
+      matchedEvidence,
+      patternSummaries,
       stats,
     };
   }

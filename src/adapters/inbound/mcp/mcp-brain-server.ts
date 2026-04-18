@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
@@ -10,6 +11,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import type { QueryUseCase } from '../../../core/application/use-cases/query-use-case.js';
 import type { FeedbackUseCase } from '../../../core/application/use-cases/feedback-use-case.js';
+import type { InspectInteractionUseCase } from '../../../core/application/use-cases/inspect-interaction-use-case.js';
 import type { LearnUseCase } from '../../../core/application/use-cases/learn-use-case.js';
 
 /**
@@ -36,39 +38,38 @@ export interface HttpSecurityOptions {
  * McpBrainServer exposes application use-cases as MCP tools.
  */
 export class McpBrainServer {
-  private readonly server: McpServer;
-  private readonly httpTransport: StreamableHTTPServerTransport;
+  private readonly httpSessionsById = new Map<
+    string,
+    { server: McpServer; transport: StreamableHTTPServerTransport }
+  >();
 
   /**
    * @param name Server name reported to MCP clients.
    * @param version Server version reported to MCP clients.
    * @param queryUseCase Query application use-case.
+   * @param inspectInteractionUseCase Interaction inspection use-case.
    * @param feedbackUseCase Feedback application use-case.
    * @param learnUseCase Learn application use-case.
    * @param httpSecurityOptions HTTP hardening contract, including optional bearer
    * token auth, CORS allow-list, request-size ceiling, and rate-limiting controls.
    */
   public constructor(
-    name: string,
-    version: string,
+    private readonly name: string,
+    private readonly version: string,
     private readonly queryUseCase: QueryUseCase,
+    private readonly inspectInteractionUseCase: InspectInteractionUseCase,
     private readonly feedbackUseCase: FeedbackUseCase,
     private readonly learnUseCase: LearnUseCase,
     private readonly httpSecurityOptions: HttpSecurityOptions,
-  ) {
-    this.server = new McpServer({ name, version });
-    this.httpTransport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-    });
-    this.registerTools();
-  }
+  ) {}
 
   /**
    * Starts stdio transport for local MCP process integration.
    */
   public async startStdio(): Promise<void> {
+    const server = this.createProtocolServer();
     const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    await server.connect(transport);
   }
 
   /**
@@ -78,8 +79,6 @@ export class McpBrainServer {
    * @param host Interface binding host.
    */
   public async startHttp(port: number, host: string): Promise<void> {
-    await this.server.connect(this.httpTransport);
-
     const app = createMcpExpressApp({ host });
 
     // Honor upstream proxy headers to make per-client rate limiting accurate behind reverse proxies.
@@ -165,7 +164,38 @@ export class McpBrainServer {
 
     app.post('/mcp', async (req: Request, res: Response) => {
       try {
-        await this.httpTransport.handleRequest(req, res, req.body);
+        const sessionId = this.getSessionId(req);
+
+        let transport: StreamableHTTPServerTransport | undefined;
+
+        if (sessionId !== undefined) {
+          transport = this.httpSessionsById.get(sessionId)?.transport;
+          if (!transport) {
+            res.status(400).json({
+              jsonrpc: '2.0',
+              error: {
+                code: -32000,
+                message: 'Bad Request: Invalid or unknown Mcp-Session-Id',
+              },
+              id: null,
+            });
+            return;
+          }
+        } else if (isInitializeRequest(req.body)) {
+          transport = await this.createAndConnectHttpTransport();
+        } else {
+          res.status(400).json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32000,
+              message: 'Bad Request: Mcp-Session-Id header is required',
+            },
+            id: null,
+          });
+          return;
+        }
+
+        await transport.handleRequest(req, res, req.body);
       } catch (error) {
         if (!res.headersSent) {
           res.status(500).json({
@@ -182,11 +212,63 @@ export class McpBrainServer {
     });
 
     app.get('/mcp', async (req: Request, res: Response) => {
-      await this.httpTransport.handleRequest(req, res);
+      const sessionId = this.getSessionId(req);
+      if (!sessionId) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Bad Request: Mcp-Session-Id header is required',
+          },
+          id: null,
+        });
+        return;
+      }
+
+      const transport = this.httpSessionsById.get(sessionId)?.transport;
+      if (!transport) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Bad Request: Invalid or unknown Mcp-Session-Id',
+          },
+          id: null,
+        });
+        return;
+      }
+
+      await transport.handleRequest(req, res);
     });
 
     app.delete('/mcp', async (req: Request, res: Response) => {
-      await this.httpTransport.handleRequest(req, res);
+      const sessionId = this.getSessionId(req);
+      if (!sessionId) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Bad Request: Mcp-Session-Id header is required',
+          },
+          id: null,
+        });
+        return;
+      }
+
+      const transport = this.httpSessionsById.get(sessionId)?.transport;
+      if (!transport) {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Bad Request: Invalid or unknown Mcp-Session-Id',
+          },
+          id: null,
+        });
+        return;
+      }
+
+      await transport.handleRequest(req, res);
     });
 
     app.get('/health', (_req: Request, res: Response) => {
@@ -203,6 +285,52 @@ export class McpBrainServer {
   }
 
   /**
+   * Creates isolated MCP protocol server so each HTTP session owns its own
+   * protocol lifecycle and repeated initialize calls do not collide.
+   */
+  private createProtocolServer(): McpServer {
+    const server = new McpServer({ name: this.name, version: this.version });
+    this.registerTools(server);
+    return server;
+  }
+
+  /**
+   * Creates and connects a new streamable HTTP transport for one MCP session.
+   */
+  private async createAndConnectHttpTransport(): Promise<StreamableHTTPServerTransport> {
+    const server = this.createProtocolServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      onsessioninitialized: (sessionId: string) => {
+        this.httpSessionsById.set(sessionId, { server, transport });
+      },
+    });
+
+    transport.onclose = () => {
+      const closedSessionId = transport.sessionId;
+      if (closedSessionId) {
+        this.httpSessionsById.delete(closedSessionId);
+      }
+    };
+
+    await server.connect(transport);
+    return transport;
+  }
+
+  /**
+   * Returns trimmed MCP session header value or undefined when absent.
+   */
+  private getSessionId(req: Request): string | undefined {
+    const rawSessionId = req.header('mcp-session-id');
+    if (typeof rawSessionId !== 'string') {
+      return undefined;
+    }
+
+    const sessionId = rawSessionId.trim();
+    return sessionId.length > 0 ? sessionId : undefined;
+  }
+
+  /**
    * Executes query tool logic without transport layer.
    *
    * This hook exists to enable integration tests against tool behavior without
@@ -210,6 +338,17 @@ export class McpBrainServer {
    */
   public async executeQueryTool(text: string, topK: number): Promise<Record<string, unknown>> {
     const result = await this.queryUseCase.execute({ text, topK });
+    return { ...result } as Record<string, unknown>;
+  }
+
+  /**
+   * Executes interaction inspection logic without transport layer.
+   */
+  public async executeInspectInteractionTool(
+    interactionId: string,
+    topK: number,
+  ): Promise<Record<string, unknown>> {
+    const result = await this.inspectInteractionUseCase.execute({ interactionId, topK });
     return { ...result } as Record<string, unknown>;
   }
 
@@ -243,12 +382,12 @@ export class McpBrainServer {
   /**
    * Registers query, feedback, and learn tools with strict schemas.
    */
-  private registerTools(): void {
-    this.server.registerTool(
+  private registerTools(server: McpServer): void {
+    server.registerTool(
       'query',
       {
         description:
-          'Embed query with all-MiniLM, apply SONA instant learning, return interaction ID + patterns.',
+          'Embed query with all-MiniLM, apply SONA instant learning, and return interaction ID plus matched evidence and pattern summaries.',
         inputSchema: {
           text: z.string().min(1).max(10_000),
           topK: z.number().int().min(1).max(20).default(5),
@@ -268,7 +407,31 @@ export class McpBrainServer {
       },
     );
 
-    this.server.registerTool(
+    server.registerTool(
+      'inspect_interaction',
+      {
+        description:
+          'Inspect a prior query interaction by ID, replaying retrieval context when needed to expose matched evidence and pattern summaries.',
+        inputSchema: {
+          interactionId: z.string().uuid(),
+          topK: z.number().int().min(1).max(20).default(5),
+        },
+      },
+      async ({ interactionId, topK }) => {
+        const result = await this.executeInspectInteractionTool(interactionId, topK);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+          structuredContent: result,
+        };
+      },
+    );
+
+    server.registerTool(
       'feedback',
       {
         description:
@@ -300,7 +463,7 @@ export class McpBrainServer {
       },
     );
 
-    this.server.registerTool(
+    server.registerTool(
       'learn',
       {
         description: 'Force SONA background learning cycle and return latest stats.',

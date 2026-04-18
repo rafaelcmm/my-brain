@@ -1,15 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { QueryUseCase } from './query-use-case.js';
+import { InspectInteractionUseCase } from './inspect-interaction-use-case.js';
 import type { AdaptiveBrainPort } from '../../ports/adaptive-brain-port.js';
 import type { EmbeddingsPort } from '../../ports/embeddings-port.js';
 
 /**
- * Embedding test double keeps vectors deterministic so tests validate
- * orchestration contracts instead of model behavior.
+ * Embedding test double keeps inspection replay deterministic and free from model downloads.
  */
 class FakeEmbeddingsPort implements EmbeddingsPort {
   public async embed(text: string): Promise<number[]> {
-    return [text.length, 1, 0];
+    return [text.length, 2, 0];
   }
 
   public getDimension(): number {
@@ -18,10 +17,12 @@ class FakeEmbeddingsPort implements EmbeddingsPort {
 }
 
 /**
- * Adaptive-brain test double returns stable canned values so assertions target
- * use-case flow and output mapping.
+ * Adaptive-brain fake exposes both buffered and durable interaction paths so inspection
+ * tests can verify active-buffer reuse and replay fallback behavior.
  */
 class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
+  public useBufferedEmbedding = true;
+
   public async beginInteraction(): Promise<string> {
     return '11111111-1111-4111-8111-111111111111';
   }
@@ -40,7 +41,7 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
   public async findPatterns(): Promise<
     Array<{ id: string; avgQuality: number; clusterSize: number; patternType: string }>
   > {
-    return [{ id: 'p1', avgQuality: 0.9, clusterSize: 7, patternType: 'General' }];
+    return [{ id: 'p1', avgQuality: 0.91, clusterSize: 4, patternType: 'General' }];
   }
 
   public async findMatchedEvidence(): Promise<
@@ -58,10 +59,10 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
   > {
     return [
       {
-        interactionId: '22222222-2222-4222-8222-222222222222',
-        text: 'prior helpdesk unlock flow',
-        score: 0.88,
-        rawScore: 0.88,
+        interactionId: '33333333-3333-4333-8333-333333333333',
+        text: 'reset lockout counter manually',
+        score: 0.79,
+        rawScore: 0.79,
         scoreType: 'vectorSimilarity',
         whyMatched: 'Nearest stored interaction.',
         retrievalRank: 1,
@@ -76,50 +77,60 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
     queryText: string;
     createdAtIso: string;
     updatedAtIso: string;
-    status: 'pending';
+    status: 'completed';
+    qualityScore: number;
   }> {
     return {
       interactionId: '11111111-1111-4111-8111-111111111111',
-      queryText: 'hello',
+      queryText: 'unlock locked account',
       createdAtIso: '2026-01-01T00:00:00.000Z',
       updatedAtIso: '2026-01-01T00:00:00.000Z',
-      status: 'pending',
+      status: 'completed',
+      qualityScore: 0.8,
     };
   }
 
   public async getBufferedAdaptedEmbedding(): Promise<number[] | undefined> {
-    return [5, 1, 0];
+    return this.useBufferedEmbedding ? [9, 1, 0] : undefined;
   }
 
   public async forceLearn(): Promise<string> {
-    return 'ok';
+    return 'forced';
   }
 
   public async getStats(): Promise<Record<string, unknown>> {
-    return { trajectories: 1 };
+    return { inspected: true };
   }
 }
 
 /**
- * Unit tests validate query orchestration behavior without infrastructure.
+ * Unit tests validate inspection behavior independently from transport and SONA runtime.
  */
-describe('QueryUseCase', () => {
-  it('returns interaction id, matched evidence, pattern summaries, and stats', async () => {
-    const useCase = new QueryUseCase(new FakeEmbeddingsPort(), new FakeAdaptiveBrainPort());
+describe('InspectInteractionUseCase', () => {
+  it('reuses active buffered embedding when available', async () => {
+    const port = new FakeAdaptiveBrainPort();
+    const useCase = new InspectInteractionUseCase(new FakeEmbeddingsPort(), port);
 
-    const output = await useCase.execute({ text: 'hello', topK: 5 });
+    const output = await useCase.execute({
+      interactionId: '11111111-1111-4111-8111-111111111111',
+      topK: 3,
+    });
 
-    expect(output.interactionId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(output.inspectionMode).toBe('active-buffer');
     expect(output.matchedEvidence).toHaveLength(1);
     expect(output.patternSummaries).toHaveLength(1);
-    expect(output.stats).toEqual({ trajectories: 1 });
   });
 
-  it('rejects invalid topK', async () => {
-    const useCase = new QueryUseCase(new FakeEmbeddingsPort(), new FakeAdaptiveBrainPort());
+  it('replays query text when live buffer is unavailable', async () => {
+    const port = new FakeAdaptiveBrainPort();
+    port.useBufferedEmbedding = false;
+    const useCase = new InspectInteractionUseCase(new FakeEmbeddingsPort(), port);
 
-    await expect(useCase.execute({ text: 'hello', topK: 0 })).rejects.toThrow(
-      'topK must be between 1 and 20.',
-    );
+    const output = await useCase.execute({
+      interactionId: '11111111-1111-4111-8111-111111111111',
+      topK: 3,
+    });
+
+    expect(output.inspectionMode).toBe('re-embedded-query');
   });
 });

@@ -35,6 +35,42 @@ class FakeAdaptiveBrainPort implements AdaptiveBrainPort {
     return [];
   }
 
+  public async findMatchedEvidence(): Promise<
+    Array<{
+      interactionId: string;
+      text: string;
+      score: number;
+      rawScore: number;
+      scoreType: 'vectorSimilarity';
+      whyMatched: string;
+      retrievalRank: number;
+      createdAtIso: string;
+      status: 'completed';
+    }>
+  > {
+    return [];
+  }
+
+  public async getInteractionRecord(): Promise<{
+    interactionId: string;
+    queryText: string;
+    createdAtIso: string;
+    updatedAtIso: string;
+    status: 'pending';
+  }> {
+    return {
+      interactionId: '11111111-1111-4111-8111-111111111111',
+      queryText: 'hello',
+      createdAtIso: '2026-01-01T00:00:00.000Z',
+      updatedAtIso: '2026-01-01T00:00:00.000Z',
+      status: 'pending',
+    };
+  }
+
+  public async getBufferedAdaptedEmbedding(): Promise<number[] | undefined> {
+    return undefined;
+  }
+
   public async forceLearn(): Promise<string> {
     return 'forced';
   }
