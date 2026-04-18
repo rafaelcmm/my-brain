@@ -29,9 +29,8 @@ Note: standalone `install.sh` is inside release bundle and repository, not uploa
 Pinned tag installer:
 
 ```bash
-MY_BRAIN_VERSION="vX.Y.Z"; \
-curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/${MY_BRAIN_VERSION}/release/install.sh" \
-  | MY_BRAIN_VERSION="${MY_BRAIN_VERSION}" bash
+export MY_BRAIN_VERSION="vX.Y.Z" && \
+  curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/${MY_BRAIN_VERSION}/release/install.sh" | bash
 ```
 
 Latest installer from main branch:
