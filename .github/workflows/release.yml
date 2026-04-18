@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate SemVer tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '${GITHUB_REF_NAME}' is not stable SemVer (vX.Y.Z)."
+            exit 1
+          fi
+
+      - name: Prepare release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE="ghcr.io/${OWNER_LC}/my-brain"
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Format check
+        run: yarn format:check
+
+      - name: Test
+        run: yarn test
+
+      - name: Build
+        run: yarn build
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build local image for security scan
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ${{ steps.meta.outputs.image }}:${{ github.ref_name }}
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.ref_name }}
+          format: table
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Push release image tags
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ github.ref_name }}
+            ${{ steps.meta.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.title=my-brain
+            org.opencontainers.image.description=A self-learning MCP server
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build release bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_DIR="my-brain-release-${GITHUB_REF_NAME}"
+          mkdir -p "${RELEASE_DIR}"
+
+          cp release/docker-compose.release.yml "${RELEASE_DIR}/docker-compose.release.yml"
+          cp release/.env.release.example "${RELEASE_DIR}/.env.release.example"
+          cp release/INSTALL.md "${RELEASE_DIR}/INSTALL.md"
+
+          sed -i "s|ghcr.io/ORG/my-brain:v1.0.0|${{ steps.meta.outputs.image }}:v${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/.env.release.example"
+          sed -i "s|MCP_SERVER_VERSION=1.0.0|MCP_SERVER_VERSION=${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/.env.release.example"
+
+          tar -czf "${RELEASE_DIR}.tar.gz" "${RELEASE_DIR}"
+          sha256sum "${RELEASE_DIR}.tar.gz" > "${RELEASE_DIR}.sha256"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            my-brain-release-${{ github.ref_name }}.tar.gz
+            my-brain-release-${{ github.ref_name }}.sha256
