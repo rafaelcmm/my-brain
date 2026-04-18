@@ -17,22 +17,6 @@
 
 ## Install
 
-Local setup:
-
-```bash
-corepack enable
-yarn install --frozen-lockfile
-```
-
-Pinned release installer example (fixed URL pattern; works for `v1.0.3`):
-
-```bash
-export MY_BRAIN_VERSION="v1.0.3" && \
-  curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/${MY_BRAIN_VERSION}/release/install.sh" | bash
-```
-
-Generic pinned version:
-
 ```bash
 export MY_BRAIN_VERSION="vX.Y.Z" && \
   curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/${MY_BRAIN_VERSION}/release/install.sh" | bash
