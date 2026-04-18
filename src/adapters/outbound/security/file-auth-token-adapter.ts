@@ -76,7 +76,7 @@ export class FileAuthTokenAdapter implements AuthTokenPort {
     }
 
     throw new Error(
-      'No active MCP auth token found. Initialize with yarn auth:token:init --bootstrap-token <secure-token>.',
+      'No active MCP auth token found. Initialize with node dist/cli/manage-auth-token.js init --bootstrap-token <secure-token>.',
     );
   }
 
