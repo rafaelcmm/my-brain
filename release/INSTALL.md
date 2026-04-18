@@ -7,8 +7,9 @@ This release bundle targets one Docker host with local persistent volumes.
 Pinned version install (recommended):
 
 ```bash
-curl -fsSL "https://github.com/rafaelmonteiro/my-brain/releases/download/vX.Y.Z/install.sh" \
-  | MY_BRAIN_VERSION="vX.Y.Z" bash
+MY_BRAIN_VERSION="vX.Y.Z"; \
+curl -fsSL "https://raw.githubusercontent.com/rafaelmonteiro/my-brain/${MY_BRAIN_VERSION}/release/install.sh" \
+  | MY_BRAIN_VERSION="${MY_BRAIN_VERSION}" bash
 ```
 
 Latest release install:
