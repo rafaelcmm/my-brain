@@ -71,6 +71,34 @@ yarn build
 
 Use `yarn start` when you want the Docker stack running detached after the image builds.
 
+## Production Releases
+
+Tag pushes matching `vX.Y.Z` trigger automated release publishing:
+
+- GHCR image: `ghcr.io/<owner>/my-brain:vX.Y.Z` and `latest`
+- Release assets:
+  - `my-brain-release-vX.Y.Z.tar.gz`
+  - `my-brain-release-vX.Y.Z.sha256`
+
+Release pipeline gates:
+
+- lint
+- format check
+- test
+- build
+- container vulnerability scan (blocks HIGH/CRITICAL)
+
+Install from release bundle:
+
+1. Download `tar.gz` and `.sha256` from GitHub Releases.
+2. Verify checksum (`sha256sum -c ...`).
+3. Extract bundle and configure `.env` from `.env.release.example`.
+4. If first boot has empty token store and no `MCP_AUTH_TOKEN`, run one-off bootstrap init with compiled CLI.
+5. Start with `docker compose -f docker-compose.release.yml --env-file .env up -d`.
+6. Rotate token from running container and remove bootstrap secret.
+
+Operator runbook: `release/INSTALL.md`
+
 ## Test and Quality
 
 ```bash
@@ -116,6 +144,23 @@ You can also seed init explicitly:
 ```bash
 yarn auth:token:init --bootstrap-token "<32+ char secret>"
 ```
+
+For production runtime containers from release bundle directory, use compiled CLI with the same compose args used for startup:
+
+```bash
+# first boot only when token store is empty and MCP_AUTH_TOKEN is unset
+docker compose -f docker-compose.release.yml --env-file .env \
+  run --rm --no-deps \
+  -e MCP_BOOTSTRAP_TOKEN="<32+ char secret>" \
+  brain-mcp node dist/cli/manage-auth-token.js init \
+  --label "initial-bootstrap" \
+  --bootstrap-token-env MCP_BOOTSTRAP_TOKEN
+
+docker compose -f docker-compose.release.yml --env-file .env exec brain-mcp \
+  node dist/cli/manage-auth-token.js rotate --label "initial-rotate"
+```
+
+If `.env` already sets `MCP_AUTH_TOKEN`, pre-start init can be skipped.
 
 The rotate command prints a new token once. Update your client environment (`MCP_AUTH_TOKEN`) and rotate immediately after initial bootstrap.
 
