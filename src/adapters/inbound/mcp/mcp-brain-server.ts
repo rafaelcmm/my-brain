@@ -5,7 +5,7 @@ import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import cors from 'cors';
 import helmet from 'helmet';
-import { randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
@@ -13,13 +13,17 @@ import type { QueryUseCase } from '../../../core/application/use-cases/query-use
 import type { FeedbackUseCase } from '../../../core/application/use-cases/feedback-use-case.js';
 import type { InspectInteractionUseCase } from '../../../core/application/use-cases/inspect-interaction-use-case.js';
 import type { LearnUseCase } from '../../../core/application/use-cases/learn-use-case.js';
+import type { AuthTokenPort } from '../../../core/ports/auth-token-port.js';
 
 /**
  * HTTP transport hardening options passed from runtime configuration.
  */
 export interface HttpSecurityOptions {
-  /** Bearer token required by HTTP MCP endpoint. */
-  readonly authToken?: string;
+  /** Persisted token verifier for HTTP MCP endpoint. */
+  readonly authTokens?: AuthTokenPort;
+
+  /** Optional seed token used when persisted store is still empty. */
+  readonly bootstrapToken?: string;
 
   /** Optional explicit CORS allow-list. Empty disables CORS headers. */
   readonly allowedOrigins: readonly string[];
@@ -51,7 +55,8 @@ export class McpBrainServer {
    * @param feedbackUseCase Feedback application use-case.
    * @param learnUseCase Learn application use-case.
    * @param httpSecurityOptions HTTP hardening contract, including optional bearer
-   * token auth, CORS allow-list, request-size ceiling, and rate-limiting controls.
+   * token verifier, bootstrap seed for empty token stores, CORS allow-list,
+   * request-size ceiling, and rate-limiting controls.
    */
   public constructor(
     private readonly name: string,
@@ -80,6 +85,11 @@ export class McpBrainServer {
    */
   public async startHttp(port: number, host: string): Promise<void> {
     const app = createMcpExpressApp({ host });
+    if (!this.httpSecurityOptions.authTokens) {
+      throw new Error('HTTP transport requires auth token verifier configuration.');
+    }
+
+    this.httpSecurityOptions.authTokens.ensureActiveToken(this.httpSecurityOptions.bootstrapToken);
 
     // Honor upstream proxy headers to make per-client rate limiting accurate behind reverse proxies.
     app.set('trust proxy', 1);
@@ -126,26 +136,14 @@ export class McpBrainServer {
     );
 
     app.use('/mcp', (req: Request, res: Response, next: () => void) => {
-      const expectedToken = this.httpSecurityOptions.authToken;
-      if (!expectedToken) {
+      const authTokens = this.httpSecurityOptions.authTokens;
+      if (!authTokens) {
         next();
         return;
       }
 
-      const authHeader = req.header('authorization');
-      const bearerPrefix = 'Bearer ';
-      const providedToken =
-        typeof authHeader === 'string' && authHeader.startsWith(bearerPrefix)
-          ? authHeader.slice(bearerPrefix.length).trim()
-          : '';
-
-      const expectedBuffer = Buffer.from(expectedToken, 'utf8');
-      const providedBuffer = Buffer.from(providedToken, 'utf8');
-      // Match lengths first to avoid timingSafeEqual throwing on unequal buffer sizes.
-      const isTokenValid =
-        // Constant-time compare reduces token-check timing side-channel leakage.
-        expectedBuffer.length === providedBuffer.length &&
-        timingSafeEqual(expectedBuffer, providedBuffer);
+      const providedToken = this.parseBearerToken(req.header('authorization'));
+      const isTokenValid = authTokens.verifyToken(providedToken);
 
       if (!isTokenValid) {
         res.status(401).json({
@@ -328,6 +326,22 @@ export class McpBrainServer {
 
     const sessionId = rawSessionId.trim();
     return sessionId.length > 0 ? sessionId : undefined;
+  }
+
+  /**
+   * Parses bearer token with strict format so malformed headers fail closed.
+   */
+  private parseBearerToken(authHeader: string | undefined): string {
+    if (typeof authHeader !== 'string') {
+      return '';
+    }
+
+    const parts = authHeader.trim().split(/\s+/);
+    if (parts.length !== 2 || parts[0]?.toLowerCase() !== 'bearer') {
+      return '';
+    }
+
+    return parts[1] ?? '';
   }
 
   /**

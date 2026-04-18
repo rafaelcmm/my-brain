@@ -51,7 +51,7 @@ yarn install --frozen-lockfile
 ```
 
 Container deployment has built-in defaults inside image/compose.
-For HTTP transport with Docker Compose, `MCP_AUTH_TOKEN` is mandatory.
+For HTTP transport with Docker Compose, auth tokens persist in `MCP_AUTH_STORE_PATH`.
 
 ## Development Runtime
 
@@ -87,7 +87,7 @@ Prepare required environment:
 
 ```bash
 cp .env.example .env
-# set MCP_AUTH_TOKEN in .env to a 16+ character secret
+# optional: set MCP_AUTH_TOKEN in .env to seed first token on initial startup (32+ chars)
 ```
 
 ```bash
@@ -102,14 +102,31 @@ HTTP transport requires a bearer token. Send:
 Authorization: Bearer <MCP_AUTH_TOKEN>
 ```
 
-The example client in `examples/mcp.example.json` expects `MCP_AUTH_TOKEN` in your shell environment.
+If no token exists in persisted store, startup fails closed until token store is initialized. Store path defaults to `/data/mcp-auth-tokens.json`.
+
+Manage tokens explicitly with scripts:
+
+```bash
+yarn auth:token:init
+yarn auth:token:rotate --label "operator-rotate-2026-04-17"
+```
+
+You can also seed init explicitly:
+
+```bash
+yarn auth:token:init --bootstrap-token "<32+ char secret>"
+```
+
+The rotate command prints a new token once. Update your client environment (`MCP_AUTH_TOKEN`) and rotate immediately after initial bootstrap.
+
+The example client in `examples/mcp.example.json` still expects `MCP_AUTH_TOKEN` in your shell environment.
 
 Security defaults in compose now bind to localhost and run hardened container settings (`read_only`, `cap_drop: ALL`, `no-new-privileges`, resource and log limits).
-Compose fails fast during config/load if `MCP_AUTH_TOKEN` is missing.
 
 State persistence:
 
 - `brain_data` volume: `/data/ruvector.db`
+- `brain_data` volume: `/data/mcp-auth-tokens.json` token store
 - `brain_models` volume: cached embedding model files
 
 Useful Docker commands:
@@ -246,5 +263,5 @@ Output:
 - Query text is persisted for explainable retrieval. Treat this as a single-tenant trusted-memory feature unless you add redaction, retention, and tenant isolation.
 - Security boundary validates MCP tool inputs with Zod schemas.
 - HTTP hardening uses `helmet`, rate limiting, and request-size limits configurable via env (`MCP_RATE_LIMIT_*`, `MCP_MAX_BODY_BYTES`).
-- HTTP MCP auth is enforced with bearer token via `MCP_AUTH_TOKEN` when transport is `http`.
+- HTTP MCP auth is enforced with persisted hashed bearer tokens via `MCP_AUTH_STORE_PATH` when transport is `http`.
 - `examples/mcp.example.json` requires HTTP transport (`MCP_TRANSPORT=http`).

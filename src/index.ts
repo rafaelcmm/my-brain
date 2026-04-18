@@ -6,7 +6,7 @@ import { loadRuntimeConfig } from './shared/config/env.js';
  */
 async function main(): Promise<void> {
   const config = loadRuntimeConfig();
-  const app = createApp();
+  const app = createApp(config);
 
   if (config.mcpTransport === 'http') {
     await app.startHttp(config.mcpHttpPort, config.mcpHttpHost);

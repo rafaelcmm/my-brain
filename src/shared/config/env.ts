@@ -34,8 +34,11 @@ export interface RuntimeConfig {
   /** HTTP bind port when using HTTP transport. */
   readonly mcpHttpPort: number;
 
-  /** Bearer token required for HTTP MCP requests. Required in HTTP transport. */
+  /** Optional bootstrap token used to seed empty persisted auth store. */
   readonly mcpAuthToken?: string;
+
+  /** Path to persisted auth token store used by HTTP transport. */
+  readonly mcpAuthStorePath: string;
 
   /** Optional CORS origin allow-list for HTTP transport. */
   readonly mcpAllowedOrigins: readonly string[];
@@ -71,6 +74,10 @@ export interface RuntimeConfig {
   readonly sonaEwcLambda: number;
 }
 
+/**
+ * Parses boolean-like env values while preserving deterministic fallback when
+ * variable is omitted.
+ */
 function parseBooleanEnv(rawValue: string | undefined, fallback: boolean): boolean {
   if (rawValue === undefined) {
     return fallback;
@@ -80,11 +87,18 @@ function parseBooleanEnv(rawValue: string | undefined, fallback: boolean): boole
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 }
 
+/**
+ * Parses integer environment values with safe fallback when unset or invalid.
+ */
 function parseNumberEnv(rawValue: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(rawValue ?? String(fallback), 10);
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+/**
+ * Parses comma-separated CORS origins while removing empty entries so runtime
+ * CORS configuration receives only explicit operator-approved origins.
+ */
 function parseAllowedOrigins(rawValue: string | undefined): readonly string[] {
   if (!rawValue) {
     return [];
@@ -187,10 +201,8 @@ export function loadRuntimeConfig(): RuntimeConfig {
   }
 
   const mcpAuthToken = process.env.MCP_AUTH_TOKEN?.trim();
-  if (mcpTransportRaw === 'http' && (!mcpAuthToken || mcpAuthToken.length < 16)) {
-    throw new Error(
-      'MCP_AUTH_TOKEN is required in HTTP transport and must be at least 16 characters.',
-    );
+  if (mcpAuthToken && mcpAuthToken.length < 32) {
+    throw new Error('MCP_AUTH_TOKEN must be at least 32 characters when provided.');
   }
 
   const modelCacheDir = validatePathEnv(
@@ -201,10 +213,14 @@ export function loadRuntimeConfig(): RuntimeConfig {
     process.env.RUVECTOR_DB_PATH ?? '/data/ruvector.db',
     'RUVECTOR_DB_PATH',
   );
+  const mcpAuthStorePath = validatePathEnv(
+    process.env.MCP_AUTH_STORE_PATH ?? '/data/mcp-auth-tokens.json',
+    'MCP_AUTH_STORE_PATH',
+  );
 
   return {
     serverName: process.env.MCP_SERVER_NAME ?? 'my-brain',
-    serverVersion: process.env.MCP_SERVER_VERSION ?? '0.1.0',
+    serverVersion: process.env.MCP_SERVER_VERSION ?? '1.0.0',
     embeddingModelId: process.env.EMBEDDING_MODEL_ID ?? 'sentence-transformers/all-MiniLM-L6-v2',
     embeddingDim,
     modelCacheDir,
@@ -213,6 +229,7 @@ export function loadRuntimeConfig(): RuntimeConfig {
     mcpHttpHost: process.env.MCP_HTTP_HOST ?? '127.0.0.1',
     mcpHttpPort,
     mcpAuthToken,
+    mcpAuthStorePath,
     mcpAllowedOrigins: parseAllowedOrigins(process.env.MCP_ALLOWED_ORIGINS),
     mcpMaxBodyBytes,
     mcpRateLimitWindowMs,

@@ -2,6 +2,10 @@ import { config as loadEnv } from 'dotenv';
 import { execFileSync } from 'node:child_process';
 import { normalize, resolve } from 'node:path';
 
+/**
+ * ClearDbOptions captures validated CLI intent before destructive operations
+ * run against Docker-managed persistent data.
+ */
 interface ClearDbOptions {
   readonly envFile: string;
   readonly force: boolean;

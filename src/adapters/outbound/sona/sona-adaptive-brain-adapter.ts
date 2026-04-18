@@ -10,12 +10,27 @@ import type {
   QueryEvidence,
 } from '../../../core/domain/interaction.js';
 
+/**
+ * SonaRuntimeConfig captures tunable SONA adaptation parameters loaded from
+ * environment so deployments can balance learning speed and stability.
+ */
 export interface SonaRuntimeConfig {
+  /** Micro LoRA rank for short-horizon adaptation updates. */
   readonly microLoraRank: number;
+
+  /** Base LoRA rank controlling capacity of long-horizon adaptation layer. */
   readonly baseLoraRank: number;
+
+  /** Learning rate for micro adaptation updates applied during fast learning. */
   readonly microLoraLr: number;
+
+  /** Minimum trajectory quality required before committing adaptation signal. */
   readonly qualityThreshold: number;
+
+  /** Pattern cluster count used by SONA pattern summarization stage. */
   readonly patternClusters: number;
+
+  /** EWC regularization strength preserving prior knowledge during updates. */
   readonly ewcLambda: number;
 }
 

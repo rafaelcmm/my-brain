@@ -1,6 +1,6 @@
 {
   "name": "my-brain",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A self learning system to improve LLMs with feedback",
   "type": "commonjs",
   "license": "MIT",
@@ -10,6 +10,8 @@
     "start": "docker compose up -d --build",
     "db:clear": "tsx scripts/clear-db.ts",
     "db:clear:force": "tsx scripts/clear-db.ts --force",
+    "auth:token:init": "tsx scripts/manage-auth-token.ts init",
+    "auth:token:rotate": "tsx scripts/manage-auth-token.ts rotate",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:restart": "docker compose down && docker compose up -d --build",
@@ -35,6 +37,9 @@
     "helmet": "^8.1.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
+  },
+  "resolutions": {
+    "protobufjs": "^7.5.5"
   },
   "overrides": {
     "protobufjs": "^7.5.5"
