@@ -92,7 +92,7 @@ Install from release bundle:
 
 1. Download `tar.gz` and `.sha256` from GitHub Releases.
 2. Verify checksum (`sha256sum -c ...`).
-3. Extract bundle and configure `.env` from `.env.release.example`.
+3. Extract bundle and configure `.env` from `env.release.example`.
 4. If first boot has empty token store and no `MCP_AUTH_TOKEN`, run one-off bootstrap init with compiled CLI.
 5. Start with `docker compose -f docker-compose.release.yml --env-file .env up -d`.
 6. Rotate token from running container and remove bootstrap secret.

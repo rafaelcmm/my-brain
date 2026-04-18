@@ -27,7 +27,7 @@ Do not extract bundle until checksum verification succeeds.
 ```bash
 tar -xzf my-brain-release-vX.Y.Z.tar.gz
 cd my-brain-release-vX.Y.Z
-cp .env.release.example .env
+cp env.release.example .env
 ```
 
 Edit `.env`:

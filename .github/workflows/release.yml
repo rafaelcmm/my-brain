@@ -109,11 +109,11 @@ jobs:
           mkdir -p "${RELEASE_DIR}"
 
           cp release/docker-compose.release.yml "${RELEASE_DIR}/docker-compose.release.yml"
-          cp release/.env.release.example "${RELEASE_DIR}/.env.release.example"
+          cp release/env.release.example "${RELEASE_DIR}/env.release.example"
           cp release/INSTALL.md "${RELEASE_DIR}/INSTALL.md"
 
-          sed -i "s|ghcr.io/ORG/my-brain:v1.0.0|${{ steps.meta.outputs.image }}:v${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/.env.release.example"
-          sed -i "s|MCP_SERVER_VERSION=1.0.0|MCP_SERVER_VERSION=${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/.env.release.example"
+          sed -i "s|ghcr.io/ORG/my-brain:v1.0.0|${{ steps.meta.outputs.image }}:v${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/env.release.example"
+          sed -i "s|MCP_SERVER_VERSION=1.0.0|MCP_SERVER_VERSION=${{ steps.meta.outputs.version }}|g" "${RELEASE_DIR}/env.release.example"
 
           tar -czf "${RELEASE_DIR}.tar.gz" "${RELEASE_DIR}"
           sha256sum "${RELEASE_DIR}.tar.gz" > "${RELEASE_DIR}.sha256"
