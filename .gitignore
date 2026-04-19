@@ -10,6 +10,8 @@ coverage/
 .env
 .env.*
 !.env.example
+.secrets/
+.mcp.json
 
 # Logs
 npm-debug.log*
@@ -24,3 +26,7 @@ Thumbs.db
 *.swo
 .idea/
 .vscode/
+
+# Runtime and backups
+*.bak
+*.previous
