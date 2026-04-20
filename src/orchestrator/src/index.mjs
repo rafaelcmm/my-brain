@@ -1,5 +1,8 @@
 import http from "node:http";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { Pool } from "pg";
 
 const FULL_MODE = "full";
@@ -437,6 +440,244 @@ function getCapabilities() {
 }
 
 /**
+ * Reads request body as JSON object and fails closed on malformed payloads.
+ *
+ * @param {http.IncomingMessage} req Incoming HTTP request stream.
+ * @returns {Promise<Record<string, unknown>>} Parsed JSON object payload.
+ */
+function parseJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    /** @type {Buffer[]} */
+    const chunks = [];
+
+    req.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+
+    req.on("end", () => {
+      try {
+        const text = Buffer.concat(chunks).toString("utf8").trim();
+        if (!text) {
+          resolve({});
+          return;
+        }
+
+        const parsed = JSON.parse(text);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          reject(new Error("JSON body must be an object"));
+          return;
+        }
+
+        resolve(parsed);
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    req.on("error", reject);
+  });
+}
+
+/**
+ * Executes safe git command to derive project context metadata.
+ *
+ * @param {string[]} args Git command arguments.
+ * @returns {string | null} Command stdout when successful.
+ */
+function runGitCommand(args) {
+  try {
+    const output = execFileSync("git", args, {
+      cwd: process.cwd(),
+      timeout: 2000,
+      maxBuffer: 16 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString("utf8")
+      .trim();
+
+    return output || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Converts common git URL formats into normalized repo and short repo_name.
+ *
+ * @param {string | null} remoteUrl Git remote URL candidate.
+ * @returns {{repo: string | null, repo_name: string | null}} Normalized identifiers.
+ */
+function parseRemoteRepo(remoteUrl) {
+  if (!remoteUrl) {
+    return { repo: null, repo_name: null };
+  }
+
+  const normalized = remoteUrl
+    .replace(/^git@/, "")
+    .replace(/:/, "/")
+    .replace(/^https?:\/\//, "")
+    .replace(/\.git$/, "");
+
+  const parts = normalized.split("/").filter(Boolean);
+  const repoName = parts.length > 0 ? parts[parts.length - 1] : null;
+
+  return {
+    repo: normalized,
+    repo_name: repoName,
+  };
+}
+
+/**
+ * Detects active frameworks using manifest files in current workspace.
+ *
+ * @returns {string[]} Framework identifiers used as context metadata.
+ */
+function detectFrameworks() {
+  const frameworks = new Set();
+
+  const packageJsonPath = path.join(process.cwd(), "package.json");
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+      const deps = {
+        ...(pkg.dependencies ?? {}),
+        ...(pkg.devDependencies ?? {}),
+      };
+
+      if (deps.react) frameworks.add("react");
+      if (deps.next) frameworks.add("nextjs");
+      if (deps.express) frameworks.add("express");
+      if (deps.hono) frameworks.add("hono");
+      if (deps.typescript) frameworks.add("typescript");
+      if (deps["@modelcontextprotocol/sdk"]) frameworks.add("mcp");
+    } catch {
+      // Keep probe resilient if package.json is malformed.
+    }
+  }
+
+  if (fs.existsSync(path.join(process.cwd(), "docker-compose.yml"))) {
+    frameworks.add("docker");
+  }
+
+  if (fs.existsSync(path.join(process.cwd(), "src", "gateway", "Caddyfile"))) {
+    frameworks.add("caddy");
+  }
+
+  return Array.from(frameworks);
+}
+
+/**
+ * Derives project context used by capture and recall flows.
+ *
+ * @returns {Record<string, unknown>} Project context envelope.
+ */
+function buildProjectContext() {
+  const remoteOrigin = runGitCommand(["config", "--get", "remote.origin.url"]);
+  const author = runGitCommand(["config", "--get", "user.email"]);
+  const { repo, repo_name: repoName } = parseRemoteRepo(remoteOrigin);
+
+  return {
+    repo,
+    repo_name: repoName,
+    project: repoName ?? path.basename(process.cwd()),
+    language: "javascript",
+    frameworks: detectFrameworks(),
+    author,
+    source: `conversation:${new Date().toISOString().slice(0, 10)}`,
+    generated_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Persists sidecar metadata row for a newly remembered memory.
+ *
+ * @param {string} memoryId Stable memory identifier from memory engine.
+ * @param {Record<string, unknown>} envelope Validated metadata envelope.
+ * @returns {Promise<void>}
+ */
+async function persistMemoryMetadata(memoryId, envelope) {
+  if (!runtime.pool) {
+    pushDegradedReason("metadata persistence unavailable");
+    return;
+  }
+
+  const metadata = /** @type {Record<string, unknown>} */ (envelope.metadata ?? {});
+  const frameworks = Array.isArray(metadata.frameworks) ? metadata.frameworks : [];
+  const tags = Array.isArray(metadata.tags) ? metadata.tags : [];
+
+  await runtime.pool.query(
+    `INSERT INTO my_brain_memory_metadata (
+      memory_id,
+      content,
+      type,
+      scope,
+      repo,
+      repo_name,
+      project,
+      language,
+      frameworks,
+      path,
+      symbol,
+      tags,
+      source,
+      author,
+      agent,
+      created_at,
+      expires_at,
+      confidence,
+      visibility,
+      metadata
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8,
+      $9::jsonb, $10, $11, $12::jsonb, $13, $14, $15,
+      COALESCE($16::timestamptz, NOW()), $17::timestamptz, $18, $19, $20::jsonb
+    )
+    ON CONFLICT (memory_id) DO UPDATE SET
+      content = EXCLUDED.content,
+      type = EXCLUDED.type,
+      scope = EXCLUDED.scope,
+      repo = EXCLUDED.repo,
+      repo_name = EXCLUDED.repo_name,
+      project = EXCLUDED.project,
+      language = EXCLUDED.language,
+      frameworks = EXCLUDED.frameworks,
+      path = EXCLUDED.path,
+      symbol = EXCLUDED.symbol,
+      tags = EXCLUDED.tags,
+      source = EXCLUDED.source,
+      author = EXCLUDED.author,
+      agent = EXCLUDED.agent,
+      created_at = EXCLUDED.created_at,
+      expires_at = EXCLUDED.expires_at,
+      confidence = EXCLUDED.confidence,
+      visibility = EXCLUDED.visibility,
+      metadata = EXCLUDED.metadata`,
+    [
+      memoryId,
+      envelope.content,
+      envelope.type,
+      envelope.scope,
+      metadata.repo,
+      metadata.repo_name,
+      metadata.project,
+      metadata.language,
+      JSON.stringify(frameworks),
+      metadata.path,
+      metadata.symbol,
+      JSON.stringify(tags),
+      metadata.source,
+      metadata.author,
+      metadata.agent,
+      metadata.created_at,
+      metadata.expires_at,
+      metadata.confidence,
+      metadata.visibility,
+      JSON.stringify(metadata),
+    ],
+  );
+}
+
+/**
  * Sends JSON responses with stable content-type and status handling.
  *
  * @param {http.ServerResponse} res Node response object.
@@ -456,7 +697,7 @@ function sendJson(res, status, payload) {
  * @param {http.ServerResponse} res HTTP response.
  * @returns {void}
  */
-function handleRequest(req, res) {
+async function handleRequest(req, res) {
   const method = req.method ?? "GET";
   const url = req.url ?? "/";
 
@@ -519,13 +760,106 @@ function handleRequest(req, res) {
     return;
   }
 
+  if (method === "POST" && url === "/v1/context/probe") {
+    sendJson(res, 200, {
+      success: true,
+      context: buildProjectContext(),
+      degraded: runtime.degradedReasons.length > 0,
+    });
+    return;
+  }
+
+  if (method === "POST" && url === "/v1/memory") {
+    let payload;
+    try {
+      payload = await parseJsonBody(req);
+    } catch (error) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: error instanceof Error ? error.message : "invalid json payload",
+      });
+      return;
+    }
+
+    const validation = validateMemoryEnvelope(payload);
+    if (!validation.valid || !validation.envelope) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: "memory envelope validation failed",
+        details: validation.errors,
+      });
+      return;
+    }
+
+    const envelope = validation.envelope;
+    const context = buildProjectContext();
+    envelope.metadata = {
+      ...(envelope.metadata ?? {}),
+      repo: envelope.metadata?.repo ?? context.repo,
+      repo_name: envelope.metadata?.repo_name ?? context.repo_name,
+      project: envelope.metadata?.project ?? context.project,
+      language: envelope.metadata?.language ?? context.language,
+      frameworks:
+        Array.isArray(envelope.metadata?.frameworks) && envelope.metadata.frameworks.length > 0
+          ? envelope.metadata.frameworks
+          : context.frameworks,
+      author: envelope.metadata?.author ?? context.author,
+      source: envelope.metadata?.source ?? context.source,
+    };
+
+    if (!runtime.intelligenceEngine) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "memory engine unavailable",
+      });
+      return;
+    }
+
+    try {
+      const remembered = await runtime.intelligenceEngine.remember(envelope.content, envelope.type);
+      const memoryId =
+        sanitizeText(remembered?.id, 128) ??
+        `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      await persistMemoryMetadata(memoryId, envelope);
+
+      sendJson(res, 200, {
+        success: true,
+        memory_id: memoryId,
+        scope: envelope.scope,
+        type: envelope.type,
+      });
+    } catch (error) {
+      sendJson(res, 500, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "failed to store memory",
+      });
+    }
+    return;
+  }
+
   sendJson(res, 404, {
     error: "not_found",
     message: "Route not implemented in bootstrap orchestrator",
   });
 }
 
-const server = http.createServer(handleRequest);
+const server = http.createServer((req, res) => {
+  handleRequest(req, res).catch((error) => {
+    process.stderr.write(
+      `[my-brain] request handler failure: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    sendJson(res, 500, {
+      success: false,
+      error: "SERVER_ERROR",
+      message: "unhandled orchestrator error",
+    });
+  });
+});
 
 initializeRuntime()
   .catch((error) => {

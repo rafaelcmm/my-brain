@@ -7,6 +7,8 @@ This file is API and configuration reference for maintainers.
 - `GET /health`: orchestrator liveness.
 - `GET /v1/status`: orchestrator status snapshot.
 - `GET /v1/capabilities`: engine/vector/sona/attention capability flags and degraded-mode reasons.
+- `POST /v1/context/probe`: derives repo/project/language/framework context from local workspace.
+- `POST /v1/memory`: writes validated memory envelope and metadata sidecar row.
 
 More endpoints are added incrementally and documented here in same change set.
 
