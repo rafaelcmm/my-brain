@@ -10,13 +10,13 @@
 5. chmod 700 .secrets && chmod 600 .secrets/auth-token
 6. printf 'unused-placeholder' > .secrets/auth-token.previous && chmod 600 .secrets/auth-token.previous
 7. docker compose up -d
-8. ./scripts/smoke-test.sh
+8. ./src/scripts/smoke-test.sh
 
 ## Rotate Token
 
-1. ./scripts/rotate-token.sh
+1. ./src/scripts/rotate-token.sh
 2. Update client header configuration.
-3. Re-run ./scripts/smoke-test.sh
+3. Re-run ./src/scripts/smoke-test.sh
 
 ## Tear Down
 

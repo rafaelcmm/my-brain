@@ -5,8 +5,8 @@
   "description": "Self-hosted memory and orchestration layer for MCP clients.",
   "license": "MIT",
   "scripts": {
-    "lint": "npm run lint --prefix orchestrator",
-    "test": "npm run test --prefix orchestrator",
+    "lint": "npm run lint --prefix src/orchestrator",
+    "test": "npm run test --prefix src/orchestrator",
     "format:check": "prettier --check ."
   },
   "devDependencies": {

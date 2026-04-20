@@ -29,7 +29,7 @@ services:
       POSTGRES_DB: ${MYBRAIN_DB_NAME:-mybrain_db}
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ./src/db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test:
         [
@@ -83,7 +83,7 @@ services:
     image: ${MYBRAIN_ORCHESTRATOR_IMAGE_TAG:-my-brain/orchestrator:local}
     build:
       context: .
-      dockerfile: orchestrator/Dockerfile
+      dockerfile: src/orchestrator/Dockerfile
     container_name: my-brain-orchestrator
     restart: unless-stopped
     depends_on:
@@ -126,7 +126,7 @@ services:
     image: my-brain/mcp-bridge:local
     build:
       context: .
-      dockerfile: mcp-bridge/Dockerfile
+      dockerfile: src/mcp-bridge/Dockerfile
     container_name: my-brain-mcp
     restart: unless-stopped
     depends_on:
@@ -160,7 +160,7 @@ services:
       MYBRAIN_AUTH_TOKEN_FILE: /run/secrets/auth-token
       MYBRAIN_CORS_ORIGINS: ${MYBRAIN_CORS_ORIGINS:-http://localhost,http://127.0.0.1}
     volumes:
-      - ./gateway/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./src/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./.secrets:/run/secrets:ro
       - caddy-data:/data
       - caddy-config:/config

@@ -25,13 +25,13 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 
 1. Clone this repository.
 2. Run:
-   ./scripts/install.sh
+   ./src/scripts/install.sh
 3. Copy token from .secrets/auth-token into your MCP client config.
 
 ### Option B: one-line bootstrap (after you publish this repo)
 
 1. Run:
-   curl -fsSL https://raw.githubusercontent.com/<your-org>/my-brain/main/scripts/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/<your-org>/my-brain/main/src/scripts/install.sh | bash
 2. Review printed MCP snippet and paste into your local client config.
 
 ## Prerequisites
@@ -48,7 +48,7 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 2. Check services:
    docker compose ps
 3. Run smoke test:
-   ./scripts/smoke-test.sh
+   ./src/scripts/smoke-test.sh
 4. Read logs:
    docker compose logs -f my-brain-orchestrator
 5. Stop stack:
@@ -60,15 +60,15 @@ Use .mcp.json.example as base. Recommended header approach uses environment vari
 
 ```json
 {
-   "mcpServers": {
-      "my-brain": {
-         "type": "sse",
-         "url": "http://127.0.0.1:3333/sse",
-         "headers": {
-            "Authorization": "Bearer ${env:MYBRAIN_TOKEN}"
-         }
+  "mcpServers": {
+    "my-brain": {
+      "type": "sse",
+      "url": "http://127.0.0.1:3333/sse",
+      "headers": {
+        "Authorization": "Bearer ${env:MYBRAIN_TOKEN}"
       }
-   }
+    }
+  }
 }
 ```
 
@@ -84,7 +84,7 @@ export MYBRAIN_TOKEN="$(cat ~/.my-brain/.secrets/auth-token)"
 2. Only gateway exposes ports to host.
 3. Gateway validates bearer token for both MCP and REST.
 4. Gateway strips Authorization header before forwarding upstream.
-5. Token rotates with ./scripts/rotate-token.sh and triggers gateway reload.
+5. Token rotates with ./src/scripts/rotate-token.sh and triggers gateway reload.
 
 ## Configuration
 
@@ -100,10 +100,10 @@ High-impact variables:
 
 ## Repository Map
 
-1. orchestrator/: runtime process and container build.
-2. gateway/: Caddy auth and reverse-proxy config.
-3. db/: database bootstrap SQL.
-4. scripts/: install, rotate, smoke automation.
+1. src/orchestrator/: runtime process and container build.
+2. src/gateway/: Caddy auth and reverse-proxy config.
+3. src/db/: database bootstrap SQL.
+4. src/scripts/: install, rotate, smoke automation.
 5. .github/workflows/: CI and release pipelines.
 6. docs/: technical implementation docs and runbooks.
 7. knowledge/: research documents that shaped this implementation.

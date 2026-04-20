@@ -51,7 +51,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: orchestrator/Dockerfile
+          file: src/orchestrator/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -75,7 +75,7 @@ jobs:
           mkdir -p dist
           tar --exclude-vcs -czf "dist/my-brain-${{ github.ref_name }}.tar.gz" \
             docker-compose.yml .env.example \
-            orchestrator/ gateway/ db/ scripts/ .claude/ .mcp.json.example \
+            src/orchestrator/ src/gateway/ src/db/ src/scripts/ .claude/ .mcp.json.example \
             docs/ README.md LICENSE.md CHANGELOG.md AGENTS.md
       - name: Upload release asset
         env:

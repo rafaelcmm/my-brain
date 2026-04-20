@@ -15,9 +15,9 @@
 3. Stop stack:
    docker compose down
 4. Rotate token:
-   ./scripts/rotate-token.sh
+   ./src/scripts/rotate-token.sh
 5. Smoke test:
-   ./scripts/smoke-test.sh
+   ./src/scripts/smoke-test.sh
 
 ## Required Secret Files
 
