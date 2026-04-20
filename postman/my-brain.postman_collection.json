@@ -1,0 +1,305 @@
+{
+  "info": {
+    "_postman_id": "a0e1f2b3-0000-4000-8000-200000000001",
+    "name": "my-brain",
+    "description": "Local testing collection for the my-brain self-hosted memory stack.\n\nAll requests route through the Caddy gateway (`rest_base_url` on port 8080, `mcp_base_url` on port 3333) and require a Bearer token set in the `auth_token` environment variable.\n\nImport alongside `my-brain.postman_environment.json` and select the **my-brain (local)** environment before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Orchestrator",
+      "description": "REST endpoints exposed by the Node orchestrator service (proxied through Caddy on port 8080).",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{rest_base_url}}/health",
+              "host": ["{{rest_base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Liveness probe. Returns service name, current mode (memory/full), SONA enabled flag, and UTC timestamp.\n\nExpected: 200 OK with `status: \"ok\"`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{rest_base_url}}/health",
+                  "host": ["{{rest_base_url}}"],
+                  "path": ["health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"my-brain-orchestrator\",\n  \"mode\": \"memory\",\n  \"sonaEnabled\": true,\n  \"timestamp\": \"2026-04-20T00:00:00.000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/status",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "status"]
+            },
+            "description": "Returns runtime configuration summary: mode, LLM model/endpoint, and whether the DB URL is configured.\n\nExpected: 200 OK. In `memory` mode the `llm.endpoint` field will be `null`."
+          },
+          "response": [
+            {
+              "name": "200 OK – memory mode",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{rest_base_url}}/v1/status",
+                  "host": ["{{rest_base_url}}"],
+                  "path": ["v1", "status"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"service\": \"my-brain-orchestrator\",\n  \"mode\": \"memory\",\n  \"llm\": {\n    \"model\": \"qwen3.5:0.8b\",\n    \"endpoint\": null\n  },\n  \"memory\": {\n    \"dbConfigured\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Unauthorized (token sanity check)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{rest_base_url}}/health",
+              "host": ["{{rest_base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Sends the health request **without** the Authorization header to verify the gateway rejects unauthenticated traffic.\n\nExpected: 401 Unauthorized with `WWW-Authenticate: Bearer realm=\"my-brain\"`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "MCP Bridge",
+      "description": "MCP (Model Context Protocol) endpoints exposed by mcp-proxy (proxied through Caddy on port 3333).\n\nThe SSE transport requires two steps:\n1. `GET /sse` — opens a persistent SSE stream; the server returns a `sessionId` in the first event. Save that value into the `mcp_session_id` environment variable.\n2. `POST /messages?sessionId={{mcp_session_id}}` — sends a JSON-RPC 2.0 request and receives the response on the SSE stream.\n\nPostman's built-in SSE support (v10.19+) can be used for the SSE request; alternatively use `curl -N` from the terminal.",
+      "item": [
+        {
+          "name": "Open SSE stream",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              },
+              {
+                "key": "Cache-Control",
+                "value": "no-cache"
+              }
+            ],
+            "url": {
+              "raw": "{{mcp_base_url}}/sse",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["sse"]
+            },
+            "description": "Opens the MCP SSE transport stream. The first event contains the `sessionId` needed for subsequent `POST /messages` calls.\n\nEvent shape:\n```\ndata: {\"sessionId\": \"<uuid>\"}\n```\n\nCopy the `sessionId` value into the `mcp_session_id` environment variable, then use the message requests below.\n\n**curl equivalent:**\n```bash\ncurl -N -H 'Authorization: Bearer {{auth_token}}' \\\n     -H 'Accept: text/event-stream' \\\n     http://127.0.0.1:3333/sse\n```"
+          },
+          "response": []
+        },
+        {
+          "name": "Initialize",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/messages?sessionId={{mcp_session_id}}",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["messages"],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "{{mcp_session_id}}"
+                }
+              ]
+            },
+            "description": "MCP JSON-RPC `initialize` handshake. Must be the first message sent on a new session.\n\nThe response is delivered on the SSE stream opened by `GET /sse`.\n\n**Prerequisite:** populate `mcp_session_id` from the SSE stream first."
+          },
+          "response": []
+        },
+        {
+          "name": "List tools",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\",\n  \"params\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/messages?sessionId={{mcp_session_id}}",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["messages"],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "{{mcp_session_id}}"
+                }
+              ]
+            },
+            "description": "Returns the full list of tools registered by the ruvector MCP server.\n\nResponse arrives on the SSE stream. Inspect `result.tools` for available tool names and input schemas."
+          },
+          "response": []
+        },
+        {
+          "name": "List resources",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"resources/list\",\n  \"params\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/messages?sessionId={{mcp_session_id}}",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["messages"],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "{{mcp_session_id}}"
+                }
+              ]
+            },
+            "description": "Returns the list of resources exposed by the ruvector MCP server."
+          },
+          "response": []
+        },
+        {
+          "name": "Call tool – store memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"store_memory\",\n    \"arguments\": {\n      \"content\": \"my-brain Postman test entry\",\n      \"metadata\": {\n        \"source\": \"postman\",\n        \"tag\": \"test\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/messages?sessionId={{mcp_session_id}}",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["messages"],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "{{mcp_session_id}}"
+                }
+              ]
+            },
+            "description": "Stores a memory entry via the ruvector MCP tool. Adjust `content` and `metadata` to match your test data.\n\nTool name may differ depending on the ruvector version — run **List tools** first to confirm the exact name."
+          },
+          "response": []
+        },
+        {
+          "name": "Call tool – recall memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"recall_memory\",\n    \"arguments\": {\n      \"query\": \"Postman test\",\n      \"topK\": 5\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/messages?sessionId={{mcp_session_id}}",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["messages"],
+              "query": [
+                {
+                  "key": "sessionId",
+                  "value": "{{mcp_session_id}}"
+                }
+              ]
+            },
+            "description": "Performs a semantic similarity search against stored memories. Adjust `query` and `topK` as needed.\n\nTool name may differ depending on the ruvector version — run **List tools** first to confirm the exact name."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": []
+}
