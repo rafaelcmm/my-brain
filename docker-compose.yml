@@ -50,6 +50,11 @@ services:
       - ollama:/root/.ollama
     expose:
       - "11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     deploy:
       resources:
         reservations:
@@ -63,18 +68,18 @@ services:
     container_name: my-brain-llm-init
     depends_on:
       my-brain-llm:
-        condition: service_started
+        condition: service_healthy
     environment:
       OLLAMA_HOST: http://my-brain-llm:11434
       MYBRAIN_LLM_MODEL: ${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}
       MYBRAIN_EMBEDDING_MODEL: ${MYBRAIN_EMBEDDING_MODEL:-}
-    command: >
-      sh -c "
-        ollama pull ${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b} &&
-        if [ -n \"${MYBRAIN_EMBEDDING_MODEL:-}\" ]; then
-          ollama pull ${MYBRAIN_EMBEDDING_MODEL};
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        ollama pull ${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}
+        if [ -n "${MYBRAIN_EMBEDDING_MODEL:-}" ]; then
+          ollama pull ${MYBRAIN_EMBEDDING_MODEL}
         fi
-      "
     restart: "no"
 
   my-brain-orchestrator:
@@ -88,7 +93,7 @@ services:
       my-brain-db:
         condition: service_healthy
       my-brain-llm:
-        condition: service_started
+        condition: service_healthy
     environment:
       MYBRAIN_LOG_LEVEL: ${MYBRAIN_LOG_LEVEL:-info}
       MYBRAIN_DB_URL: postgres://${MYBRAIN_DB_USER:-mybrain}:${MYBRAIN_DB_PASSWORD}@my-brain-db:5432/${MYBRAIN_DB_NAME:-mybrain_db}
