@@ -11,7 +11,7 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 
 ## What You Get
 
-1. SSE MCP endpoint at /sse.
+1. Streamable HTTP MCP endpoint at /mcp (MCP spec 2024-11-05+).
 2. Auth gateway with shared bearer token validation for MCP and REST.
 3. Install and operations scripts:
    install.sh, rotate-token.sh, smoke-test.sh.
@@ -62,8 +62,8 @@ Use .mcp.json.example as base. Recommended header approach uses environment vari
 {
   "mcpServers": {
     "my-brain": {
-      "type": "sse",
-      "url": "http://127.0.0.1:3333/sse",
+      "type": "http",
+      "url": "http://127.0.0.1:3333/mcp",
       "headers": {
         "Authorization": "Bearer ${env:MYBRAIN_TOKEN}"
       }
@@ -115,7 +115,7 @@ High-impact variables:
    verify token content and ensure gateway sees .secrets/auth-token.
 2. compose config fails:
    ensure .env exists and MYBRAIN_DB_PASSWORD is set.
-3. tools/list fails:
+3. POST /mcp fails:
    inspect gateway and mcp logs:
    docker compose logs my-brain-gateway my-brain-mcp
 4. orchestrator unhealthy:
