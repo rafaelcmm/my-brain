@@ -14,3 +14,4 @@ Applies to .claude/ skills and agents.
 
 1. Avoid user-invocable flags unless explicitly requested.
 2. Update skill descriptions when trigger behavior drifts.
+3. Load `memory-hygiene` and `memory-retrieval` rules automatically for code-change workflows.
