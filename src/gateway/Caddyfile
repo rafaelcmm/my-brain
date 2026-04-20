@@ -1,28 +1,42 @@
 {
-    admin off
-    auto_https off
+	admin off
+	auto_https off
 }
 
 # Require bearer token rendered by install/rotation scripts.
 (bearer_auth) {
-    @unauth not header Authorization "Bearer my-brain-local-token"
-    header @unauth WWW-Authenticate `Bearer realm="my-brain"`
-    respond @unauth "Unauthorized" 401
+	@unauth not header Authorization "Bearer my-brain-local-token"
+	header @unauth WWW-Authenticate `Bearer realm="my-brain"`
+	respond @unauth "Unauthorized" 401
 }
 
 :3333 {
-    import bearer_auth
-    reverse_proxy my-brain-mcp:3333 {
-        header_up Host {host}
-        header_up -Authorization
-        flush_interval -1
-    }
+	import bearer_auth
+	# Block legacy SSE entrypoints at the gateway so operators only see the
+	# supported Streamable HTTP contract exposed by /mcp.
+	@legacy_sse path /sse /messages /messages/*
+	handle @legacy_sse {
+		respond "Legacy MCP SSE transport removed. Use POST /mcp with type \"http\"." 410
+	}
+
+	@streamable_http path /mcp /mcp/*
+	handle @streamable_http {
+		reverse_proxy my-brain-mcp:3333 {
+			header_up Host {host}
+			header_up -Authorization
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond "Not Found" 404
+	}
 }
 
 :8080 {
-    import bearer_auth
-    reverse_proxy my-brain-orchestrator:8080 {
-        header_up Host {host}
-        header_up -Authorization
-    }
+	import bearer_auth
+	reverse_proxy my-brain-orchestrator:8080 {
+		header_up Host {host}
+		header_up -Authorization
+	}
 }

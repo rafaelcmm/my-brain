@@ -1,5 +1,7 @@
 import http from "node:http";
 
+const FULL_MODE = "full";
+
 /**
  * Parses a boolean-like environment variable while keeping defaults explicit.
  *
@@ -37,7 +39,10 @@ function parseBoolean(value, fallback) {
  */
 function loadConfig() {
   return {
-    mode: process.env.MYBRAIN_MODE ?? "memory",
+    // Full mode is now the only supported runtime profile. Keeping the field
+    // stable avoids breaking existing health/status consumers while removing
+    // the dormant configuration branch that no longer changes behavior.
+    mode: FULL_MODE,
     logLevel: process.env.MYBRAIN_LOG_LEVEL ?? "info",
     llmModel: process.env.MYBRAIN_LLM_MODEL ?? "qwen3.5:0.8b",
     dbUrl: process.env.MYBRAIN_DB_URL ?? "",
@@ -89,7 +94,7 @@ function handleRequest(req, res) {
       mode: config.mode,
       llm: {
         model: config.llmModel,
-        endpoint: config.mode === "full" ? config.llmUrl : null,
+        endpoint: config.llmUrl,
       },
       memory: {
         dbConfigured: config.dbUrl.length > 0,

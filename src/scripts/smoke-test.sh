@@ -50,4 +50,9 @@ mcp_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
   "http://127.0.0.1:${mcp_port}/mcp" || true)"
 [[ "$mcp_code" == "200" ]] || { echo "expected 200 /mcp, got $mcp_code" >&2; exit 1; }
 
+# The public gateway should reject the legacy SSE transport so client tooling
+# converges on one supported MCP contract instead of two partially-compatible ones.
+legacy_sse_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${mcp_port}/sse" || true)"
+[[ "$legacy_sse_code" == "410" ]] || { echo "expected 410 /sse, got $legacy_sse_code" >&2; exit 1; }
+
 echo "smoke test passed"

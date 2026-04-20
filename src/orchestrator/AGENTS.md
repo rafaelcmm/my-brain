@@ -8,7 +8,7 @@ Applies to src/orchestrator/ runtime code and container build.
 
 1. Keep startup deterministic and configuration explicit.
 2. Preserve health endpoint stability for gateway and CI probes.
-3. Keep runtime compatible with memory mode and full mode.
+3. Keep runtime aligned with the single supported full-stack deployment profile.
 
 ## Change Constraints
 

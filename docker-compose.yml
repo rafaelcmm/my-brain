@@ -44,7 +44,6 @@ services:
     image: ${MYBRAIN_LLM_IMAGE:-ollama/ollama:latest}
     container_name: my-brain-llm
     restart: unless-stopped
-    profiles: ["full"]
     environment:
       OLLAMA_HOST: 0.0.0.0
     volumes:
@@ -62,7 +61,6 @@ services:
   my-brain-llm-init:
     image: ${MYBRAIN_LLM_IMAGE:-ollama/ollama:latest}
     container_name: my-brain-llm-init
-    profiles: ["full"]
     depends_on:
       my-brain-llm:
         condition: service_started
@@ -89,8 +87,9 @@ services:
     depends_on:
       my-brain-db:
         condition: service_healthy
+      my-brain-llm:
+        condition: service_started
     environment:
-      MYBRAIN_MODE: ${MYBRAIN_MODE:-memory}
       MYBRAIN_LOG_LEVEL: ${MYBRAIN_LOG_LEVEL:-info}
       MYBRAIN_DB_URL: postgres://${MYBRAIN_DB_USER:-mybrain}:${MYBRAIN_DB_PASSWORD}@my-brain-db:5432/${MYBRAIN_DB_NAME:-mybrain_db}
       MYBRAIN_LLM_URL: http://my-brain-llm:11434
