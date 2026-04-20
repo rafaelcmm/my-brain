@@ -65,6 +65,37 @@ function parseInteger(value, fallback) {
 }
 
 /**
+ * Computes cosine similarity between two vectors.
+ *
+ * @param {number[]} a First embedding vector.
+ * @param {number[]} b Second embedding vector.
+ * @returns {number} Similarity score in range [-1, 1].
+ */
+function similarity(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+    return 0;
+  }
+
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let index = 0; index < a.length; index += 1) {
+    const av = Number(a[index] ?? 0);
+    const bv = Number(b[index] ?? 0);
+    dot += av * bv;
+    normA += av * av;
+    normB += bv * bv;
+  }
+
+  if (normA === 0 || normB === 0) {
+    return 0;
+  }
+
+  return dot / Math.sqrt(normA * normB);
+}
+
+/**
  * Normalizes text fields by trimming and enforcing upper size bounds.
  *
  * @param {unknown} value Candidate user-provided value.
@@ -127,7 +158,11 @@ function sanitizeTags(value) {
 function validateMemoryEnvelope(payload) {
   const errors = [];
 
-  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    Array.isArray(payload)
+  ) {
     return { valid: false, errors: ["payload must be an object"] };
   }
 
@@ -139,7 +174,9 @@ function validateMemoryEnvelope(payload) {
 
   const type = sanitizeText(body.type, 32)?.toLowerCase();
   if (!type || !MEMORY_TYPES.has(type)) {
-    errors.push("type must be one of: decision, fix, convention, gotcha, tradeoff, pattern, reference");
+    errors.push(
+      "type must be one of: decision, fix, convention, gotcha, tradeoff, pattern, reference",
+    );
   }
 
   const scope = sanitizeText(body.scope, 16)?.toLowerCase();
@@ -148,14 +185,19 @@ function validateMemoryEnvelope(payload) {
   }
 
   const metadataRaw =
-    typeof body.metadata === "object" && body.metadata !== null && !Array.isArray(body.metadata)
+    typeof body.metadata === "object" &&
+    body.metadata !== null &&
+    !Array.isArray(body.metadata)
       ? /** @type {Record<string, unknown>} */ (body.metadata)
       : {};
 
   const confidence = metadataRaw.confidence;
   if (
     confidence !== undefined &&
-    (typeof confidence !== "number" || Number.isNaN(confidence) || confidence < 0 || confidence > 1)
+    (typeof confidence !== "number" ||
+      Number.isNaN(confidence) ||
+      confidence < 0 ||
+      confidence > 1)
   ) {
     errors.push("metadata.confidence must be a number between 0 and 1");
   }
@@ -215,6 +257,9 @@ function validateMemoryEnvelope(payload) {
  * llmModel: string,
  * dbUrl: string,
  * llmUrl: string,
+ * embeddingModel: string,
+ * embeddingDim: number,
+ * vectorPort: number,
  * sonaEnabled: boolean,
  * }} Sanitized configuration consumed by request handlers.
  */
@@ -228,7 +273,8 @@ function loadConfig() {
     llmModel: process.env.MYBRAIN_LLM_MODEL ?? "qwen3.5:0.8b",
     dbUrl: process.env.MYBRAIN_DB_URL ?? "",
     llmUrl: process.env.MYBRAIN_LLM_URL ?? "",
-    embeddingModel: process.env.MYBRAIN_EMBEDDING_MODEL ?? "qwen3-embedding:0.6b",
+    embeddingModel:
+      process.env.MYBRAIN_EMBEDDING_MODEL ?? "qwen3-embedding:0.6b",
     embeddingDim: parseInteger(process.env.MYBRAIN_EMBEDDING_DIM, 1024),
     vectorPort: parseInteger(process.env.RUVECTOR_PORT, 8080),
     sonaEnabled: parseBoolean(process.env.RUVLLM_SONA_ENABLED, true),
@@ -269,8 +315,13 @@ const runtime = {
 };
 
 const rateWindowMs = 60_000;
-const rateLimitPerWindow = parseInteger(process.env.MYBRAIN_RATE_LIMIT_PER_MIN, 60);
+const rateLimitPerWindow = parseInteger(
+  process.env.MYBRAIN_RATE_LIMIT_PER_MIN,
+  60,
+);
 const rateBuckets = new Map();
+const embeddingCache = new Map();
+const maxEmbeddingCacheSize = 400;
 
 /**
  * Applies fixed-window rate limiting by endpoint class and caller address.
@@ -312,6 +363,38 @@ function pushDegradedReason(reason) {
   if (!runtime.degradedReasons.includes(reason)) {
     runtime.degradedReasons.push(reason);
   }
+}
+
+/**
+ * Converts internal runtime errors into non-sensitive status labels.
+ *
+ * @param {string | null} errorMessage Internal error string.
+ * @returns {string | null} Safe status value.
+ */
+function sanitizeStatusError(errorMessage) {
+  if (!errorMessage) {
+    return null;
+  }
+
+  return "unavailable";
+}
+
+/**
+ * Logs failures without exposing internal details outside debug mode.
+ *
+ * @param {string} context Stable operation context.
+ * @param {unknown} error Caught error object.
+ * @returns {void}
+ */
+function logInternalError(context, error) {
+  if (config.logLevel === "debug") {
+    process.stderr.write(
+      `[my-brain] ${context}: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
+    );
+    return;
+  }
+
+  process.stderr.write(`[my-brain] ${context}: internal error\n`);
 }
 
 /**
@@ -441,9 +524,12 @@ function initializeIntelligenceEngine() {
     const stats = runtime.intelligenceEngine.getStats();
     runtime.engine.sona = Boolean(stats?.sonaEnabled);
     runtime.engine.attention = Boolean(stats?.attentionEnabled);
-    runtime.engine.embeddingDim = Number(stats?.memoryDimensions ?? config.embeddingDim);
+    runtime.engine.embeddingDim = Number(
+      stats?.memoryDimensions ?? config.embeddingDim,
+    );
   } catch (error) {
-    runtime.engine.error = error instanceof Error ? error.message : String(error);
+    runtime.engine.error =
+      error instanceof Error ? error.message : String(error);
     pushDegradedReason("intelligence engine failed");
   }
 }
@@ -652,7 +738,11 @@ function parseJsonBody(req) {
         }
 
         const parsed = JSON.parse(text);
-        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+        if (
+          typeof parsed !== "object" ||
+          parsed === null ||
+          Array.isArray(parsed)
+        ) {
           reject(new Error("JSON body must be an object"));
           return;
         }
@@ -674,6 +764,7 @@ function parseJsonBody(req) {
  * @returns {string | null} Command stdout when successful.
  */
 function runGitCommand(args) {
+  // Security boundary: callers must pass hardcoded git arguments only.
   try {
     const output = execFileSync("git", args, {
       cwd: process.cwd(),
@@ -688,6 +779,31 @@ function runGitCommand(args) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Retrieves cached embedding for repeated recall scoring.
+ *
+ * @param {string} content Memory content string.
+ * @returns {number[]} Embedding vector.
+ */
+function getCachedEmbedding(content) {
+  if (embeddingCache.has(content)) {
+    const cached = embeddingCache.get(content);
+    embeddingCache.delete(content);
+    embeddingCache.set(content, cached);
+    return cached;
+  }
+
+  const embedding = runtime.intelligenceEngine.embed(content);
+  embeddingCache.set(content, embedding);
+
+  if (embeddingCache.size > maxEmbeddingCacheSize) {
+    const oldestKey = embeddingCache.keys().next().value;
+    embeddingCache.delete(oldestKey);
+  }
+
+  return embedding;
 }
 
 /**
@@ -790,8 +906,12 @@ async function persistMemoryMetadata(memoryId, envelope) {
     return;
   }
 
-  const metadata = /** @type {Record<string, unknown>} */ (envelope.metadata ?? {});
-  const frameworks = Array.isArray(metadata.frameworks) ? metadata.frameworks : [];
+  const metadata = /** @type {Record<string, unknown>} */ (
+    envelope.metadata ?? {}
+  );
+  const frameworks = Array.isArray(metadata.frameworks)
+    ? metadata.frameworks
+    : [];
   const tags = Array.isArray(metadata.tags) ? metadata.tags : [];
 
   await runtime.pool.query(
@@ -880,7 +1000,7 @@ function sendJson(res, status, payload) {
 }
 
 /**
- * Handles known routes used by gateway probes and operator diagnostics.
+ * Handles orchestrator HTTP API routes for health, capabilities, and memory flows.
  *
  * @param {http.IncomingMessage} req HTTP request.
  * @param {http.ServerResponse} res HTTP response.
@@ -904,6 +1024,30 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (method === "GET" && url === "/ready") {
+    const capabilities = getCapabilities();
+    const ready =
+      capabilities.engine &&
+      runtime.db.connected &&
+      runtime.db.adrSchemasReady &&
+      runtime.llm.loaded;
+
+    if (!ready) {
+      sendJson(res, 503, {
+        status: "not_ready",
+        service: "my-brain-orchestrator",
+        message: "service dependencies unavailable",
+      });
+      return;
+    }
+
+    sendJson(res, 200, {
+      status: "ready",
+      service: "my-brain-orchestrator",
+    });
+    return;
+  }
+
   if (method === "GET" && url === "/v1/status") {
     sendJson(res, 200, {
       service: "my-brain-orchestrator",
@@ -916,14 +1060,14 @@ async function handleRequest(req, res) {
         model: config.llmModel,
         endpoint: config.llmUrl,
         loaded: runtime.llm.loaded,
-        error: runtime.llm.error,
+        error: sanitizeStatusError(runtime.llm.error),
       },
       memory: {
         dbConfigured: config.dbUrl.length > 0,
         dbConnected: runtime.db.connected,
         extensionVersion: runtime.db.extensionVersion,
         adrSchemasReady: runtime.db.adrSchemasReady,
-        error: runtime.db.error,
+        error: sanitizeStatusError(runtime.db.error),
       },
     });
     return;
@@ -935,9 +1079,15 @@ async function handleRequest(req, res) {
       success: true,
       capabilities,
       features: {
-        vectorDb: capabilities.vectorDb ? "HNSW indexing enabled" : "Brute-force fallback",
-        sona: capabilities.sona ? "SONA adaptive learning" : "Q-learning fallback",
-        attention: capabilities.attention ? "Self-attention embeddings" : "Hash embeddings",
+        vectorDb: capabilities.vectorDb
+          ? "HNSW indexing enabled"
+          : "Brute-force fallback",
+        sona: capabilities.sona
+          ? "SONA adaptive learning"
+          : "Q-learning fallback",
+        attention: capabilities.attention
+          ? "Self-attention embeddings"
+          : "Hash embeddings",
         embeddingDim: capabilities.embeddingDim,
       },
       degradedReasons: runtime.degradedReasons,
@@ -975,7 +1125,8 @@ async function handleRequest(req, res) {
       sendJson(res, 400, {
         success: false,
         error: "INVALID_INPUT",
-        message: error instanceof Error ? error.message : "invalid json payload",
+        message:
+          error instanceof Error ? error.message : "invalid json payload",
       });
       return;
     }
@@ -1000,7 +1151,8 @@ async function handleRequest(req, res) {
       project: envelope.metadata?.project ?? context.project,
       language: envelope.metadata?.language ?? context.language,
       frameworks:
-        Array.isArray(envelope.metadata?.frameworks) && envelope.metadata.frameworks.length > 0
+        Array.isArray(envelope.metadata?.frameworks) &&
+        envelope.metadata.frameworks.length > 0
           ? envelope.metadata.frameworks
           : context.frameworks,
       author: envelope.metadata?.author ?? context.author,
@@ -1017,7 +1169,10 @@ async function handleRequest(req, res) {
     }
 
     try {
-      const remembered = await runtime.intelligenceEngine.remember(envelope.content, envelope.type);
+      const remembered = await runtime.intelligenceEngine.remember(
+        envelope.content,
+        envelope.type,
+      );
       const memoryId =
         sanitizeText(remembered?.id, 128) ??
         `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -1057,7 +1212,8 @@ async function handleRequest(req, res) {
       sendJson(res, 400, {
         success: false,
         error: "INVALID_INPUT",
-        message: error instanceof Error ? error.message : "invalid json payload",
+        message:
+          error instanceof Error ? error.message : "invalid json payload",
       });
       return;
     }
@@ -1072,10 +1228,18 @@ async function handleRequest(req, res) {
       return;
     }
 
-    const topK = Math.min(Math.max(parseInteger(String(payload.top_k ?? payload.topK ?? "8"), 8), 1), 20);
+    const topK = Math.min(
+      Math.max(
+        parseInteger(String(payload.top_k ?? payload.topK ?? "8"), 8),
+        1,
+      ),
+      20,
+    );
     const minScoreFromPayload = payload.min_score ?? payload.minScore;
     const minScore =
-      typeof minScoreFromPayload === "number" && minScoreFromPayload >= 0 && minScoreFromPayload <= 1
+      typeof minScoreFromPayload === "number" &&
+      minScoreFromPayload >= 0 &&
+      minScoreFromPayload <= 1
         ? minScoreFromPayload
         : getDefaultRecallThreshold();
 
@@ -1102,17 +1266,19 @@ async function handleRequest(req, res) {
               .map((value) => value.trim().toLowerCase())
               .slice(0, 8)
           : [],
-        include_expired: payload.include_expired === true || payload.includeExpired === true,
+        include_expired:
+          payload.include_expired === true || payload.includeExpired === true,
       };
 
-      const candidateLimit = Math.min(Math.max(topK * 8, 50), 500);
+      const candidateLimit = Math.min(Math.max(topK * 6, 30), 150);
       const candidates = await queryRecallCandidates(filters, candidateLimit);
       const queryEmbedding = runtime.intelligenceEngine.embed(query);
 
       const scored = candidates
         .map((candidate) => {
-          const content = typeof candidate.content === "string" ? candidate.content : "";
-          const contentEmbedding = runtime.intelligenceEngine.embed(content);
+          const content =
+            typeof candidate.content === "string" ? candidate.content : "";
+          const contentEmbedding = getCachedEmbedding(content);
           const score = similarity(queryEmbedding, contentEmbedding);
 
           return {
@@ -1133,7 +1299,9 @@ async function handleRequest(req, res) {
             },
           };
         })
-        .filter((entry) => typeof entry.score === "number" && entry.score >= minScore)
+        .filter(
+          (entry) => typeof entry.score === "number" && entry.score >= minScore,
+        )
         .sort((a, b) => b.score - a.score)
         .slice(0, topK)
         .map((entry) => ({
@@ -1149,9 +1317,7 @@ async function handleRequest(req, res) {
         results: scored,
       });
     } catch (error) {
-      process.stderr.write(
-        `[my-brain] recall failure: ${error instanceof Error ? error.message : String(error)}\n`,
-      );
+      logInternalError("recall failure", error);
       sendJson(res, 500, {
         success: false,
         error: "SERVER_ERROR",
@@ -1187,7 +1353,8 @@ async function handleRequest(req, res) {
       sendJson(res, 400, {
         success: false,
         error: "INVALID_INPUT",
-        message: error instanceof Error ? error.message : "invalid json payload",
+        message:
+          error instanceof Error ? error.message : "invalid json payload",
       });
       return;
     }
@@ -1245,13 +1412,15 @@ async function handleRequest(req, res) {
       sendJson(res, 400, {
         success: false,
         error: "INVALID_INPUT",
-        message: error instanceof Error ? error.message : "invalid json payload",
+        message:
+          error instanceof Error ? error.message : "invalid json payload",
       });
       return;
     }
 
     const memoryId = sanitizeText(payload.memory_id ?? payload.id, 128);
-    const mode = sanitizeText(payload.mode, 8)?.toLowerCase() === "hard" ? "hard" : "soft";
+    const mode =
+      sanitizeText(payload.mode, 8)?.toLowerCase() === "hard" ? "hard" : "soft";
 
     if (!memoryId) {
       sendJson(res, 400, {
@@ -1263,7 +1432,10 @@ async function handleRequest(req, res) {
     }
 
     if (mode === "hard") {
-      await runtime.pool.query("DELETE FROM my_brain_memory_metadata WHERE memory_id = $1", [memoryId]);
+      await runtime.pool.query(
+        "DELETE FROM my_brain_memory_metadata WHERE memory_id = $1",
+        [memoryId],
+      );
     } else {
       await runtime.pool.query(
         "UPDATE my_brain_memory_metadata SET expires_at = NOW() WHERE memory_id = $1",
@@ -1296,7 +1468,8 @@ async function handleRequest(req, res) {
       sendJson(res, 400, {
         success: false,
         error: "INVALID_INPUT",
-        message: error instanceof Error ? error.message : "invalid json payload",
+        message:
+          error instanceof Error ? error.message : "invalid json payload",
       });
       return;
     }
@@ -1304,7 +1477,9 @@ async function handleRequest(req, res) {
     const sessionId = sanitizeText(payload.session_id, 128) ?? randomUUID();
     const agent = sanitizeText(payload.agent, 128) ?? "main";
     const context =
-      typeof payload.context === "object" && payload.context !== null && !Array.isArray(payload.context)
+      typeof payload.context === "object" &&
+      payload.context !== null &&
+      !Array.isArray(payload.context)
         ? payload.context
         : buildProjectContext();
 
@@ -1345,7 +1520,8 @@ async function handleRequest(req, res) {
       sendJson(res, 400, {
         success: false,
         error: "INVALID_INPUT",
-        message: error instanceof Error ? error.message : "invalid json payload",
+        message:
+          error instanceof Error ? error.message : "invalid json payload",
       });
       return;
     }
@@ -1361,7 +1537,8 @@ async function handleRequest(req, res) {
     }
 
     const success = payload.success !== false;
-    const quality = typeof payload.quality === "number" ? payload.quality : null;
+    const quality =
+      typeof payload.quality === "number" ? payload.quality : null;
     const reason = sanitizeText(payload.reason, 500);
 
     await runtime.pool.query(
@@ -1409,7 +1586,8 @@ async function handleRequest(req, res) {
       sendJson(res, 400, {
         success: false,
         error: "INVALID_INPUT",
-        message: error instanceof Error ? error.message : "invalid json payload",
+        message:
+          error instanceof Error ? error.message : "invalid json payload",
       });
       return;
     }
@@ -1445,9 +1623,7 @@ async function handleRequest(req, res) {
 
 const server = http.createServer((req, res) => {
   handleRequest(req, res).catch((error) => {
-    process.stderr.write(
-      `[my-brain] request handler failure: ${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    logInternalError("request handler failure", error);
     sendJson(res, 500, {
       success: false,
       error: "SERVER_ERROR",
@@ -1459,9 +1635,7 @@ const server = http.createServer((req, res) => {
 initializeRuntime()
   .catch((error) => {
     pushDegradedReason("runtime initialization threw");
-    process.stderr.write(
-      `[my-brain] runtime initialization failed: ${error instanceof Error ? error.message : String(error)}\n`,
-    );
+    logInternalError("runtime initialization failed", error);
   })
   .finally(() => {
     server.listen(config.vectorPort, "0.0.0.0", () => {

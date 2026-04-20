@@ -2,7 +2,10 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * @typedef {{name: string, description: string, inputSchema: Record<string, unknown>}} BridgeTool
@@ -11,19 +14,15 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 /**
  * Returns immutable bridge config used by runtime wiring.
  *
- * @returns {{host: string, port: number}} Bind configuration used by server.
+ * @returns {{restBaseUrl: string, upstreamCommand: string, upstreamArgs: string[]}} Runtime bridge config.
  */
 function loadConfig() {
   return {
     restBaseUrl: process.env.MYBRAIN_REST_URL ?? "http://127.0.0.1:8080",
     upstreamCommand: process.env.MYBRAIN_UPSTREAM_MCP_COMMAND ?? "npx",
-    upstreamArgs:
-      process.env.MYBRAIN_UPSTREAM_MCP_ARGS?.split(" ").filter(Boolean) ?? [
-        "-y",
-        "ruvector",
-        "mcp",
-        "start",
-      ],
+    upstreamArgs: process.env.MYBRAIN_UPSTREAM_MCP_ARGS?.split(" ").filter(
+      Boolean,
+    ) ?? ["-y", "ruvector", "mcp", "start"],
   };
 }
 
@@ -32,11 +31,15 @@ const config = loadConfig();
 const bridgeTools = [
   {
     name: "mb_context_probe",
-    description: "Return derived project context used by metadata-aware memory capture",
+    description:
+      "Return derived project context used by metadata-aware memory capture",
     inputSchema: {
       type: "object",
       properties: {
-        refresh: { type: "boolean", description: "Reserved compatibility flag" },
+        refresh: {
+          type: "boolean",
+          description: "Reserved compatibility flag",
+        },
       },
       required: [],
     },
@@ -57,7 +60,8 @@ const bridgeTools = [
   },
   {
     name: "mb_recall",
-    description: "Recall memory with scoped metadata filters and minimum score threshold",
+    description:
+      "Recall memory with scoped metadata filters and minimum score threshold",
     inputSchema: {
       type: "object",
       properties: {
@@ -163,7 +167,9 @@ async function connectUpstream() {
     command: config.upstreamCommand,
     args: config.upstreamArgs,
     env: Object.fromEntries(
-      Object.entries(process.env).filter((entry) => typeof entry[1] === "string"),
+      Object.entries(process.env).filter(
+        (entry) => typeof entry[1] === "string",
+      ),
     ),
   });
 
@@ -192,7 +198,9 @@ async function callOrchestrator(pathname, payload) {
     body: JSON.stringify(payload),
   });
 
-  const json = await response.json().catch(() => ({ success: false, error: "invalid_response" }));
+  const json = await response
+    .json()
+    .catch(() => ({ success: false, error: "invalid_response" }));
   return {
     http_status: response.status,
     ...json,
@@ -263,21 +271,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   switch (name) {
     case "mb_context_probe":
-      return asTextResult(await callOrchestrator("/v1/context/probe", args ?? {}));
+      return asTextResult(
+        await callOrchestrator("/v1/context/probe", args ?? {}),
+      );
     case "mb_remember":
       return asTextResult(await callOrchestrator("/v1/memory", args ?? {}));
     case "mb_recall":
-      return asTextResult(await callOrchestrator("/v1/memory/recall", args ?? {}));
+      return asTextResult(
+        await callOrchestrator("/v1/memory/recall", args ?? {}),
+      );
     case "mb_vote":
-      return asTextResult(await callOrchestrator("/v1/memory/vote", args ?? {}));
+      return asTextResult(
+        await callOrchestrator("/v1/memory/vote", args ?? {}),
+      );
     case "mb_forget":
-      return asTextResult(await callOrchestrator("/v1/memory/forget", args ?? {}));
+      return asTextResult(
+        await callOrchestrator("/v1/memory/forget", args ?? {}),
+      );
     case "mb_session_open":
-      return asTextResult(await callOrchestrator("/v1/session/open", args ?? {}));
+      return asTextResult(
+        await callOrchestrator("/v1/session/open", args ?? {}),
+      );
     case "mb_session_close":
-      return asTextResult(await callOrchestrator("/v1/session/close", args ?? {}));
+      return asTextResult(
+        await callOrchestrator("/v1/session/close", args ?? {}),
+      );
     case "mb_digest":
-      return asTextResult(await callOrchestrator("/v1/memory/digest", args ?? {}));
+      return asTextResult(
+        await callOrchestrator("/v1/memory/digest", args ?? {}),
+      );
     default:
       if (upstreamConnected) {
         return upstreamClient.callTool({

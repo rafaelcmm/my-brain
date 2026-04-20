@@ -8,7 +8,7 @@ allowed-tools: mcp__my-brain__mb_context_probe, mcp__my-brain__mb_recall, mcp__m
 
 1. Distill durable lesson into 1-3 context-free sentences.
 2. Classify `type` as one of:
-	- `decision`, `fix`, `convention`, `gotcha`, `tradeoff`, `pattern`, `reference`
+   - `decision`, `fix`, `convention`, `gotcha`, `tradeoff`, `pattern`, `reference`
 3. Call `mb_context_probe` to fill metadata defaults (`repo`, `project`, `language`, `frameworks`, `author`).
 4. Dedup first with `mb_recall` (`top_k=3`, `scope=repo`, `repo=context.repo_name`).
 5. Skip save if best hit similarity is `> 0.85`.

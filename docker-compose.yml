@@ -94,6 +94,8 @@ services:
         condition: service_healthy
       my-brain-llm:
         condition: service_healthy
+      my-brain-llm-init:
+        condition: service_completed_successfully
     environment:
       MYBRAIN_LOG_LEVEL: ${MYBRAIN_LOG_LEVEL:-info}
       MYBRAIN_DB_URL: postgres://${MYBRAIN_DB_USER:-mybrain}:${MYBRAIN_DB_PASSWORD}@my-brain-db:5432/${MYBRAIN_DB_NAME:-mybrain_db}
@@ -121,10 +123,11 @@ services:
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/ready || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 90s
 
   my-brain-mcp:
     image: my-brain/mcp-bridge:local
@@ -140,6 +143,16 @@ services:
       MYBRAIN_REST_URL: http://my-brain-orchestrator:8080
       MYBRAIN_DB_URL: postgres://${MYBRAIN_DB_USER:-mybrain}:${MYBRAIN_DB_PASSWORD}@my-brain-db:5432/${MYBRAIN_DB_NAME:-mybrain_db}
       MYBRAIN_ALLOWED_ORIGINS: ${MYBRAIN_ALLOWED_MCP_ORIGINS:-http://localhost,http://127.0.0.1}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'code=$$(curl --max-time 3 -s -o /dev/null -w ''%{http_code}'' -X POST http://localhost:3333/mcp -H ''content-type: application/json'' -H ''accept: application/json, text/event-stream'' -H ''mcp-protocol-version: 2024-11-05'' --data ''{"jsonrpc":"2.0","id":"health","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"healthcheck","version":"1.0.0"}}}'' || true); [ "$$code" = "200" ]',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     expose:
       - "3333"
 
@@ -149,7 +162,7 @@ services:
     restart: unless-stopped
     depends_on:
       my-brain-mcp:
-        condition: service_started
+        condition: service_healthy
       my-brain-orchestrator:
         condition: service_healthy
     environment:

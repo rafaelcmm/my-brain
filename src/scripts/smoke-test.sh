@@ -32,27 +32,59 @@ if find .secrets -type f ! -perm 600 | grep -q .; then
   exit 1
 fi
 
-unauth_code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${rest_port}/health")"
-[[ "$unauth_code" == "401" ]] || { echo "expected 401 without token, got $unauth_code" >&2; exit 1; }
+retry_until_code() {
+  local expected_code="$1"
+  local label="$2"
+  shift 2
+  local observed_code="000"
 
-auth_code="$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${rest_port}/health")"
-[[ "$auth_code" == "200" ]] || { echo "expected 200 with token, got $auth_code" >&2; exit 1; }
+  for _ in $(seq 1 12); do
+    observed_code="$("$@" || true)"
+    if [[ "$observed_code" == "$expected_code" ]]; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "expected ${expected_code} ${label}, got ${observed_code}" >&2
+  return 1
+}
+
+retry_until_code "401" "GET /health without token" \
+  curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
+  "http://127.0.0.1:${rest_port}/health"
+
+retry_until_code "200" "GET /health with token" \
+  curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $token" \
+  "http://127.0.0.1:${rest_port}/health"
 
 # Streamable HTTP transport: POST an MCP initialize message and expect 200.
 # The gateway enforces bearer auth before forwarding; a 200 confirms both
 # auth pass-through and mcp-proxy reachability on the /mcp endpoint.
-mcp_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
-  -X POST \
-  -H "Authorization: Bearer $token" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke-test","version":"1.0.0"}}}' \
-  "http://127.0.0.1:${mcp_port}/mcp" || true)"
+# Retry initialize because gateway and bridge can report healthy slightly
+# before first /mcp transaction path is fully accepting requests.
+mcp_code="000"
+for _ in $(seq 1 12); do
+  mcp_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
+    -X POST \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json, text/event-stream" \
+    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke-test","version":"1.0.0"}}}' \
+    "http://127.0.0.1:${mcp_port}/mcp" || true)"
+  if [[ "$mcp_code" == "200" ]]; then
+    break
+  fi
+  sleep 2
+done
 [[ "$mcp_code" == "200" ]] || { echo "expected 200 /mcp, got $mcp_code" >&2; exit 1; }
 
 # The public gateway should reject the legacy SSE transport so client tooling
 # converges on one supported MCP contract instead of two partially-compatible ones.
-legacy_sse_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${mcp_port}/sse" || true)"
-[[ "$legacy_sse_code" == "410" ]] || { echo "expected 410 /sse, got $legacy_sse_code" >&2; exit 1; }
+retry_until_code "410" "GET /sse with token" \
+  curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
+  -H "Authorization: Bearer $token" \
+  "http://127.0.0.1:${mcp_port}/sse"
 
 echo "smoke test passed"

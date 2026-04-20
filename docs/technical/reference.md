@@ -5,6 +5,7 @@ This file is API and configuration reference for maintainers.
 ## REST endpoints
 
 - `GET /health`: orchestrator liveness.
+- `GET /ready`: orchestrator readiness (engine + db connection + ADR schemas + LLM runtime).
 - `GET /v1/status`: orchestrator status snapshot.
 - `GET /v1/capabilities`: engine/vector/sona/attention capability flags and degraded-mode reasons.
 - `POST /v1/context/probe`: derives repo/project/language/framework context from local workspace.
