@@ -9,8 +9,10 @@ RUN apt-get update \
 
 RUN python3 -m venv "${VIRTUAL_ENV}" \
  && "${VIRTUAL_ENV}/bin/pip" install --no-cache-dir --upgrade pip \
- && "${VIRTUAL_ENV}/bin/pip" install --no-cache-dir mcp-proxy==0.9.0
+ && "${VIRTUAL_ENV}/bin/pip" install --no-cache-dir mcp-proxy==0.11.0
 
 WORKDIR /app
 
-CMD ["mcp-proxy", "--host", "0.0.0.0", "--port", "3333", "--pass-environment", "--allow-origin", "http://localhost,http://127.0.0.1", "--", "npx", "-y", "ruvector", "mcp", "start"]
+# --allow-origin must be repeated per origin; comma-separated strings are not split by mcp-proxy.
+# Streamable HTTP transport is the default in 0.11.0+ — clients connect to /mcp, not /sse.
+CMD ["mcp-proxy", "--host", "0.0.0.0", "--port", "3333", "--pass-environment", "--allow-origin", "http://localhost", "--allow-origin", "http://127.0.0.1", "--", "npx", "-y", "ruvector", "mcp", "start"]
