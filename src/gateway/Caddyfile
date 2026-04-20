@@ -35,6 +35,13 @@
 
 :8080 {
 	import bearer_auth
+	handle_path /llm/* {
+		reverse_proxy my-brain-llm:11434 {
+			header_up Host {host}
+			header_up -Authorization
+		}
+	}
+
 	reverse_proxy my-brain-orchestrator:8080 {
 		header_up Host {host}
 		header_up -Authorization
