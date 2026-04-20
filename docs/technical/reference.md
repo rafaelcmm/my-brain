@@ -9,6 +9,7 @@ This file is API and configuration reference for maintainers.
 - `GET /v1/capabilities`: engine/vector/sona/attention capability flags and degraded-mode reasons.
 - `POST /v1/context/probe`: derives repo/project/language/framework context from local workspace.
 - `POST /v1/memory`: writes validated memory envelope and metadata sidecar row.
+- `POST /v1/memory/recall`: scoped metadata-filtered recall with minimum-score cutoff.
 
 More endpoints are added incrementally and documented here in same change set.
 

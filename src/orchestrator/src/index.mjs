@@ -440,6 +440,106 @@ function getCapabilities() {
 }
 
 /**
+ * Computes similarity threshold policy based on runtime quality mode.
+ *
+ * @returns {number} Minimum score accepted for recall responses.
+ */
+function getDefaultRecallThreshold() {
+  return runtime.engine.loaded ? 0.6 : 0.85;
+}
+
+/**
+ * Runs metadata-first candidate selection for scoped recall.
+ *
+ * @param {Record<string, unknown>} filters Recall filter payload.
+ * @param {number} limit Candidate row limit for scoring stage.
+ * @returns {Promise<Array<Record<string, unknown>>>} Candidate metadata rows.
+ */
+async function queryRecallCandidates(filters, limit) {
+  if (!runtime.pool) {
+    return [];
+  }
+
+  const clauses = ["1 = 1"];
+  const values = [];
+
+  const pushValue = (value) => {
+    values.push(value);
+    return `$${values.length}`;
+  };
+
+  if (typeof filters.scope === "string") {
+    clauses.push(`scope = ${pushValue(filters.scope)}`);
+  }
+
+  if (typeof filters.repo === "string") {
+    const param = pushValue(filters.repo);
+    clauses.push(`(repo = ${param} OR repo_name = ${param})`);
+  }
+
+  if (typeof filters.project === "string") {
+    clauses.push(`project = ${pushValue(filters.project)}`);
+  }
+
+  if (typeof filters.language === "string") {
+    clauses.push(`language = ${pushValue(filters.language)}`);
+  }
+
+  if (typeof filters.type === "string") {
+    clauses.push(`type = ${pushValue(filters.type)}`);
+  }
+
+  if (!filters.include_expired) {
+    clauses.push("(expires_at IS NULL OR expires_at > NOW())");
+  }
+
+  if (Array.isArray(filters.tags) && filters.tags.length > 0) {
+    clauses.push(
+      `EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements_text(tags) AS tag
+        WHERE tag = ANY(${pushValue(filters.tags)}::text[])
+      )`,
+    );
+  }
+
+  if (Array.isArray(filters.frameworks) && filters.frameworks.length > 0) {
+    clauses.push(
+      `EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements_text(frameworks) AS framework
+        WHERE framework = ANY(${pushValue(filters.frameworks)}::text[])
+      )`,
+    );
+  }
+
+  values.push(limit);
+
+  const result = await runtime.pool.query(
+    `SELECT
+      memory_id,
+      content,
+      type,
+      scope,
+      repo,
+      repo_name,
+      project,
+      language,
+      frameworks,
+      tags,
+      created_at,
+      expires_at
+    FROM my_brain_memory_metadata
+    WHERE ${clauses.join(" AND ")}
+    ORDER BY created_at DESC
+    LIMIT $${values.length}`,
+    values,
+  );
+
+  return result.rows;
+}
+
+/**
  * Reads request body as JSON object and fails closed on malformed payloads.
  *
  * @param {http.IncomingMessage} req Incoming HTTP request stream.
@@ -837,6 +937,118 @@ async function handleRequest(req, res) {
         success: false,
         error: "SERVER_ERROR",
         message: "failed to store memory",
+      });
+    }
+    return;
+  }
+
+  if (method === "POST" && url === "/v1/memory/recall") {
+    let payload;
+    try {
+      payload = await parseJsonBody(req);
+    } catch (error) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: error instanceof Error ? error.message : "invalid json payload",
+      });
+      return;
+    }
+
+    const query = sanitizeText(payload.query, 1024);
+    if (!query) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: "query must be a non-empty string",
+      });
+      return;
+    }
+
+    const topK = Math.min(Math.max(parseInteger(String(payload.top_k ?? payload.topK ?? "8"), 8), 1), 20);
+    const minScoreFromPayload = payload.min_score ?? payload.minScore;
+    const minScore =
+      typeof minScoreFromPayload === "number" && minScoreFromPayload >= 0 && minScoreFromPayload <= 1
+        ? minScoreFromPayload
+        : getDefaultRecallThreshold();
+
+    if (!runtime.intelligenceEngine) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "memory engine unavailable",
+      });
+      return;
+    }
+
+    try {
+      const filters = {
+        scope: sanitizeText(payload.scope, 16),
+        repo: sanitizeText(payload.repo, 256),
+        project: sanitizeText(payload.project, 128),
+        language: sanitizeText(payload.language, 64),
+        type: sanitizeText(payload.type, 32),
+        tags: sanitizeTags(payload.tags),
+        frameworks: Array.isArray(payload.frameworks)
+          ? payload.frameworks
+              .filter((value) => typeof value === "string")
+              .map((value) => value.trim().toLowerCase())
+              .slice(0, 8)
+          : [],
+        include_expired: payload.include_expired === true || payload.includeExpired === true,
+      };
+
+      const candidateLimit = Math.min(Math.max(topK * 8, 50), 500);
+      const candidates = await queryRecallCandidates(filters, candidateLimit);
+      const queryEmbedding = runtime.intelligenceEngine.embed(query);
+
+      const scored = candidates
+        .map((candidate) => {
+          const content = typeof candidate.content === "string" ? candidate.content : "";
+          const contentEmbedding = runtime.intelligenceEngine.embed(content);
+          const score = similarity(queryEmbedding, contentEmbedding);
+
+          return {
+            id: candidate.memory_id,
+            content,
+            type: candidate.type,
+            scope: candidate.scope,
+            score,
+            metadata: {
+              repo: candidate.repo,
+              repo_name: candidate.repo_name,
+              project: candidate.project,
+              language: candidate.language,
+              frameworks: candidate.frameworks,
+              tags: candidate.tags,
+              created_at: candidate.created_at,
+              expires_at: candidate.expires_at,
+            },
+          };
+        })
+        .filter((entry) => typeof entry.score === "number" && entry.score >= minScore)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, topK)
+        .map((entry) => ({
+          ...entry,
+          score: Number(entry.score.toFixed(3)),
+        }));
+
+      sendJson(res, 200, {
+        success: true,
+        query,
+        top_k: topK,
+        min_score: minScore,
+        results: scored,
+      });
+    } catch (error) {
+      process.stderr.write(
+        `[my-brain] recall failure: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+      sendJson(res, 500, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "failed to recall memory",
       });
     }
     return;
