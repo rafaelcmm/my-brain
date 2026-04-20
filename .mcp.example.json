@@ -1,0 +1,12 @@
+{
+  "_comment": "Copy this file to .mcp.json (gitignored) and replace the token with the value from .secrets/auth-token. The MCP bridge is exposed on port 3333 through the Caddy gateway — all requests require a Bearer token.",
+  "mcpServers": {
+    "my-brain": {
+      "type": "sse",
+      "url": "http://127.0.0.1:3333/sse",
+      "headers": {
+        "Authorization": "Bearer my-brain-local-token"
+      }
+    }
+  }
+}

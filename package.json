@@ -5,6 +5,10 @@
   "description": "Self-hosted memory and orchestration layer for MCP clients.",
   "license": "MIT",
   "scripts": {
+    "up": "docker compose up -d --build",
+    "down": "docker compose down",
+    "restart": "docker compose restart",
+    "logs": "docker compose logs -f",
     "lint": "npm run lint --prefix src/orchestrator",
     "test": "npm run test --prefix src/orchestrator",
     "format:check": "prettier --check ."
