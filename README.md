@@ -142,10 +142,10 @@ Implementation details are intentionally separated from this user README:
 
 1. Keep changes scoped and documented.
 2. Run:
-   npm install
-   npm run lint
-   npm test
-   npx prettier --check .
+   pnpm install
+   pnpm lint
+   pnpm test
+   pnpm format:check
 3. Validate compose and smoke flow before opening PR.
 
 ## Status
