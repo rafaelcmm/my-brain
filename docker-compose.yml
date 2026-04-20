@@ -141,7 +141,8 @@ services:
       --host 0.0.0.0
       --port 3333
       --pass-environment
-      --allow-origin ${MYBRAIN_ALLOWED_MCP_ORIGINS:-http://localhost,http://127.0.0.1}
+      --allow-origin http://localhost
+      --allow-origin http://127.0.0.1
       --
       npx -y ruvector mcp start
     expose:
