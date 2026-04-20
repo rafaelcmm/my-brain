@@ -2,7 +2,7 @@
 
 ## Scope
 
-Applies to orchestrator/ runtime code and container build.
+Applies to src/orchestrator/ runtime code and container build.
 
 ## Responsibilities
 
@@ -18,6 +18,6 @@ Applies to orchestrator/ runtime code and container build.
 
 ## Validation
 
-1. npm run lint --prefix orchestrator
-2. npm run test --prefix orchestrator
-3. docker build -f orchestrator/Dockerfile -t my-brain/orchestrator:local .
+1. npm run lint --prefix src/orchestrator
+2. npm run test --prefix src/orchestrator
+3. docker build -f src/orchestrator/Dockerfile -t my-brain/orchestrator:local .

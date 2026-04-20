@@ -27,11 +27,11 @@ die() { printf 'ERR %s\n' "$*" >&2; exit 1; }
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/install.sh [--mode memory|full] [--model MODEL] [--version TAG]
+  ./src/scripts/install.sh [--mode memory|full] [--model MODEL] [--version TAG]
                        [--install-dir PATH] [--force-token]
 
 Optional integrity check:
-  MYBRAIN_VERIFY_SHA256=<expected_hash> ./scripts/install.sh
+  MYBRAIN_VERIFY_SHA256=<expected_hash> ./src/scripts/install.sh
 EOF
 }
 
@@ -141,8 +141,8 @@ fi
 token="$(cat "$token_file")"
 
 # Render gateway token matcher in Caddyfile.
-sed -i.bak -E "s|Bearer [^\"]+|Bearer ${token}|" gateway/Caddyfile
-rm -f gateway/Caddyfile.bak
+sed -i.bak -E "s|Bearer [^\"]+|Bearer ${token}|" src/gateway/Caddyfile
+rm -f src/gateway/Caddyfile.bak
 
 if [[ ! -f .secrets/auth-token.previous ]]; then
   printf 'unused-placeholder' > .secrets/auth-token.previous
@@ -222,5 +222,5 @@ Manage:
   docker compose down
 
 Rotate token:
-  ./scripts/rotate-token.sh
+  ./src/scripts/rotate-token.sh
 EOF

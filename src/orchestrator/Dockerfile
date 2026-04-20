@@ -16,7 +16,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 FROM base AS prod-deps
-COPY orchestrator/package.json orchestrator/pnpm-lock.yaml ./
+COPY src/orchestrator/package.json src/orchestrator/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
@@ -25,8 +25,8 @@ RUN groupadd -g 1001 mybrain \
  && useradd -u 1001 -g mybrain -m -d /app -s /usr/sbin/nologin mybrain
 
 COPY --from=prod-deps --chown=mybrain:mybrain /app/node_modules ./node_modules
-COPY --chown=mybrain:mybrain orchestrator/package.json ./
-COPY --chown=mybrain:mybrain orchestrator/src ./src
+COPY --chown=mybrain:mybrain src/orchestrator/package.json ./
+COPY --chown=mybrain:mybrain src/orchestrator/src ./src
 
 USER mybrain
 EXPOSE 8080

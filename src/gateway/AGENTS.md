@@ -2,7 +2,7 @@
 
 ## Scope
 
-Applies to gateway/ reverse-proxy and auth behavior.
+Applies to src/gateway/ reverse-proxy and auth behavior.
 
 ## Responsibilities
 
@@ -18,4 +18,4 @@ Applies to gateway/ reverse-proxy and auth behavior.
 
 ## Validation
 
-1. docker run --rm -v "$PWD/gateway:/etc/caddy" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+1. docker run --rm -v "$PWD/src/gateway:/etc/caddy" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile

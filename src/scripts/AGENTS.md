@@ -2,7 +2,7 @@
 
 ## Scope
 
-Applies to scripts/ shell automation.
+Applies to src/scripts/ shell automation.
 
 ## Responsibilities
 
@@ -18,5 +18,5 @@ Applies to scripts/ shell automation.
 
 ## Validation
 
-1. shellcheck scripts/\*.sh
-2. scripts/smoke-test.sh after compose up
+1. shellcheck src/scripts/\*.sh
+2. src/scripts/smoke-test.sh after compose up

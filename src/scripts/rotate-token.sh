@@ -26,9 +26,9 @@ printf '%s' "$new_token" > "$tmp"
 chmod 600 "$tmp"
 mv "$tmp" "$TOKEN_FILE"
 
-if [[ -f gateway/Caddyfile ]]; then
-  sed -i.bak -E "s|Bearer [^\"]+|Bearer ${new_token}|" gateway/Caddyfile
-  rm -f gateway/Caddyfile.bak
+if [[ -f src/gateway/Caddyfile ]]; then
+  sed -i.bak -E "s|Bearer [^\"]+|Bearer ${new_token}|" src/gateway/Caddyfile
+  rm -f src/gateway/Caddyfile.bak
 fi
 
 echo "Token rotated"

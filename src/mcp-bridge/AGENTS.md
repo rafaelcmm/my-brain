@@ -2,7 +2,7 @@
 
 ## Scope
 
-Applies to mcp-bridge container build and runtime bridge behavior.
+Applies to src/mcp-bridge container build and runtime bridge behavior.
 
 ## Responsibilities
 
@@ -12,5 +12,5 @@ Applies to mcp-bridge container build and runtime bridge behavior.
 
 ## Validation
 
-1. docker build -f mcp-bridge/Dockerfile -t my-brain/mcp-bridge:local .
+1. docker build -f src/mcp-bridge/Dockerfile -t my-brain/mcp-bridge:local .
 2. Verify tools/list returns HTTP 200 through gateway with bearer token.

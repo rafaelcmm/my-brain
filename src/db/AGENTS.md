@@ -2,7 +2,7 @@
 
 ## Scope
 
-Applies to db/ bootstrap SQL and migration-like changes.
+Applies to src/db/ bootstrap SQL and migration-like changes.
 
 ## Responsibilities
 
