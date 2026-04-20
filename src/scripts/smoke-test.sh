@@ -38,7 +38,16 @@ unauth_code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${rest_p
 auth_code="$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${rest_port}/health")"
 [[ "$auth_code" == "200" ]] || { echo "expected 200 with token, got $auth_code" >&2; exit 1; }
 
-sse_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${mcp_port}/sse" || true)"
-[[ "$sse_code" == "200" ]] || { echo "expected 200 /sse, got $sse_code" >&2; exit 1; }
+# Streamable HTTP transport: POST an MCP initialize message and expect 200.
+# The gateway enforces bearer auth before forwarding; a 200 confirms both
+# auth pass-through and mcp-proxy reachability on the /mcp endpoint.
+mcp_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
+  -X POST \
+  -H "Authorization: Bearer $token" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke-test","version":"1.0.0"}}}' \
+  "http://127.0.0.1:${mcp_port}/mcp" || true)"
+[[ "$mcp_code" == "200" ]] || { echo "expected 200 /mcp, got $mcp_code" >&2; exit 1; }
 
 echo "smoke test passed"
