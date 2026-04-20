@@ -55,6 +55,18 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 5. Stop stack:
    docker compose down
 
+### Postman Minimal General Test
+
+Use the bundled collection `my-brain (minimal)` for a compact sanity flow:
+
+1. `General Smoke -> Health check`
+2. `General Smoke -> Initialize MCP session`
+3. `General Smoke -> List MCP tools`
+4. `General Smoke -> LLM generate`
+
+The initialize request auto-saves `Mcp-Session-Id` into `mcp_session_id`.
+The generate request auto-builds JSON payload and uses `think=false` to return direct answer text.
+
 ## Connect Client (MCP)
 
 Use .mcp.json.example as base. Recommended header approach uses environment variable:
@@ -119,9 +131,12 @@ High-impact variables:
 3. POST /mcp fails:
    inspect gateway and mcp logs:
    docker compose logs my-brain-gateway my-brain-mcp
-4. 410 on /sse or /messages:
+4. MCP returns "Session not found":
+   run `Initialize session` first and make sure follow-up requests send `Mcp-Session-Id`.
+   In the bundled Postman collection, `Initialize session` now auto-saves this header to `mcp_session_id`.
+5. 410 on /sse or /messages:
    expected. Legacy SSE is intentionally blocked at the gateway; use POST /mcp.
-5. orchestrator unhealthy:
+6. orchestrator unhealthy:
    check logs and health endpoint from container network.
 
 ## Technical Docs

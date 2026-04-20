@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "a0e1f2b3-0000-4000-8000-200000000001",
-    "name": "my-brain",
-    "description": "Local testing collection for the my-brain self-hosted memory stack.\n\nAll requests route through the Caddy gateway (`rest_base_url` on port 8080, `mcp_base_url` on port 3333) and require a Bearer token set in the `auth_token` environment variable.\n\nImport alongside `my-brain.postman_environment.json` and select the **my-brain (local)** environment before running.",
+    "name": "my-brain (minimal)",
+    "description": "Minimal general smoke tests for local my-brain stack.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -17,8 +17,7 @@
   },
   "item": [
     {
-      "name": "Orchestrator",
-      "description": "REST endpoints exposed by the Node orchestrator service (proxied through Caddy on port 8080).",
+      "name": "General Smoke",
       "item": [
         {
           "name": "Health check",
@@ -30,83 +29,12 @@
               "host": ["{{rest_base_url}}"],
               "path": ["health"]
             },
-            "description": "Liveness probe. Returns service name, fixed `full` runtime mode, SONA enabled flag, and UTC timestamp.\n\nExpected: 200 OK with `status: \"ok\"`."
-          },
-          "response": [
-            {
-              "name": "200 OK",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{rest_base_url}}/health",
-                  "host": ["{{rest_base_url}}"],
-                  "path": ["health"]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"my-brain-orchestrator\",\n  \"mode\": \"full\",\n  \"sonaEnabled\": true,\n  \"timestamp\": \"2026-04-20T00:00:00.000Z\"\n}"
-            }
-          ]
-        },
-        {
-          "name": "Status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{rest_base_url}}/v1/status",
-              "host": ["{{rest_base_url}}"],
-              "path": ["v1", "status"]
-            },
-            "description": "Returns runtime configuration summary: fixed `full` mode, LLM model/endpoint, and whether the DB URL is configured.\n\nExpected: 200 OK. The `llm.endpoint` field should always point at the local Ollama sidecar."
-          },
-          "response": [
-            {
-              "name": "200 OK – full runtime",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{rest_base_url}}/v1/status",
-                  "host": ["{{rest_base_url}}"],
-                  "path": ["v1", "status"]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "body": "{\n  \"service\": \"my-brain-orchestrator\",\n  \"mode\": \"full\",\n  \"llm\": {\n    \"model\": \"qwen3.5:0.8b\",\n    \"endpoint\": \"http://my-brain-llm:11434\"\n  },\n  \"memory\": {\n    \"dbConfigured\": true\n  }\n}"
-            }
-          ]
-        },
-        {
-          "name": "Unauthorized (token sanity check)",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{rest_base_url}}/health",
-              "host": ["{{rest_base_url}}"],
-              "path": ["health"]
-            },
-            "description": "Sends the health request **without** the Authorization header to verify the gateway rejects unauthenticated traffic.\n\nExpected: 401 Unauthorized with `WWW-Authenticate: Bearer realm=\"my-brain\"`."
+            "description": "Checks orchestrator liveness through gateway."
           },
           "response": []
-        }
-      ]
-    },
-    {
-      "name": "MCP Bridge",
-      "description": "MCP (Model Context Protocol) endpoints exposed by mcp-proxy (proxied through Caddy on port 3333).\n\nThis project supports Streamable HTTP only:\n1. `POST /mcp` with `initialize`.\n2. Copy the `Mcp-Session-Id` response header into the `mcp_session_id` environment variable.\n3. Reuse that value in the `Mcp-Session-Id` request header for later calls.\n\nLegacy `/sse` and `/messages` routes are intentionally blocked at the gateway.",
-      "item": [
+        },
         {
-          "name": "Initialize session",
+          "name": "Initialize MCP session",
           "request": {
             "method": "POST",
             "header": [
@@ -133,12 +61,29 @@
               "host": ["{{mcp_base_url}}"],
               "path": ["mcp"]
             },
-            "description": "Initializes an MCP session over Streamable HTTP. Copy the `Mcp-Session-Id` response header into the `mcp_session_id` environment variable before using the follow-up requests.\n\n**curl equivalent:**\n```bash\ncurl -i -X POST -H 'Authorization: Bearer {{auth_token}}' \\\n     -H 'Content-Type: application/json' \\\n     -H 'Accept: application/json, text/event-stream' \\\n     -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"postman\",\"version\":\"1.0.0\"}}}' \\\n     http://127.0.0.1:3333/mcp\n```"
+            "description": "Creates MCP session and stores Mcp-Session-Id in environment."
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const sessionId = pm.response.headers.get('Mcp-Session-Id') || pm.response.headers.get('mcp-session-id');",
+                  "pm.test('initialize returns Mcp-Session-Id header', function () {",
+                  "  pm.expect(sessionId, 'Mcp-Session-Id response header').to.be.a('string').and.not.empty;",
+                  "});",
+                  "if (sessionId) {",
+                  "  pm.environment.set('mcp_session_id', sessionId.trim());",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
-          "name": "List tools",
+          "name": "List MCP tools",
           "request": {
             "method": "POST",
             "header": [
@@ -169,12 +114,12 @@
               "host": ["{{mcp_base_url}}"],
               "path": ["mcp"]
             },
-            "description": "Returns the full list of tools registered by the ruvector MCP server. Requires `mcp_session_id` from the initialize response header."
+            "description": "Verifies MCP bridge works with active session."
           },
           "response": []
         },
         {
-          "name": "List resources",
+          "name": "LLM generate",
           "request": {
             "method": "POST",
             "header": [
@@ -184,52 +129,12 @@
               },
               {
                 "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "Mcp-Session-Id",
-                "value": "{{mcp_session_id}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"resources/list\",\n  \"params\": {}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{mcp_base_url}}/mcp",
-              "host": ["{{mcp_base_url}}"],
-              "path": ["mcp"]
-            },
-            "description": "Returns the list of resources exposed by the ruvector MCP server."
-          },
-          "response": []
-        },
-        {
-          "name": "Call tool – remember context",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "Mcp-Session-Id",
-                "value": "{{mcp_session_id}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"hooks_remember\",\n    \"arguments\": {\n      \"content\": \"my-brain Postman test entry\",\n      \"type\": \"general\"\n    }\n  }\n}",
+              "raw": "{}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -237,49 +142,45 @@
               }
             },
             "url": {
-              "raw": "{{mcp_base_url}}/mcp",
-              "host": ["{{mcp_base_url}}"],
-              "path": ["mcp"]
+              "raw": "{{rest_base_url}}/llm/api/generate",
+              "host": ["{{rest_base_url}}"],
+              "path": ["llm", "api", "generate"]
             },
-            "description": "Stores a memory entry via the live `hooks_remember` tool exposed by the current ruvector MCP server."
+            "description": "Runs minimal model generation through gateway llm proxy."
           },
-          "response": []
-        },
-        {
-          "name": "Call tool – recall context",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json, text/event-stream"
-              },
-              {
-                "key": "Mcp-Session-Id",
-                "value": "{{mcp_session_id}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"hooks_recall\",\n    \"arguments\": {\n      \"query\": \"Postman test\",\n      \"top_k\": 5\n    }\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const model = pm.environment.get('llm_model') || 'qwen3.5:0.8b';",
+                  "const prompt = pm.environment.get('llm_prompt') || 'Reply with one word: ready';",
+                  "const payload = {",
+                  "  model,",
+                  "  prompt,",
+                  "  stream: false,",
+                  "  think: false,",
+                  "  options: { temperature: 0, num_predict: 24 }",
+                  "};",
+                  "pm.request.body.update(JSON.stringify(payload, null, 2));"
+                ],
+                "type": "text/javascript"
               }
             },
-            "url": {
-              "raw": "{{mcp_base_url}}/mcp",
-              "host": ["{{mcp_base_url}}"],
-              "path": ["mcp"]
-            },
-            "description": "Performs a semantic search via the live `hooks_recall` tool exposed by the current ruvector MCP server."
-          },
-          "response": []
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('generate returns response text', function () {",
+                  "  pm.expect(body.response, 'Ollama response').to.be.a('string').and.not.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     }
