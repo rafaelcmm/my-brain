@@ -14,7 +14,6 @@ set -euo pipefail
 MYBRAIN_REPO_URL="${MYBRAIN_REPO_URL:-https://github.com/<your-org>/my-brain.git}"
 MYBRAIN_INSTALL_DIR="${MYBRAIN_INSTALL_DIR:-$HOME/.my-brain}"
 MYBRAIN_VERSION="${MYBRAIN_VERSION:-latest}"
-MYBRAIN_MODE="${MYBRAIN_MODE:-memory}"
 MYBRAIN_LLM_MODEL="${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}"
 MYBRAIN_FORCE_REGEN_TOKEN="${MYBRAIN_FORCE_REGEN_TOKEN:-false}"
 MYBRAIN_VERIFY_SHA256="${MYBRAIN_VERIFY_SHA256:-}"
@@ -27,7 +26,7 @@ die() { printf 'ERR %s\n' "$*" >&2; exit 1; }
 usage() {
   cat <<'EOF'
 Usage:
-  ./src/scripts/install.sh [--mode memory|full] [--model MODEL] [--version TAG]
+  ./src/scripts/install.sh [--model MODEL] [--version TAG]
                        [--install-dir PATH] [--force-token]
 
 Optional integrity check:
@@ -37,10 +36,6 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --mode)
-      MYBRAIN_MODE="$2"
-      shift 2
-      ;;
     --model)
       MYBRAIN_LLM_MODEL="$2"
       shift 2
@@ -108,13 +103,20 @@ ok "version: $installed_version"
 if [[ ! -f .env ]]; then
   cp .env.example .env
   sed -i.bak -E \
-    -e "s|^MYBRAIN_MODE=.*|MYBRAIN_MODE=${MYBRAIN_MODE}|" \
     -e "s|^MYBRAIN_LLM_MODEL=.*|MYBRAIN_LLM_MODEL=${MYBRAIN_LLM_MODEL}|" \
     .env
   rm -f .env.bak
   ok "wrote .env"
 else
   warn ".env exists; preserving"
+fi
+
+# Remove the retired mode flag so upgrades converge on the single supported
+# runtime profile without requiring manual cleanup.
+if grep -q '^MYBRAIN_MODE=' .env; then
+  sed -i.bak '/^MYBRAIN_MODE=/d' .env
+  rm -f .env.bak
+  ok "removed deprecated MYBRAIN_MODE"
 fi
 
 if grep -q '^MYBRAIN_DB_PASSWORD=change-me-in-real-life' .env; then
@@ -153,18 +155,10 @@ token_perms="$(stat -c '%a' "$token_file" 2>/dev/null || stat -f '%A' "$token_fi
 [[ "$token_perms" == "600" ]] || die "bad token perms: $token_perms"
 
 say "Pulling images"
-if [[ "$MYBRAIN_MODE" == "full" ]]; then
-  docker compose --profile full pull
-else
-  docker compose pull
-fi
+docker compose pull
 
 say "Starting services"
-if [[ "$MYBRAIN_MODE" == "full" ]]; then
-  docker compose --profile full up -d
-else
-  docker compose up -d
-fi
+docker compose up -d
 
 say "Waiting for orchestrator health"
 for i in $(seq 1 60); do
@@ -187,28 +181,36 @@ say "Verifying REST health"
 rest_code="$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${rest_port}/health")"
 [[ "$rest_code" == "200" ]] || die "REST /health failed with $rest_code"
 
-say "Verifying MCP SSE endpoint"
-mcp_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${mcp_port}/sse" || true)"
-[[ "$mcp_code" == "200" ]] || die "MCP /sse failed with $mcp_code"
+say "Verifying MCP Streamable HTTP endpoint"
+mcp_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
+  -X POST \
+  -H "Authorization: Bearer $token" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"installer","version":"1.0.0"}}}' \
+  "http://127.0.0.1:${mcp_port}/mcp" || true)"
+[[ "$mcp_code" == "200" ]] || die "MCP /mcp failed with $mcp_code"
+
+legacy_code="$(curl --max-time 5 -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "http://127.0.0.1:${mcp_port}/sse" || true)"
+[[ "$legacy_code" == "410" ]] || die "expected legacy /sse to return 410, got $legacy_code"
 
 cat <<EOF
 
 my-brain ready
 
 Version: $installed_version
-Mode: $MYBRAIN_MODE
 Install dir: $MYBRAIN_INSTALL_DIR
 Token file: $token_file
 
 REST: http://127.0.0.1:${rest_port}
-MCP:  http://127.0.0.1:${mcp_port}/sse
+MCP:  http://127.0.0.1:${mcp_port}/mcp
 
 Client snippet (.mcp.json):
 {
   "mcpServers": {
     "my-brain": {
-      "type": "sse",
-      "url": "http://127.0.0.1:${mcp_port}/sse",
+      "type": "http",
+      "url": "http://127.0.0.1:${mcp_port}/mcp",
       "headers": {
         "Authorization": "Bearer $token"
       }
