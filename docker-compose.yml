@@ -140,15 +140,6 @@ services:
       MYBRAIN_REST_URL: http://my-brain-orchestrator:8080
       MYBRAIN_DB_URL: postgres://${MYBRAIN_DB_USER:-mybrain}:${MYBRAIN_DB_PASSWORD}@my-brain-db:5432/${MYBRAIN_DB_NAME:-mybrain_db}
       MYBRAIN_ALLOWED_ORIGINS: ${MYBRAIN_ALLOWED_MCP_ORIGINS:-http://localhost,http://127.0.0.1}
-    command: >
-      mcp-proxy
-      --host 0.0.0.0
-      --port 3333
-      --pass-environment
-      --allow-origin http://localhost
-      --allow-origin http://127.0.0.1
-      --
-      npx -y ruvector mcp start
     expose:
       - "3333"
 

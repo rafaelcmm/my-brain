@@ -13,6 +13,11 @@ RUN python3 -m venv "${VIRTUAL_ENV}" \
 
 WORKDIR /app
 
+COPY src/mcp-bridge/package.json src/mcp-bridge/package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY src/mcp-bridge/src ./src
+
 # --allow-origin must be repeated per origin; comma-separated strings are not split by mcp-proxy.
 # Streamable HTTP transport is the default in 0.11.0+ — clients connect to /mcp, not /sse.
-CMD ["mcp-proxy", "--host", "0.0.0.0", "--port", "3333", "--pass-environment", "--allow-origin", "http://localhost", "--allow-origin", "http://127.0.0.1", "--", "npx", "-y", "ruvector", "mcp", "start"]
+CMD ["mcp-proxy", "--host", "0.0.0.0", "--port", "3333", "--pass-environment", "--allow-origin", "http://localhost", "--allow-origin", "http://127.0.0.1", "--", "node", "src/index.mjs"]
