@@ -31,7 +31,7 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 ### Option B: one-line bootstrap (after you publish this repo)
 
 1. Run:
-   curl -fsSL https://raw.githubusercontent.com/<your-org>/my-brain/main/src/scripts/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/rafaelcmm/my-brain/v0.1.0/src/scripts/install.sh | bash
 2. Review printed MCP snippet and paste into your local client config.
 
 ## Prerequisites
