@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "my-brain": {
-      "type": "sse",
-      "url": "http://127.0.0.1:3333/sse",
+      "type": "http",
+      "url": "http://127.0.0.1:3333/mcp",
       "headers": {
         "Authorization": "Bearer ${env:MYBRAIN_TOKEN}"
       }
