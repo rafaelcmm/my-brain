@@ -3,9 +3,9 @@
 	auto_https off
 }
 
-# Require bearer token rendered by install/rotation scripts.
+# Require bearer token from the mounted secret file.
 (bearer_auth) {
-	@unauth not header Authorization "Bearer my-brain-local-token"
+	@unauth not header Authorization "Bearer {file./run/secrets/auth-token}"
 	header @unauth WWW-Authenticate `Bearer realm="my-brain"`
 	respond @unauth "Unauthorized" 401
 }

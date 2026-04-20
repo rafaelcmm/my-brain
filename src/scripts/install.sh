@@ -142,10 +142,6 @@ fi
 
 token="$(cat "$token_file")"
 
-# Render gateway token matcher in Caddyfile.
-sed -i.bak -E "s|Bearer [^\"]+|Bearer ${token}|" src/gateway/Caddyfile
-rm -f src/gateway/Caddyfile.bak
-
 if [[ ! -f .secrets/auth-token.previous ]]; then
   printf 'unused-placeholder' > .secrets/auth-token.previous
   chmod 600 .secrets/auth-token.previous
@@ -212,11 +208,14 @@ Client snippet (.mcp.json):
       "type": "http",
       "url": "http://127.0.0.1:${mcp_port}/mcp",
       "headers": {
-        "Authorization": "Bearer $token"
+        "Authorization": "Bearer \${env:MYBRAIN_TOKEN}"
       }
     }
   }
 }
+
+Export token for local shells:
+  export MYBRAIN_TOKEN="\$(cat ${token_file})"
 
 Manage:
   docker compose ps

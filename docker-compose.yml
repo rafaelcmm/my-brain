@@ -157,7 +157,6 @@ services:
       my-brain-orchestrator:
         condition: service_healthy
     environment:
-      MYBRAIN_AUTH_TOKEN_FILE: /run/secrets/auth-token
       MYBRAIN_CORS_ORIGINS: ${MYBRAIN_CORS_ORIGINS:-http://localhost,http://127.0.0.1}
     volumes:
       - ./src/gateway/Caddyfile:/etc/caddy/Caddyfile:ro

@@ -26,18 +26,13 @@ printf '%s' "$new_token" > "$tmp"
 chmod 600 "$tmp"
 mv "$tmp" "$TOKEN_FILE"
 
-if [[ -f src/gateway/Caddyfile ]]; then
-  sed -i.bak -E "s|Bearer [^\"]+|Bearer ${new_token}|" src/gateway/Caddyfile
-  rm -f src/gateway/Caddyfile.bak
-fi
-
 echo "Token rotated"
 echo " old: ${TOKEN_FILE}.previous"
 echo " new: ${TOKEN_FILE}"
 echo
 if command -v docker >/dev/null; then
-  docker compose up -d my-brain-gateway >/dev/null 2>&1 || true
+  docker compose restart my-brain-gateway >/dev/null 2>&1 || true
   echo "gateway reload requested"
 fi
 
-echo "Use in clients: Authorization: Bearer $new_token"
+echo "Refresh client auth from: ${TOKEN_FILE}"
