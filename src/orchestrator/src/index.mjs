@@ -1,6 +1,7 @@
 import http from "node:http";
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
@@ -323,6 +324,30 @@ async function ensureAdrSchemas(pool) {
       metadata JSONB NOT NULL DEFAULT '{}'::jsonb
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS my_brain_memory_votes (
+      id BIGSERIAL PRIMARY KEY,
+      memory_id TEXT NOT NULL,
+      direction TEXT NOT NULL,
+      reason TEXT,
+      source TEXT,
+      voted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS my_brain_sessions (
+      session_id TEXT PRIMARY KEY,
+      agent TEXT,
+      context JSONB NOT NULL DEFAULT '{}'::jsonb,
+      opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      closed_at TIMESTAMPTZ,
+      success BOOLEAN,
+      quality DOUBLE PRECISION,
+      reason TEXT
+    )
+  `);
 }
 
 /**
@@ -537,6 +562,36 @@ async function queryRecallCandidates(filters, limit) {
   );
 
   return result.rows;
+}
+
+/**
+ * Parses digest window input to bounded SQL interval value.
+ *
+ * @param {unknown} value Raw digest window value (for example 1w, 7d, 24h).
+ * @returns {string} SQL interval expression used for digest filtering.
+ */
+function normalizeDigestSince(value) {
+  if (typeof value !== "string") {
+    return "7 days";
+  }
+
+  const normalized = value.trim().toLowerCase();
+  const weekMatch = normalized.match(/^(\d{1,2})w$/);
+  if (weekMatch) {
+    return `${weekMatch[1]} weeks`;
+  }
+
+  const dayMatch = normalized.match(/^(\d{1,3})d$/);
+  if (dayMatch) {
+    return `${dayMatch[1]} days`;
+  }
+
+  const hourMatch = normalized.match(/^(\d{1,3})h$/);
+  if (hourMatch) {
+    return `${hourMatch[1]} hours`;
+  }
+
+  return "7 days";
 }
 
 /**
@@ -1051,6 +1106,255 @@ async function handleRequest(req, res) {
         message: "failed to recall memory",
       });
     }
+    return;
+  }
+
+  if (method === "POST" && url === "/v1/memory/vote") {
+    if (!runtime.pool) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "vote storage unavailable",
+      });
+      return;
+    }
+
+    let payload;
+    try {
+      payload = await parseJsonBody(req);
+    } catch (error) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: error instanceof Error ? error.message : "invalid json payload",
+      });
+      return;
+    }
+
+    const memoryId = sanitizeText(payload.memory_id ?? payload.id, 128);
+    const direction = sanitizeText(payload.direction, 8)?.toLowerCase();
+    const reason = sanitizeText(payload.reason, 500);
+
+    if (!memoryId || (direction !== "up" && direction !== "down")) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: "memory_id and direction(up|down) are required",
+      });
+      return;
+    }
+
+    await runtime.pool.query(
+      `INSERT INTO my_brain_memory_votes (memory_id, direction, reason, source)
+       VALUES ($1, $2, $3, $4)`,
+      [memoryId, direction, reason, "mb_vote"],
+    );
+
+    sendJson(res, 200, {
+      success: true,
+      memory_id: memoryId,
+      direction,
+    });
+    return;
+  }
+
+  if (method === "POST" && url === "/v1/memory/forget") {
+    if (!runtime.pool) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "metadata storage unavailable",
+      });
+      return;
+    }
+
+    let payload;
+    try {
+      payload = await parseJsonBody(req);
+    } catch (error) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: error instanceof Error ? error.message : "invalid json payload",
+      });
+      return;
+    }
+
+    const memoryId = sanitizeText(payload.memory_id ?? payload.id, 128);
+    const mode = sanitizeText(payload.mode, 8)?.toLowerCase() === "hard" ? "hard" : "soft";
+
+    if (!memoryId) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: "memory_id is required",
+      });
+      return;
+    }
+
+    if (mode === "hard") {
+      await runtime.pool.query("DELETE FROM my_brain_memory_metadata WHERE memory_id = $1", [memoryId]);
+    } else {
+      await runtime.pool.query(
+        "UPDATE my_brain_memory_metadata SET expires_at = NOW() WHERE memory_id = $1",
+        [memoryId],
+      );
+    }
+
+    sendJson(res, 200, {
+      success: true,
+      memory_id: memoryId,
+      mode,
+    });
+    return;
+  }
+
+  if (method === "POST" && url === "/v1/session/open") {
+    if (!runtime.pool) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "session storage unavailable",
+      });
+      return;
+    }
+
+    let payload;
+    try {
+      payload = await parseJsonBody(req);
+    } catch (error) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: error instanceof Error ? error.message : "invalid json payload",
+      });
+      return;
+    }
+
+    const sessionId = sanitizeText(payload.session_id, 128) ?? randomUUID();
+    const agent = sanitizeText(payload.agent, 128) ?? "main";
+    const context =
+      typeof payload.context === "object" && payload.context !== null && !Array.isArray(payload.context)
+        ? payload.context
+        : buildProjectContext();
+
+    await runtime.pool.query(
+      `INSERT INTO my_brain_sessions (session_id, agent, context)
+       VALUES ($1, $2, $3::jsonb)
+       ON CONFLICT (session_id) DO NOTHING`,
+      [sessionId, agent, JSON.stringify(context)],
+    );
+
+    if (runtime.intelligenceEngine) {
+      runtime.intelligenceEngine.beginTrajectory("session_open", "session");
+      runtime.intelligenceEngine.setTrajectoryRoute(agent);
+    }
+
+    sendJson(res, 200, {
+      success: true,
+      session_id: sessionId,
+      agent,
+    });
+    return;
+  }
+
+  if (method === "POST" && url === "/v1/session/close") {
+    if (!runtime.pool) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "session storage unavailable",
+      });
+      return;
+    }
+
+    let payload;
+    try {
+      payload = await parseJsonBody(req);
+    } catch (error) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: error instanceof Error ? error.message : "invalid json payload",
+      });
+      return;
+    }
+
+    const sessionId = sanitizeText(payload.session_id, 128);
+    if (!sessionId) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: "session_id is required",
+      });
+      return;
+    }
+
+    const success = payload.success !== false;
+    const quality = typeof payload.quality === "number" ? payload.quality : null;
+    const reason = sanitizeText(payload.reason, 500);
+
+    await runtime.pool.query(
+      `UPDATE my_brain_sessions
+       SET closed_at = NOW(), success = $2, quality = $3, reason = $4
+       WHERE session_id = $1`,
+      [sessionId, success, quality, reason],
+    );
+
+    if (runtime.intelligenceEngine) {
+      runtime.intelligenceEngine.endTrajectory(success, quality ?? undefined);
+    }
+
+    sendJson(res, 200, {
+      success: true,
+      session_id: sessionId,
+      closed: true,
+    });
+    return;
+  }
+
+  if (method === "POST" && url === "/v1/memory/digest") {
+    if (!runtime.pool) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "digest storage unavailable",
+      });
+      return;
+    }
+
+    let payload;
+    try {
+      payload = await parseJsonBody(req);
+    } catch (error) {
+      sendJson(res, 400, {
+        success: false,
+        error: "INVALID_INPUT",
+        message: error instanceof Error ? error.message : "invalid json payload",
+      });
+      return;
+    }
+
+    const since = normalizeDigestSince(payload.since);
+    const summary = await runtime.pool.query(
+      `SELECT
+        type,
+        COALESCE(language, 'unknown') AS language,
+        COALESCE(repo_name, 'unknown') AS repo_name,
+        COUNT(*)::int AS count
+       FROM my_brain_memory_metadata
+       WHERE created_at >= NOW() - $1::interval
+       GROUP BY type, language, repo_name
+       ORDER BY count DESC
+       LIMIT 200`,
+      [since],
+    );
+
+    sendJson(res, 200, {
+      success: true,
+      since,
+      rows: summary.rows,
+    });
     return;
   }
 
