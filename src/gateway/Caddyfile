@@ -16,6 +16,7 @@
 	# supported Streamable HTTP contract exposed by /mcp.
 	@legacy_sse path /sse /messages /messages/*
 	handle @legacy_sse {
+		header Link "</mcp>; rel=\"successor\""
 		respond "Legacy MCP SSE transport removed. Use POST /mcp with type \"http\"." 410
 	}
 

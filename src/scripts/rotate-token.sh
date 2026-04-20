@@ -4,6 +4,7 @@
 set -euo pipefail
 
 TOKEN_FILE="${MYBRAIN_TOKEN_FILE:-./.secrets/auth-token}"
+MIN_TOKEN_LENGTH="${MYBRAIN_MIN_TOKEN_LENGTH:-73}"
 SECRETS_DIR="$(dirname "$TOKEN_FILE")"
 
 if [[ ! -d "$SECRETS_DIR" ]]; then
@@ -18,6 +19,10 @@ fi
 
 raw="$(openssl rand -base64 96 | tr -d '/+=\n' | cut -c1-64)"
 new_token="my-brain-${raw}"
+if [[ "${#new_token}" -lt "$MIN_TOKEN_LENGTH" ]]; then
+  echo "generated token too short (${#new_token}); require >= ${MIN_TOKEN_LENGTH}" >&2
+  exit 1
+fi
 
 tmp="$(mktemp "${TOKEN_FILE}.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT

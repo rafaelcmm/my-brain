@@ -17,6 +17,7 @@ MYBRAIN_VERSION="${MYBRAIN_VERSION:-latest}"
 MYBRAIN_LLM_MODEL="${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}"
 MYBRAIN_FORCE_REGEN_TOKEN="${MYBRAIN_FORCE_REGEN_TOKEN:-false}"
 MYBRAIN_VERIFY_SHA256="${MYBRAIN_VERIFY_SHA256:-}"
+MYBRAIN_MIN_TOKEN_LENGTH="${MYBRAIN_MIN_TOKEN_LENGTH:-73}"
 
 say() { printf '>> %s\n' "$*"; }
 ok() { printf 'OK %s\n' "$*"; }
@@ -141,6 +142,9 @@ else
 fi
 
 token="$(cat "$token_file")"
+if [[ "${#token}" -lt "$MYBRAIN_MIN_TOKEN_LENGTH" ]]; then
+  die "auth token too short (${#token}); require >= ${MYBRAIN_MIN_TOKEN_LENGTH}. rotate with ./src/scripts/rotate-token.sh"
+fi
 
 if [[ ! -f .secrets/auth-token.previous ]]; then
   printf 'unused-placeholder' > .secrets/auth-token.previous

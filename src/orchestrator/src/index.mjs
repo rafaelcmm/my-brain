@@ -268,6 +268,40 @@ const runtime = {
   llmEngine: null,
 };
 
+const rateWindowMs = 60_000;
+const rateLimitPerWindow = parseInteger(process.env.MYBRAIN_RATE_LIMIT_PER_MIN, 60);
+const rateBuckets = new Map();
+
+/**
+ * Applies fixed-window rate limiting by endpoint class and caller address.
+ *
+ * @param {http.IncomingMessage} req Incoming request.
+ * @param {string} endpointKey Endpoint class key.
+ * @returns {boolean} True when request can proceed.
+ */
+function allowRequest(req, endpointKey) {
+  const caller =
+    sanitizeText(req.headers["x-forwarded-for"], 128) ??
+    sanitizeText(req.socket?.remoteAddress, 128) ??
+    "unknown";
+  const now = Date.now();
+  const bucketKey = `${endpointKey}:${caller}`;
+  const entry = rateBuckets.get(bucketKey);
+
+  if (!entry || now - entry.windowStart >= rateWindowMs) {
+    rateBuckets.set(bucketKey, { windowStart: now, count: 1 });
+    return true;
+  }
+
+  if (entry.count >= rateLimitPerWindow) {
+    return false;
+  }
+
+  entry.count += 1;
+  rateBuckets.set(bucketKey, entry);
+  return true;
+}
+
 /**
  * Records degradation reasons once so diagnostics remain concise.
  *
@@ -925,6 +959,15 @@ async function handleRequest(req, res) {
   }
 
   if (method === "POST" && url === "/v1/memory") {
+    if (!allowRequest(req, "memory-write")) {
+      sendJson(res, 429, {
+        success: false,
+        error: "RATE_LIMITED",
+        message: "memory write rate limit exceeded",
+      });
+      return;
+    }
+
     let payload;
     try {
       payload = await parseJsonBody(req);
@@ -998,6 +1041,15 @@ async function handleRequest(req, res) {
   }
 
   if (method === "POST" && url === "/v1/memory/recall") {
+    if (!allowRequest(req, "memory-recall")) {
+      sendJson(res, 429, {
+        success: false,
+        error: "RATE_LIMITED",
+        message: "memory recall rate limit exceeded",
+      });
+      return;
+    }
+
     let payload;
     try {
       payload = await parseJsonBody(req);
@@ -1110,6 +1162,15 @@ async function handleRequest(req, res) {
   }
 
   if (method === "POST" && url === "/v1/memory/vote") {
+    if (!allowRequest(req, "memory-vote")) {
+      sendJson(res, 429, {
+        success: false,
+        error: "RATE_LIMITED",
+        message: "memory vote rate limit exceeded",
+      });
+      return;
+    }
+
     if (!runtime.pool) {
       sendJson(res, 503, {
         success: false,
@@ -1159,6 +1220,15 @@ async function handleRequest(req, res) {
   }
 
   if (method === "POST" && url === "/v1/memory/forget") {
+    if (!allowRequest(req, "memory-forget")) {
+      sendJson(res, 429, {
+        success: false,
+        error: "RATE_LIMITED",
+        message: "memory forget rate limit exceeded",
+      });
+      return;
+    }
+
     if (!runtime.pool) {
       sendJson(res, 503, {
         success: false,
@@ -1314,6 +1384,15 @@ async function handleRequest(req, res) {
   }
 
   if (method === "POST" && url === "/v1/memory/digest") {
+    if (!allowRequest(req, "memory-digest")) {
+      sendJson(res, 429, {
+        success: false,
+        error: "RATE_LIMITED",
+        message: "memory digest rate limit exceeded",
+      });
+      return;
+    }
+
     if (!runtime.pool) {
       sendJson(res, 503, {
         success: false,
