@@ -10,6 +10,12 @@ This document describes runtime architecture for local my-brain deployments.
 4. Postgres: durable storage for vectors and metadata.
 5. Ollama: local LLM and embedding backends.
 
+## Data model
+
+1. Vector memory remains managed by runtime engine internals.
+2. Metadata sidecar table `my_brain_memory_metadata` stores scoped fields used by filtered recall.
+3. ADR schemas `policy_memory`, `session_memory`, and `witness_memory` are created on orchestrator bootstrap.
+
 ## Request flow
 
 1. Client calls gateway on `:3333/mcp` or `:8080/*` with bearer token.

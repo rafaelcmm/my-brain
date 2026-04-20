@@ -4,6 +4,17 @@ import { Pool } from "pg";
 
 const FULL_MODE = "full";
 const ADR_SCHEMAS = ["policy_memory", "session_memory", "witness_memory"];
+const MEMORY_TYPES = new Set([
+  "decision",
+  "fix",
+  "convention",
+  "gotcha",
+  "tradeoff",
+  "pattern",
+  "reference",
+]);
+const MEMORY_SCOPES = new Set(["repo", "project", "global"]);
+const MEMORY_VISIBILITY = new Set(["private", "team", "public"]);
 
 const require = createRequire(import.meta.url);
 
@@ -47,6 +58,148 @@ function parseInteger(value, fallback) {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+/**
+ * Normalizes text fields by trimming and enforcing upper size bounds.
+ *
+ * @param {unknown} value Candidate user-provided value.
+ * @param {number} maxLength Hard max size accepted by storage model.
+ * @returns {string | null} Sanitized string or null when value is unusable.
+ */
+function sanitizeText(value, maxLength) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized.slice(0, maxLength);
+}
+
+/**
+ * Normalizes tag arrays and drops invalid entries to reduce noisy metadata.
+ *
+ * @param {unknown} value Candidate tags payload.
+ * @returns {string[]} Sanitized unique tag array capped to five entries.
+ */
+function sanitizeTags(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const unique = new Set();
+  for (const item of value) {
+    if (typeof item !== "string") {
+      continue;
+    }
+
+    const tag = item.trim().toLowerCase();
+    if (!/^[a-z0-9-]{2,32}$/.test(tag)) {
+      continue;
+    }
+
+    unique.add(tag);
+    if (unique.size >= 5) {
+      break;
+    }
+  }
+
+  return Array.from(unique);
+}
+
+/**
+ * Validates and sanitizes metadata memory envelopes for mb write endpoints.
+ *
+ * The result is reused by handlers so business rules stay consistent across
+ * remember, vote, and digest flows.
+ *
+ * @param {unknown} payload Raw request payload.
+ * @returns {{valid: boolean, errors: string[], envelope?: Record<string, unknown>}} Validation result.
+ */
+function validateMemoryEnvelope(payload) {
+  const errors = [];
+
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    return { valid: false, errors: ["payload must be an object"] };
+  }
+
+  const body = /** @type {Record<string, unknown>} */ (payload);
+  const content = sanitizeText(body.content, 8192);
+  if (!content) {
+    errors.push("content must be a non-empty string");
+  }
+
+  const type = sanitizeText(body.type, 32)?.toLowerCase();
+  if (!type || !MEMORY_TYPES.has(type)) {
+    errors.push("type must be one of: decision, fix, convention, gotcha, tradeoff, pattern, reference");
+  }
+
+  const scope = sanitizeText(body.scope, 16)?.toLowerCase();
+  if (!scope || !MEMORY_SCOPES.has(scope)) {
+    errors.push("scope must be one of: repo, project, global");
+  }
+
+  const metadataRaw =
+    typeof body.metadata === "object" && body.metadata !== null && !Array.isArray(body.metadata)
+      ? /** @type {Record<string, unknown>} */ (body.metadata)
+      : {};
+
+  const confidence = metadataRaw.confidence;
+  if (
+    confidence !== undefined &&
+    (typeof confidence !== "number" || Number.isNaN(confidence) || confidence < 0 || confidence > 1)
+  ) {
+    errors.push("metadata.confidence must be a number between 0 and 1");
+  }
+
+  const visibility = sanitizeText(metadataRaw.visibility, 16)?.toLowerCase();
+  if (visibility && !MEMORY_VISIBILITY.has(visibility)) {
+    errors.push("metadata.visibility must be one of: private, team, public");
+  }
+
+  const tags = sanitizeTags(metadataRaw.tags);
+  const frameworks = Array.isArray(metadataRaw.frameworks)
+    ? metadataRaw.frameworks
+        .filter((value) => typeof value === "string")
+        .map((value) => value.trim().toLowerCase())
+        .filter((value) => value.length >= 2 && value.length <= 32)
+        .slice(0, 8)
+    : [];
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return {
+    valid: true,
+    errors: [],
+    envelope: {
+      content,
+      type,
+      scope,
+      metadata: {
+        repo: sanitizeText(metadataRaw.repo, 256),
+        repo_name: sanitizeText(metadataRaw.repo_name, 128),
+        project: sanitizeText(metadataRaw.project, 128),
+        language: sanitizeText(metadataRaw.language, 64),
+        frameworks,
+        path: sanitizeText(metadataRaw.path, 512),
+        symbol: sanitizeText(metadataRaw.symbol, 256),
+        tags,
+        source: sanitizeText(metadataRaw.source, 256),
+        author: sanitizeText(metadataRaw.author, 256),
+        agent: sanitizeText(metadataRaw.agent, 128),
+        created_at: sanitizeText(metadataRaw.created_at, 64),
+        expires_at: sanitizeText(metadataRaw.expires_at, 64),
+        confidence: typeof confidence === "number" ? confidence : null,
+        visibility: visibility ?? "private",
+      },
+    },
+  };
 }
 
 /**
@@ -141,6 +294,32 @@ async function ensureAdrSchemas(pool) {
       )`,
     );
   }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS my_brain_memory_metadata (
+      id BIGSERIAL PRIMARY KEY,
+      memory_id TEXT NOT NULL UNIQUE,
+      content TEXT NOT NULL,
+      type TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      repo TEXT,
+      repo_name TEXT,
+      project TEXT,
+      language TEXT,
+      frameworks JSONB NOT NULL DEFAULT '[]'::jsonb,
+      path TEXT,
+      symbol TEXT,
+      tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+      source TEXT,
+      author TEXT,
+      agent TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ,
+      confidence DOUBLE PRECISION,
+      visibility TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+    )
+  `);
 }
 
 /**
