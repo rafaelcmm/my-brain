@@ -16,6 +16,7 @@
   "dependencies": {
     "@ruvector/ruvllm": "^2.5.0",
     "@ruvector/server": "^0.1.0",
+    "pg": "^8.20.0",
     "ruvector": "^0.2.22"
   }
 }

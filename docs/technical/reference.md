@@ -6,6 +6,7 @@ This file is API and configuration reference for maintainers.
 
 - `GET /health`: orchestrator liveness.
 - `GET /v1/status`: orchestrator status snapshot.
+- `GET /v1/capabilities`: engine/vector/sona/attention capability flags and degraded-mode reasons.
 
 More endpoints are added incrementally and documented here in same change set.
 
@@ -17,6 +18,7 @@ Core variables currently consumed by runtime:
 - `MYBRAIN_LLM_URL`
 - `MYBRAIN_LLM_MODEL`
 - `MYBRAIN_EMBEDDING_MODEL`
+- `MYBRAIN_EMBEDDING_DIM`
 - `RUVECTOR_HOST`
 - `RUVECTOR_PORT`
 - `RUVLLM_SONA_ENABLED`
