@@ -171,12 +171,7 @@ services:
     image: my-brain/gateway:local
     build:
       context: .
-      dockerfile_inline: |
-        FROM caddy:2-builder AS builder
-        RUN xcaddy build \
-          --with github.com/mholt/caddy-ratelimit
-        FROM caddy:2-alpine
-        COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+      dockerfile: src/gateway/Dockerfile
     container_name: my-brain-gateway
     restart: unless-stopped
     depends_on:

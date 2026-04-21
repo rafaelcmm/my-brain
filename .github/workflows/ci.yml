@@ -72,10 +72,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build gateway image (cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/gateway/Dockerfile
+          load: true
+          push: false
+          tags: my-brain/gateway:local
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
       - name: Validate Caddyfile
         run: |
           # Validate with project gateway build because Caddyfile uses custom modules.
-          MYBRAIN_DB_PASSWORD=ci-test-password docker compose build my-brain-gateway
           docker run --rm -v "$PWD/src/gateway:/etc/caddy" my-brain/gateway:local caddy validate --config /etc/caddy/Caddyfile
 
   docker-build:
@@ -124,6 +134,7 @@ jobs:
     needs: [required-gates, compose-validate, caddyfile-validate, shellcheck]
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
       - name: Prepare env and secrets
         run: |
           cp .env.example .env
@@ -133,9 +144,39 @@ jobs:
           printf 'unused-placeholder' > .secrets/auth-token.previous
           chmod 700 .secrets
           chmod 600 .secrets/auth-token .secrets/auth-token.previous
+      - name: Build orchestrator image (cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/orchestrator/Dockerfile
+          load: true
+          push: false
+          tags: my-brain/orchestrator:local
+          cache-from: type=gha,scope=orchestrator
+          cache-to: type=gha,mode=max,scope=orchestrator
+      - name: Build MCP bridge image (cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/mcp-bridge/Dockerfile
+          load: true
+          push: false
+          tags: my-brain/mcp-bridge:local
+          cache-from: type=gha,scope=mcp-bridge
+          cache-to: type=gha,mode=max,scope=mcp-bridge
+      - name: Build gateway image (cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/gateway/Dockerfile
+          load: true
+          push: false
+          tags: my-brain/gateway:local
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
       - name: Build and start stack
         # CI runners may not have NVIDIA runtime; use base compose only (CPU-safe).
-        run: docker compose -f docker-compose.yml up -d --build
+        run: docker compose -f docker-compose.yml up -d --no-build
       - name: Smoke test
         run: ./src/scripts/smoke-test.sh
       - name: Validate tool ids
