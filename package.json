@@ -6,7 +6,10 @@
   "license": "MIT",
   "scripts": {
     "docker:up": "docker compose up -d --build",
+    "docker:up:cpu": "docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build",
+    "docker:init:cpu": "npm run docker:up:cpu",
     "docker:down": "docker compose down",
+    "docker:down:cpu": "docker compose -f docker-compose.yml -f docker-compose.cpu.yml down",
     "docker:restart": "docker compose restart",
     "docker:logs": "docker compose logs -f",
     "lint": "npm run lint --prefix src/orchestrator",

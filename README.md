@@ -47,15 +47,19 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 
 1. Start stack:
    docker compose up -d
-2. Check services:
+2. If GPU startup fails (missing NVIDIA runtime), start with CPU fallback:
+   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+   npm run docker:up:cpu
+   # alias: npm run docker:init:cpu
+3. Check services:
    docker compose ps
-3. Run smoke test:
+4. Run smoke test:
    ./src/scripts/smoke-test.sh
-4. Backfill legacy memory metadata (after schema/runtime upgrades):
+5. Backfill legacy memory metadata (after schema/runtime upgrades):
    ./src/scripts/backfill-memory-metadata.sh
-5. Read logs:
+6. Read logs:
    docker compose logs -f my-brain-orchestrator
-6. Stop stack:
+7. Stop stack:
    docker compose down
 
 ### Postman Minimal General Test
@@ -119,6 +123,7 @@ High-impact variables:
 8. MYBRAIN_MAX_REQUEST_BODY_BYTES: max accepted JSON request body size (default 1MB).
 9. MYBRAIN_PROMETHEUS_PORT: bridge metrics endpoint port (`/metrics`, default 9090).
 10. MYBRAIN_INTERNAL_API_KEY: shared internal key used between gateway, bridge, and orchestrator.
+11. MYBRAIN_LLM_GPU_COUNT: number of GPUs requested by default startup (default 1).
 
 ## Repository Map
 

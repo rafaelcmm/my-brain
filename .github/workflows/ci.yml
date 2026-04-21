@@ -134,7 +134,8 @@ jobs:
           chmod 700 .secrets
           chmod 600 .secrets/auth-token .secrets/auth-token.previous
       - name: Build and start stack
-        run: docker compose up -d --build
+        # CI runners may not have NVIDIA runtime; force CPU fallback override.
+        run: docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
       - name: Smoke test
         run: ./src/scripts/smoke-test.sh
       - name: Validate tool ids
