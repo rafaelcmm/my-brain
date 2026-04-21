@@ -8,11 +8,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node src/index.mjs",
-    "dev": "node --watch src/index.mjs",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "node --check src/index.mjs && npm run typecheck",
+    "lint": "npm run typecheck",
     "test": "node --test"
   },
   "dependencies": {
