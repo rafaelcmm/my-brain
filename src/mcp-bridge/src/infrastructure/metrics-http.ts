@@ -4,11 +4,14 @@ import type { BridgeConfig } from "../domain/types.js";
 import type { BridgeMetrics } from "../domain/metrics.js";
 
 /**
- * Compares shared secret values using constant-time semantics.
+ * Compares shared secret values using constant-time semantics to prevent timing leaks.
  *
  * @param provided Header-provided secret.
  * @param expected Configured secret.
  * @returns True when both secrets match exactly.
+ * @remarks
+ * Uses Node.js timingSafeEqual for secrets with equal length. Length mismatch causes
+ * early return—acceptable since that information cannot realistically leak auth.
  */
 function constantTimeEquals(provided: string, expected: string): boolean {
   const providedBuffer = Buffer.from(provided, "utf8");
@@ -31,17 +34,19 @@ export function startMetricsServer(config: BridgeConfig, metrics: BridgeMetrics)
     return;
   }
 
+  // Refuse to start metrics endpoint without configured auth key.
+  if (!config.internalApiKey || config.internalApiKey.length === 0) {
+    process.stderr.write("[my-brain] bridge metrics disabled: MYBRAIN_INTERNAL_API_KEY not configured\n");
+    return;
+  }
+
   createServer((req, res) => {
     if (req.method === "GET" && req.url === "/metrics") {
       const header = req.headers["x-mybrain-internal-key"];
       const provided = Array.isArray(header) ? header[0] : header;
 
-      // Preserve original policy: empty configured key keeps endpoint closed.
-      if (
-        !config.internalApiKey ||
-        typeof provided !== "string" ||
-        !constantTimeEquals(provided, config.internalApiKey)
-      ) {
+      // Key is guaranteed to exist (checked at startup).
+      if (typeof provided !== "string" || !constantTimeEquals(provided, config.internalApiKey)) {
         res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
         res.end("unauthorized");
         return;
@@ -56,7 +61,7 @@ export function startMetricsServer(config: BridgeConfig, metrics: BridgeMetrics)
 
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("not found");
-  }).listen(config.metricsPort, "0.0.0.0", () => {
+  }).listen(config.metricsPort, "127.0.0.1", () => {
     process.stderr.write(`[my-brain] bridge metrics listening on :${config.metricsPort}\n`);
   });
 }
