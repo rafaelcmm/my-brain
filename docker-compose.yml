@@ -59,13 +59,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: ${MYBRAIN_LLM_GPU_COUNT:-1}
-              capabilities: [gpu]
 
   my-brain-llm-init:
     image: ${MYBRAIN_LLM_IMAGE:-ollama/ollama:latest}

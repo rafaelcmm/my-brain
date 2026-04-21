@@ -48,7 +48,7 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 1. Start stack:
    docker compose up -d
 2. If GPU startup fails (missing NVIDIA runtime), start with CPU fallback:
-   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+   docker compose -f docker-compose.yml up -d
    npm run docker:up:cpu
    # alias: npm run docker:init:cpu
 3. Check services:
@@ -124,6 +124,11 @@ High-impact variables:
 9. MYBRAIN_PROMETHEUS_PORT: bridge metrics endpoint port (`/metrics`, default 9090).
 10. MYBRAIN_INTERNAL_API_KEY: shared internal key used between gateway, bridge, and orchestrator.
 11. MYBRAIN_LLM_GPU_COUNT: number of GPUs requested by default startup (default 1).
+
+GPU note:
+`docker compose up` loads `docker-compose.override.yml` automatically, which enables
+GPU reservation for the LLM service. Using `-f docker-compose.yml` bypasses the
+override and provides CPU fallback mode.
 
 ## Repository Map
 

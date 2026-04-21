@@ -1,7 +1,0 @@
-services:
-  my-brain-llm:
-    # CPU fallback override for hosts without NVIDIA runtime/toolkit.
-    deploy:
-      resources:
-        reservations:
-          devices: []

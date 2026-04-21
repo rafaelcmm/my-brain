@@ -1,0 +1,11 @@
+services:
+  my-brain-llm:
+    # Default local mode uses GPU when Docker can access NVIDIA runtime.
+    # Compose loads docker-compose.override.yml automatically.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${MYBRAIN_LLM_GPU_COUNT:-1}
+              capabilities: [gpu]
