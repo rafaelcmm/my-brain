@@ -74,7 +74,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate Caddyfile
         run: |
-          docker run --rm -v "$PWD/src/gateway:/etc/caddy" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+          # Validate with project gateway build because Caddyfile uses custom modules.
+          docker compose build my-brain-gateway
+          docker run --rm -v "$PWD/src/gateway:/etc/caddy" my-brain/gateway:local caddy validate --config /etc/caddy/Caddyfile
 
   docker-build:
     runs-on: ubuntu-latest

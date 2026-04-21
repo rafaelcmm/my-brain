@@ -49,16 +49,17 @@ curl -sS \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
   "$MCP_URL"
 
-node -e '
+# `node - <arg>` shifts first user arg to process.argv[2], so read JSON from argv[2].
+node - "$tmp_tools" <<'NODE' | sort -u > "$tmp_live"
 const fs = require("node:fs");
-const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const data = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 const tools = data?.result?.tools ?? [];
 for (const tool of tools) {
   if (tool?.name) {
     process.stdout.write(`${tool.name}\n`);
   }
 }
-' "$tmp_tools" | sort -u > "$tmp_live"
+NODE
 
 grep -Rho "mcp__my-brain__[a-zA-Z0-9_]*" .claude \
   | sed 's/^mcp__my-brain__//' \

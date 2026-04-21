@@ -9,9 +9,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-pass() { printf "${GREEN}✓${NC} %s\n" "$*"; }
-fail() { printf "${RED}✗${NC} %s\n" "$*"; }
-warn() { printf "${YELLOW}⚠${NC} %s\n" "$*"; }
+pass() { printf '%b%s%b %s\n' "$GREEN" '✓' "$NC" "$*"; }
+fail() { printf '%b%s%b %s\n' "$RED" '✗' "$NC" "$*"; }
+warn() { printf '%b%s%b %s\n' "$YELLOW" '⚠' "$NC" "$*"; }
 section() { printf "\n${YELLOW}=== %s ===${NC}\n" "$*"; }
 
 FAILED=0
@@ -152,10 +152,10 @@ fi
 section "Summary"
 
 if [[ "$FAILED" -eq 0 ]]; then
-  printf "\n${GREEN}All critical checks passed ✓${NC}\n"
+  printf '\n%b%s%b\n' "$GREEN" 'All critical checks passed ✓' "$NC"
   exit 0
 else
-  printf "\n${RED}${FAILED} check(s) failed ✗${NC}\n"
+  printf '\n%b%s%b\n' "$RED" "${FAILED} check(s) failed ✗" "$NC"
   printf "Fix issues above before deploying to production.\n"
   exit 1
 fi
