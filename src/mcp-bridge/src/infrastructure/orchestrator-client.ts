@@ -16,7 +16,10 @@ export class OrchestratorClient {
    * @param payload Arbitrary JSON payload forwarded from MCP call.
    * @returns Response envelope preserving compatibility fields.
    */
-  async call(pathname: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async call(
+    pathname: string,
+    payload: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const headers: Record<string, string> = {
       "content-type": "application/json",
     };
@@ -32,7 +35,10 @@ export class OrchestratorClient {
 
     const body = (await response
       .json()
-      .catch(() => ({ success: false, error: "invalid_response" }))) as Record<string, unknown>;
+      .catch(() => ({ success: false, error: "invalid_response" }))) as Record<
+      string,
+      unknown
+    >;
 
     return {
       http_status: response.status,

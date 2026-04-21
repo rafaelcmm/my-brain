@@ -29,12 +29,26 @@ export class UpstreamClient {
    * @returns Connection status after attempt.
    */
   async connect(): Promise<boolean> {
+    // Only pass safe environment variables to upstream subprocess.
+    // Exclude MYBRAIN_* secrets to prevent leakage to untrusted upstream code.
+    const safeEnv: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (
+        typeof value === "string" &&
+        !key.startsWith("MYBRAIN_INTERNAL_") &&
+        !key.includes("PASSWORD") &&
+        !key.includes("SECRET") &&
+        !key.includes("TOKEN") &&
+        !key.includes("KEY")
+      ) {
+        safeEnv[key] = value;
+      }
+    }
+
     const transport = new StdioClientTransport({
       command: this.config.upstreamCommand,
       args: [...this.config.upstreamArgs],
-      env: Object.fromEntries(
-        Object.entries(process.env).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
-      ),
+      env: safeEnv,
     });
 
     try {
@@ -42,8 +56,12 @@ export class UpstreamClient {
       this.connected = true;
     } catch (error) {
       this.connected = false;
+      // Sanitize error to avoid leaking internal paths or stack traces.
+      const message = error instanceof Error ? error.message : "unknown error";
+      const sanitized =
+        message.length > 200 ? message.slice(0, 200) + "..." : message;
       process.stderr.write(
-        `[my-brain] bridge upstream connection failed: ${error instanceof Error ? error.message : String(error)}\n`,
+        `[my-brain] bridge upstream connection failed: ${sanitized}\n`,
       );
     }
 

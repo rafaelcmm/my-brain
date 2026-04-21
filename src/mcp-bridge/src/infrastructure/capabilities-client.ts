@@ -22,19 +22,27 @@ export class CapabilitiesClient {
    */
   async getCapabilities(): Promise<Record<string, unknown>> {
     const now = Date.now();
-    if (this.cachedCapabilities && now - this.cachedCapabilitiesAt < this.cacheMs) {
+    if (
+      this.cachedCapabilities &&
+      now - this.cachedCapabilitiesAt < this.cacheMs
+    ) {
       return this.cachedCapabilities;
     }
 
     try {
-      const response = await fetch(`${this.config.restBaseUrl}/v1/capabilities`, {
-        headers: this.buildHeaders(),
-      });
+      const response = await fetch(
+        `${this.config.restBaseUrl}/v1/capabilities`,
+        {
+          headers: this.buildHeaders(),
+        },
+      );
       if (!response.ok) {
         throw new Error(`capabilities status ${response.status}`);
       }
 
-      const body = (await response.json()) as { capabilities?: Record<string, unknown> };
+      const body = (await response.json()) as {
+        capabilities?: Record<string, unknown>;
+      };
       this.cachedCapabilities = body.capabilities ?? {};
       this.cachedCapabilitiesAt = now;
       return this.cachedCapabilities;
@@ -50,9 +58,12 @@ export class CapabilitiesClient {
    */
   async getCapabilitiesPayload(): Promise<CapabilitiesPayload> {
     try {
-      const response = await fetch(`${this.config.restBaseUrl}/v1/capabilities`, {
-        headers: this.buildHeaders(),
-      });
+      const response = await fetch(
+        `${this.config.restBaseUrl}/v1/capabilities`,
+        {
+          headers: this.buildHeaders(),
+        },
+      );
       if (!response.ok) {
         throw new Error(`capabilities status ${response.status}`);
       }
@@ -70,7 +81,9 @@ export class CapabilitiesClient {
         capabilities: body.capabilities ?? {},
         features: body.features ?? {},
         degradedReasons: Array.isArray(body.degradedReasons)
-          ? body.degradedReasons.filter((value): value is string => typeof value === "string")
+          ? body.degradedReasons.filter(
+              (value): value is string => typeof value === "string",
+            )
           : [],
         db: body.db ?? {},
       };

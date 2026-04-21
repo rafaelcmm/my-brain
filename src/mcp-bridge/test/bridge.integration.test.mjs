@@ -48,7 +48,10 @@ async function startMockOrchestrator(options) {
           send(200, { success: true, memory_id: "m1", deduped: true });
           break;
         case "/v1/memory/recall":
-          send(200, { success: true, results: [{ memory_id: "m1", score: 0.99 }] });
+          send(200, {
+            success: true,
+            results: [{ memory_id: "m1", score: 0.99 }],
+          });
           break;
         case "/v1/memory/vote":
           send(200, { success: true, direction: parsed.direction ?? "up" });
@@ -194,12 +197,17 @@ test("bridge supports full mb tool surface and metrics auth", async () => {
     assert.ok(names.has("mb_session_close"));
     assert.ok(names.has("mb_digest"));
 
-    const capabilities = parseToolResult(await client.callTool({ name: "hooks_capabilities", arguments: {} }));
+    const capabilities = parseToolResult(
+      await client.callTool({ name: "hooks_capabilities", arguments: {} }),
+    );
     assert.equal(capabilities.success, true);
     assert.equal(capabilities.capabilities?.engine, true);
 
     const contextProbe = parseToolResult(
-      await client.callTool({ name: "mb_context_probe", arguments: { cwd: "/tmp/workspace" } }),
+      await client.callTool({
+        name: "mb_context_probe",
+        arguments: { cwd: "/tmp/workspace" },
+      }),
     );
     assert.equal(contextProbe.success, true);
 
@@ -212,32 +220,49 @@ test("bridge supports full mb tool surface and metrics auth", async () => {
     assert.equal(remember.success, true);
     assert.equal(remember.deduped, true);
 
-    const recall = parseToolResult(await client.callTool({ name: "mb_recall", arguments: { query: "x" } }));
+    const recall = parseToolResult(
+      await client.callTool({ name: "mb_recall", arguments: { query: "x" } }),
+    );
     assert.equal(recall.success, true);
     assert.equal(Array.isArray(recall.results), true);
 
     const vote = parseToolResult(
-      await client.callTool({ name: "mb_vote", arguments: { memory_id: "m1", direction: "up" } }),
+      await client.callTool({
+        name: "mb_vote",
+        arguments: { memory_id: "m1", direction: "up" },
+      }),
     );
     assert.equal(vote.success, true);
 
     const forget = parseToolResult(
-      await client.callTool({ name: "mb_forget", arguments: { memory_id: "m1", mode: "soft" } }),
+      await client.callTool({
+        name: "mb_forget",
+        arguments: { memory_id: "m1", mode: "soft" },
+      }),
     );
     assert.equal(forget.success, true);
 
-    const sessionOpen = parseToolResult(await client.callTool({ name: "mb_session_open", arguments: {} }));
+    const sessionOpen = parseToolResult(
+      await client.callTool({ name: "mb_session_open", arguments: {} }),
+    );
     assert.equal(sessionOpen.success, true);
 
     const sessionClose = parseToolResult(
-      await client.callTool({ name: "mb_session_close", arguments: { session_id: "s1" } }),
+      await client.callTool({
+        name: "mb_session_close",
+        arguments: { session_id: "s1" },
+      }),
     );
     assert.equal(sessionClose.success, true);
 
-    const digest = parseToolResult(await client.callTool({ name: "mb_digest", arguments: {} }));
+    const digest = parseToolResult(
+      await client.callTool({ name: "mb_digest", arguments: {} }),
+    );
     assert.equal(digest.success, true);
 
-    const unsupported = parseToolResult(await client.callTool({ name: "not_supported", arguments: {} }));
+    const unsupported = parseToolResult(
+      await client.callTool({ name: "not_supported", arguments: {} }),
+    );
     assert.equal(unsupported.success, false);
     assert.equal(unsupported.error, "unsupported_tool");
 
@@ -271,7 +296,9 @@ test("bridge blocks brain_* tools when engine capability disabled", async () => 
   });
 
   try {
-    const blocked = parseToolResult(await client.callTool({ name: "brain_recall", arguments: {} }));
+    const blocked = parseToolResult(
+      await client.callTool({ name: "brain_recall", arguments: {} }),
+    );
     assert.equal(blocked.success, false);
     assert.equal(blocked.error, "engine_disabled");
   } finally {

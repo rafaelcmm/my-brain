@@ -1,4 +1,7 @@
-import { BRIDGE_TOOLS, LEGACY_PASSTHROUGH_ALLOWLIST } from "../../domain/tool-catalog.js";
+import {
+  BRIDGE_TOOLS,
+  LEGACY_PASSTHROUGH_ALLOWLIST,
+} from "../../domain/tool-catalog.js";
 import type { BridgeMetrics } from "../../domain/metrics.js";
 import type { BridgeTool } from "../../domain/types.js";
 import type { CapabilitiesClient } from "../../infrastructure/capabilities-client.js";
@@ -36,7 +39,9 @@ export function createListToolsHandler(deps: ListToolsDependencies) {
             !LEGACY_PASSTHROUGH_ALLOWLIST.has(tool.name) ||
             (!engineReady && tool.name.startsWith("brain_"))
           ) {
-            deps.metrics.increment("mb_bridge_tools_filtered_total", { tool: tool.name });
+            deps.metrics.increment("mb_bridge_tools_filtered_total", {
+              tool: tool.name,
+            });
             continue;
           }
 
@@ -45,8 +50,13 @@ export function createListToolsHandler(deps: ListToolsDependencies) {
           }
         }
       } catch (error) {
+        // Sanitize error to avoid leaking internal details.
+        const message =
+          error instanceof Error ? error.message : "unknown error";
+        const sanitized =
+          message.length > 200 ? message.slice(0, 200) + "..." : message;
         process.stderr.write(
-          `[my-brain] bridge listTools passthrough failed: ${error instanceof Error ? error.message : String(error)}\n`,
+          `[my-brain] bridge listTools passthrough failed: ${sanitized}\n`,
         );
       }
     }

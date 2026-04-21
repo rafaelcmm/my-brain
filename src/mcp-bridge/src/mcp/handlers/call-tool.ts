@@ -38,11 +38,21 @@ interface CallToolRequestLike {
 export function createCallToolHandler(deps: CallToolDependencies) {
   return async (request: CallToolRequestLike) => {
     const { name, arguments: args } = request.params;
+
+    // Sanitize arguments: reject null/undefined, default to empty object.
+    const sanitizedArgs =
+      args != null && typeof args === "object" && !Array.isArray(args)
+        ? args
+        : {};
+
     const capabilities = await deps.capabilitiesClient.getCapabilities();
     const engineReady = capabilities.engine === true;
 
     if (!engineReady && name.startsWith("brain_")) {
-      deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "blocked" });
+      deps.metrics.increment("mb_bridge_tool_calls_total", {
+        tool: name,
+        status: "blocked",
+      });
       return asTextResult({
         success: false,
         error: "engine_disabled",
@@ -52,16 +62,35 @@ export function createCallToolHandler(deps: CallToolDependencies) {
 
     switch (name) {
       case "hooks_capabilities": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        return asTextResult(await deps.capabilitiesClient.getCapabilitiesPayload());
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        return asTextResult(
+          await deps.capabilitiesClient.getCapabilitiesPayload(),
+        );
       }
       case "mb_context_probe": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        return asTextResult(await deps.orchestratorClient.call("/v1/context/probe", args ?? {}));
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        return asTextResult(
+          await deps.orchestratorClient.call(
+            "/v1/context/probe",
+            sanitizedArgs,
+          ),
+        );
       }
       case "mb_remember": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        const result = await deps.orchestratorClient.call("/v1/memory", args ?? {});
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        const result = await deps.orchestratorClient.call(
+          "/v1/memory",
+          sanitizedArgs,
+        );
         if (result.success === true) {
           deps.metrics.increment("mb_remember_total");
         }
@@ -71,21 +100,44 @@ export function createCallToolHandler(deps: CallToolDependencies) {
         return asTextResult(result);
       }
       case "mb_recall": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
         const startedAt = Date.now();
-        const result = await deps.orchestratorClient.call("/v1/memory/recall", args ?? {});
-        deps.metrics.observeDurationMs("mb_bridge_recall_latency_ms", Date.now() - startedAt);
-        const isHit = Array.isArray(result.results) && result.results.length > 0;
-        deps.metrics.increment("mb_recall_total", { result: isHit ? "hit" : "miss" });
+        const result = await deps.orchestratorClient.call(
+          "/v1/memory/recall",
+          sanitizedArgs,
+        );
+        deps.metrics.observeDurationMs(
+          "mb_bridge_recall_latency_ms",
+          Date.now() - startedAt,
+        );
+        const isHit =
+          Array.isArray(result.results) && result.results.length > 0;
+        deps.metrics.increment("mb_recall_total", {
+          result: isHit ? "hit" : "miss",
+        });
         return asTextResult(result);
       }
       case "mb_vote": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        return asTextResult(await deps.orchestratorClient.call("/v1/memory/vote", args ?? {}));
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        return asTextResult(
+          await deps.orchestratorClient.call("/v1/memory/vote", sanitizedArgs),
+        );
       }
       case "mb_forget": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        const result = await deps.orchestratorClient.call("/v1/memory/forget", args ?? {});
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        const result = await deps.orchestratorClient.call(
+          "/v1/memory/forget",
+          sanitizedArgs,
+        );
         if (result.success === true) {
           deps.metrics.increment("mb_forget_total", {
             mode: typeof result.mode === "string" ? result.mode : "soft",
@@ -94,24 +146,54 @@ export function createCallToolHandler(deps: CallToolDependencies) {
         return asTextResult(result);
       }
       case "mb_session_open": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        return asTextResult(await deps.orchestratorClient.call("/v1/session/open", args ?? {}));
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        return asTextResult(
+          await deps.orchestratorClient.call("/v1/session/open", sanitizedArgs),
+        );
       }
       case "mb_session_close": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        return asTextResult(await deps.orchestratorClient.call("/v1/session/close", args ?? {}));
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        return asTextResult(
+          await deps.orchestratorClient.call(
+            "/v1/session/close",
+            sanitizedArgs,
+          ),
+        );
       }
       case "mb_digest": {
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "ok" });
-        return asTextResult(await deps.orchestratorClient.call("/v1/memory/digest", args ?? {}));
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "ok",
+        });
+        return asTextResult(
+          await deps.orchestratorClient.call(
+            "/v1/memory/digest",
+            sanitizedArgs,
+          ),
+        );
       }
       default: {
-        if (deps.upstreamClient.isConnected() && LEGACY_PASSTHROUGH_ALLOWLIST.has(name)) {
-          deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "passthrough" });
-          return deps.upstreamClient.callTool(name, args ?? {});
+        if (
+          deps.upstreamClient.isConnected() &&
+          LEGACY_PASSTHROUGH_ALLOWLIST.has(name)
+        ) {
+          deps.metrics.increment("mb_bridge_tool_calls_total", {
+            tool: name,
+            status: "passthrough",
+          });
+          return deps.upstreamClient.callTool(name, sanitizedArgs);
         }
 
-        deps.metrics.increment("mb_bridge_tool_calls_total", { tool: name, status: "error" });
+        deps.metrics.increment("mb_bridge_tool_calls_total", {
+          tool: name,
+          status: "error",
+        });
         return asTextResult({
           success: false,
           error: "unsupported_tool",

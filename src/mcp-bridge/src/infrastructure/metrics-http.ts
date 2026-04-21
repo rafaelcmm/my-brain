@@ -29,14 +29,19 @@ function constantTimeEquals(provided: string, expected: string): boolean {
  * @param config Runtime bridge configuration.
  * @param metrics In-memory metrics store to render.
  */
-export function startMetricsServer(config: BridgeConfig, metrics: BridgeMetrics): void {
+export function startMetricsServer(
+  config: BridgeConfig,
+  metrics: BridgeMetrics,
+): void {
   if (!Number.isFinite(config.metricsPort) || config.metricsPort <= 0) {
     return;
   }
 
   // Refuse to start metrics endpoint without configured auth key.
   if (!config.internalApiKey || config.internalApiKey.length === 0) {
-    process.stderr.write("[my-brain] bridge metrics disabled: MYBRAIN_INTERNAL_API_KEY not configured\n");
+    process.stderr.write(
+      "[my-brain] bridge metrics disabled: MYBRAIN_INTERNAL_API_KEY not configured\n",
+    );
     return;
   }
 
@@ -46,7 +51,10 @@ export function startMetricsServer(config: BridgeConfig, metrics: BridgeMetrics)
       const provided = Array.isArray(header) ? header[0] : header;
 
       // Key is guaranteed to exist (checked at startup).
-      if (typeof provided !== "string" || !constantTimeEquals(provided, config.internalApiKey)) {
+      if (
+        typeof provided !== "string" ||
+        !constantTimeEquals(provided, config.internalApiKey)
+      ) {
         res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
         res.end("unauthorized");
         return;
@@ -62,6 +70,8 @@ export function startMetricsServer(config: BridgeConfig, metrics: BridgeMetrics)
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("not found");
   }).listen(config.metricsPort, "127.0.0.1", () => {
-    process.stderr.write(`[my-brain] bridge metrics listening on :${config.metricsPort}\n`);
+    process.stderr.write(
+      `[my-brain] bridge metrics listening on :${config.metricsPort}\n`,
+    );
   });
 }
