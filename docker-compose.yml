@@ -18,6 +18,10 @@ volumes:
   caddy-config:
     name: my-brain-caddy-config
 
+secrets:
+  auth-token:
+    file: ./.secrets/auth-token
+
 services:
   my-brain-db:
     image: ${MYBRAIN_DB_IMAGE:-ruvnet/ruvector-postgres:latest}
@@ -72,14 +76,12 @@ services:
     environment:
       OLLAMA_HOST: http://my-brain-llm:11434
       MYBRAIN_LLM_MODEL: ${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}
-      MYBRAIN_EMBEDDING_MODEL: ${MYBRAIN_EMBEDDING_MODEL:-}
+      MYBRAIN_EMBEDDING_MODEL: ${MYBRAIN_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
         ollama pull ${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}
-        if [ -n "${MYBRAIN_EMBEDDING_MODEL:-}" ]; then
-          ollama pull ${MYBRAIN_EMBEDDING_MODEL}
-        fi
+        ollama pull ${MYBRAIN_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
     restart: "no"
 
   my-brain-orchestrator:
@@ -101,7 +103,15 @@ services:
       MYBRAIN_DB_URL: postgres://${MYBRAIN_DB_USER:-mybrain}:${MYBRAIN_DB_PASSWORD}@my-brain-db:5432/${MYBRAIN_DB_NAME:-mybrain_db}
       MYBRAIN_LLM_URL: http://my-brain-llm:11434
       MYBRAIN_LLM_MODEL: ${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}
-      MYBRAIN_EMBEDDING_MODEL: ${MYBRAIN_EMBEDDING_MODEL:-}
+      MYBRAIN_EMBEDDING_MODEL: ${MYBRAIN_EMBEDDING_MODEL:-qwen3-embedding:0.6b}
+      MYBRAIN_AUTH_TOKEN_FILE: /run/secrets/auth-token
+      MYBRAIN_MIN_TOKEN_LENGTH: ${MYBRAIN_MIN_TOKEN_LENGTH:-73}
+      MYBRAIN_RATE_LIMIT_PER_MIN: ${MYBRAIN_RATE_LIMIT_PER_MIN:-60}
+      MYBRAIN_MAX_REQUEST_BODY_BYTES: ${MYBRAIN_MAX_REQUEST_BODY_BYTES:-1048576}
+      MYBRAIN_INTERNAL_API_KEY: ${MYBRAIN_INTERNAL_API_KEY:-my-brain-internal-local-key}
+      # Allow gateway-only auth when the orchestrator user cannot read the token secret.
+      # Must be set explicitly; defaults to false (fail-closed).
+      MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH: ${MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH:-false}
       RUVECTOR_HOST: 0.0.0.0
       RUVECTOR_PORT: "8080"
       RUVECTOR_CORS_ORIGINS: ${MYBRAIN_CORS_ORIGINS:-http://localhost,http://127.0.0.1}
@@ -120,6 +130,10 @@ services:
     volumes:
       - models:/app/models
       - state:/app/.mybrain
+    secrets:
+      - source: auth-token
+        target: auth-token
+        mode: 0444
     expose:
       - "8080"
     healthcheck:
@@ -143,6 +157,7 @@ services:
       MYBRAIN_REST_URL: http://my-brain-orchestrator:8080
       MYBRAIN_DB_URL: postgres://${MYBRAIN_DB_USER:-mybrain}:${MYBRAIN_DB_PASSWORD}@my-brain-db:5432/${MYBRAIN_DB_NAME:-mybrain_db}
       MYBRAIN_ALLOWED_ORIGINS: ${MYBRAIN_ALLOWED_MCP_ORIGINS:-http://localhost,http://127.0.0.1}
+      MYBRAIN_INTERNAL_API_KEY: ${MYBRAIN_INTERNAL_API_KEY:-my-brain-internal-local-key}
     healthcheck:
       test:
         [
@@ -155,9 +170,20 @@ services:
       start_period: 60s
     expose:
       - "3333"
+      - "9090"
+    ports:
+      - "${MYBRAIN_BIND_HOST:-127.0.0.1}:${MYBRAIN_PROMETHEUS_PORT:-9090}:9090"
 
   my-brain-gateway:
-    image: caddy:2-alpine
+    image: my-brain/gateway:local
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM caddy:2-builder AS builder
+        RUN xcaddy build \
+          --with github.com/mholt/caddy-ratelimit
+        FROM caddy:2-alpine
+        COPY --from=builder /usr/bin/caddy /usr/bin/caddy
     container_name: my-brain-gateway
     restart: unless-stopped
     depends_on:
@@ -167,6 +193,7 @@ services:
         condition: service_healthy
     environment:
       MYBRAIN_CORS_ORIGINS: ${MYBRAIN_CORS_ORIGINS:-http://localhost,http://127.0.0.1}
+      MYBRAIN_INTERNAL_API_KEY: ${MYBRAIN_INTERNAL_API_KEY:-my-brain-internal-local-key}
     volumes:
       - ./src/gateway/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./.secrets:/run/secrets:ro

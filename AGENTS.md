@@ -23,6 +23,7 @@ my-brain is self-hosted memory and orchestration stack for MCP-capable clients.
 4. npx prettier --check .
 5. docker compose config
 6. src/scripts/smoke-test.sh (when stack is running)
+7. src/scripts/security-check.sh (validates auth token, permissions, config)
 
 ## Documentation Contract
 

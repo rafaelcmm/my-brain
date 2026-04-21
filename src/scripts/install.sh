@@ -146,6 +146,10 @@ if [[ "${#token}" -lt "$MYBRAIN_MIN_TOKEN_LENGTH" ]]; then
   die "auth token too short (${#token}); require >= ${MYBRAIN_MIN_TOKEN_LENGTH}. rotate with ./src/scripts/rotate-token.sh"
 fi
 
+if [[ ! "$token" =~ ^my-brain- ]]; then
+  die "auth token must start with 'my-brain-' prefix. rotate with ./src/scripts/rotate-token.sh"
+fi
+
 if [[ ! -f .secrets/auth-token.previous ]]; then
   printf 'unused-placeholder' > .secrets/auth-token.previous
   chmod 600 .secrets/auth-token.previous

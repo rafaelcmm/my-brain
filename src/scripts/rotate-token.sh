@@ -19,8 +19,14 @@ fi
 
 raw="$(openssl rand -base64 96 | tr -d '/+=\n' | cut -c1-64)"
 new_token="my-brain-${raw}"
+
 if [[ "${#new_token}" -lt "$MIN_TOKEN_LENGTH" ]]; then
   echo "generated token too short (${#new_token}); require >= ${MIN_TOKEN_LENGTH}" >&2
+  exit 1
+fi
+
+if [[ ! "$new_token" =~ ^my-brain- ]]; then
+  echo "generated token missing required 'my-brain-' prefix" >&2
   exit 1
 fi
 

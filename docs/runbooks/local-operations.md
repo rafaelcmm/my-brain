@@ -11,6 +11,14 @@ docker compose up -d --build
 ```bash
 docker compose ps
 ./src/scripts/smoke-test.sh
+./src/scripts/simulation-replay-v2.sh
+```
+
+## Inspect metrics
+
+```bash
+curl -sS -H "Authorization: Bearer $(cat ./.secrets/auth-token)" http://127.0.0.1:8080/metrics | head
+curl -sS -H "x-mybrain-internal-key: $(grep '^MYBRAIN_INTERNAL_API_KEY=' .env | cut -d= -f2)" http://127.0.0.1:9090/metrics | head
 ```
 
 ## Inspect logs

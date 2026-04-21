@@ -1,6 +1,15 @@
 {
 	admin off
 	auto_https off
+	servers {
+		timeouts {
+			read_body 30s
+			read_header 10s
+			write 60s
+			idle 120s
+		}
+		max_header_size 16KB
+	}
 }
 
 # Require bearer token from the mounted secret file.
@@ -10,8 +19,34 @@
 	respond @unauth "Unauthorized" 401
 }
 
+# Security headers applied to all responses.
+(security_headers) {
+	header {
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		-Server
+		defer
+	}
+}
+
+# Rate limiting: 60 requests per minute per IP.
+(rate_limit) {
+	rate_limit {
+		zone my_brain_zone {
+			key {remote_host}
+			events 60
+			window 1m
+		}
+	}
+}
+
 :3333 {
 	import bearer_auth
+	import security_headers
+	import rate_limit
 	# Block legacy SSE entrypoints at the gateway so operators only see the
 	# supported Streamable HTTP contract exposed by /mcp.
 	@legacy_sse path /sse /messages /messages/*
@@ -25,6 +60,7 @@
 		reverse_proxy my-brain-mcp:3333 {
 			header_up Host {host}
 			header_up -Authorization
+			header_up X-Mybrain-Internal-Key {$MYBRAIN_INTERNAL_API_KEY}
 			flush_interval -1
 		}
 	}
@@ -36,6 +72,8 @@
 
 :8080 {
 	import bearer_auth
+	import security_headers
+	import rate_limit
 	handle_path /llm/* {
 		reverse_proxy my-brain-llm:11434 {
 			header_up Host {host}
@@ -46,5 +84,6 @@
 	reverse_proxy my-brain-orchestrator:8080 {
 		header_up Host {host}
 		header_up -Authorization
+		header_up X-Mybrain-Internal-Key {$MYBRAIN_INTERNAL_API_KEY}
 	}
 }
