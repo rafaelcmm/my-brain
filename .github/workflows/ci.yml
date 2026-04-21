@@ -75,7 +75,7 @@ jobs:
       - name: Validate Caddyfile
         run: |
           # Validate with project gateway build because Caddyfile uses custom modules.
-          docker compose build my-brain-gateway
+          MYBRAIN_DB_PASSWORD=ci-test-password docker compose build my-brain-gateway
           docker run --rm -v "$PWD/src/gateway:/etc/caddy" my-brain/gateway:local caddy validate --config /etc/caddy/Caddyfile
 
   docker-build:
