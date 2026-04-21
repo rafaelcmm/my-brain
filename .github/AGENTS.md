@@ -8,7 +8,7 @@ Applies to CI/CD workflow and release automation files.
 
 1. Keep workflows deterministic and minimal privilege.
 2. Keep CI coverage aligned with runtime-critical artifacts.
-3. Keep release automation semver-driven via release-please.
+3. Keep release automation semver-driven via git tags (v\*) and release workflow.
 
 ## Change Constraints
 

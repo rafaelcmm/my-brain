@@ -17,7 +17,7 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 4. Install and operations scripts:
    install.sh, rotate-token.sh, smoke-test.sh.
 5. CI and release automation templates:
-   lint/test/compose validation, release-please, GHCR publish.
+   lint/test/compose validation, tag-driven release workflow, GHCR publish.
 6. Model-invoked Claude skills and curator agent templates under .claude/.
 
 ## Quick Install
@@ -29,11 +29,12 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
    ./src/scripts/install.sh
 3. Copy token from .secrets/auth-token into your MCP client config.
 
-### Option B: one-line bootstrap (after you publish this repo)
+### Option B: one-line bootstrap from a release tag
 
 1. Run:
-   curl -fsSL https://raw.githubusercontent.com/rafaelcmm/my-brain/v0.1.0/src/scripts/install.sh | bash
-2. Review printed MCP snippet and paste into your local client config.
+   curl -fsSL https://raw.githubusercontent.com/rafaelcmm/my-brain/<tag>/src/scripts/install.sh | bash
+2. Replace <tag> with the release tag you want (example: v0.1.0).
+3. Review printed MCP snippet and paste into your local client config.
 
 ## Prerequisites
 
@@ -156,9 +157,9 @@ Implementation details are intentionally separated from this user README:
 
 ## Release and Versioning
 
-1. Semantic versions are managed by release-please.
-2. Conventional commits drive version bump logic.
-3. Release workflow publishes multi-arch images and release bundle.
+1. Releases are generated from pushed git tags that match v\* (example: v0.2.0).
+2. Tag-triggered workflow publishes multi-arch images and release bundle artifacts.
+3. Conventional commits are recommended for readable history and changelog quality.
 
 ## Contributing
 
