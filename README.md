@@ -50,13 +50,11 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
    docker compose ps
 3. Run smoke test:
    ./src/scripts/smoke-test.sh
-4. Run simulation replay assertions:
-   ./src/scripts/simulation-replay-v2.sh
-5. Backfill legacy memory metadata (after schema/runtime upgrades):
+4. Backfill legacy memory metadata (after schema/runtime upgrades):
    ./src/scripts/backfill-memory-metadata.sh
-6. Read logs:
+5. Read logs:
    docker compose logs -f my-brain-orchestrator
-7. Stop stack:
+6. Stop stack:
    docker compose down
 
 ### Postman Minimal General Test
@@ -129,8 +127,7 @@ High-impact variables:
 4. src/scripts/: install, rotate, smoke automation.
 5. .github/workflows/: CI and release pipelines.
 6. docs/: technical implementation docs and runbooks.
-7. knowledge/: research documents that shaped this implementation.
-8. .claude/: model-invoked skills and curator agent templates.
+7. .claude/: model-invoked skills and curator agent templates.
 
 ## Troubleshooting
 

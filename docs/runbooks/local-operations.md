@@ -11,7 +11,6 @@ docker compose up -d --build
 ```bash
 docker compose ps
 ./src/scripts/smoke-test.sh
-./src/scripts/simulation-replay-v2.sh
 ```
 
 ## Inspect metrics
@@ -39,9 +38,39 @@ docker compose down
 ./src/scripts/rotate-token.sh
 ```
 
+## Emergency response
+
+### Compromised token
+
+```bash
+./src/scripts/rotate-token.sh
+docker compose restart my-brain-gateway
+```
+
+Then update every MCP client with the new token from `.secrets/auth-token`.
+
+### Suspected brute-force or rate-limit issue
+
+```bash
+docker compose logs my-brain-gateway | grep ' 401 '
+docker compose logs my-brain-gateway | grep ' 429 '
+```
+
+Repeated `401` entries from one source indicate bad-token retries. `429` confirms gateway rate limiting is active.
+
+### Orchestrator fails after token rotation
+
+```bash
+./src/scripts/security-check.sh
+docker compose logs my-brain-orchestrator | grep SECURITY
+```
+
+Check for missing token file, bad permissions, short token length, or wrong prefix before restarting the container.
+
 ## Troubleshooting quick checks
 
 1. `docker compose config` must pass.
 2. Gateway must return `401` without bearer token.
-3. Gateway must return `410` for `/sse` and `/messages`.
-4. MCP initialize on `/mcp` must return `200`.
+3. Gateway should emit `429` under repeated bad requests.
+4. Gateway must return `410` for `/sse` and `/messages`.
+5. MCP initialize on `/mcp` must return `200`.
