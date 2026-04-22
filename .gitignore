@@ -30,6 +30,7 @@ Thumbs.db
 # Runtime and backups
 *.bak
 *.previous
+src/orchestrator/*.db
 
 # TypeScript incremental build artifacts
 *.tsbuildinfo
