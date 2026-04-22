@@ -33,7 +33,6 @@ import { sanitizeStatusError } from "../observability/log.js";
 import { type loadConfig, parseInteger } from "../config/load-config.js";
 import type { ProjectContextHints } from "../application/project-context.js";
 import { buildProjectContext } from "../application/project-context.js";
-import { normalizeDigestSince } from "../application/backfill.js";
 import {
   getCapabilities,
   getDefaultRecallThreshold,
@@ -328,8 +327,4 @@ export async function handleRequest(
     error: "not_found",
     message: "Route not implemented in bootstrap orchestrator",
   });
-
-  // normalizeDigestSince is used only via the delegated memory-digest handler,
-  // but imported here to verify the export exists at compile time.
-  void normalizeDigestSince;
 }

@@ -126,14 +126,14 @@ export function validateMemoryEnvelope(
         .slice(0, 8)
     : [];
 
-  if (errors.length > 0) {
+  if (errors.length > 0 || !content || !type || !scope) {
     return { valid: false, errors };
   }
 
   const envelope: MemoryEnvelope = {
-    content: content!,
-    type: type!,
-    scope: scope!,
+    content,
+    type,
+    scope,
     metadata: {
       repo: sanitizeText(metadataRaw.repo, 256),
       repo_name: sanitizeText(metadataRaw.repo_name, 128),

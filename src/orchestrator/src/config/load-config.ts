@@ -15,11 +15,12 @@ export function parseBoolean(
     return fallback;
   }
 
-  if (value === "true") {
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) {
     return true;
   }
 
-  if (value === "false") {
+  if (["false", "0", "no", "off"].includes(normalized)) {
     return false;
   }
 

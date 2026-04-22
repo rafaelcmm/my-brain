@@ -5,11 +5,7 @@ const tsParser = require("@typescript-eslint/parser");
 
 module.exports = [
   {
-    ignores: [
-      "**/dist/**",
-      "**/node_modules/**",
-      "src/orchestrator/src/legacy-index.mjs",
-    ],
+    ignores: ["**/dist/**", "**/node_modules/**"],
   },
   {
     ...js.configs.recommended,
