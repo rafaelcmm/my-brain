@@ -20,13 +20,20 @@ COPY src/orchestrator/package.json src/orchestrator/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
+FROM base AS builder
+COPY . /monorepo
+WORKDIR /monorepo
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+RUN pnpm run build
+
 FROM base AS runner
 RUN groupadd -g 1001 mybrain \
  && useradd -u 1001 -g mybrain -m -d /app -s /usr/sbin/nologin mybrain
 
 COPY --from=prod-deps --chown=mybrain:mybrain /app/node_modules ./node_modules
+COPY --from=builder --chown=mybrain:mybrain /monorepo/src/orchestrator/dist ./src
 COPY --chown=mybrain:mybrain src/orchestrator/package.json ./
-COPY --chown=mybrain:mybrain src/orchestrator/src ./src
 
 USER mybrain
 EXPOSE 8080
