@@ -14,9 +14,13 @@ import type http from "node:http";
 import type { RouterContext } from "../router-context.js";
 import { sendJson } from "../response.js";
 import { parseJsonBody } from "../body.js";
+import { allowRequest } from "../../policies/rate-limit.js";
 import { sanitizeText } from "../../domain/memory-validation.js";
 import { buildProjectContext } from "../../application/project-context.js";
 import { randomUUID } from "node:crypto";
+
+/** Adapter type matching the rate-limit module's socket expectation. */
+type AllowRequestReq = Parameters<typeof allowRequest>[0];
 
 /**
  * Handles POST /v1/session/open: creates a session and begins a SONA trajectory.
@@ -30,6 +34,16 @@ export async function handleSessionOpen(
   res: http.ServerResponse,
   ctx: RouterContext,
 ): Promise<void> {
+  // Rate-limit session creation to prevent rapid session churn attacks.
+  if (!allowRequest(req as unknown as AllowRequestReq, "session-open")) {
+    sendJson(res, 429, {
+      success: false,
+      error: "RATE_LIMITED",
+      message: "session open rate limit exceeded",
+    });
+    return;
+  }
+
   const { state } = ctx;
 
   const pool = state.pool;
@@ -100,6 +114,16 @@ export async function handleSessionClose(
   res: http.ServerResponse,
   ctx: RouterContext,
 ): Promise<void> {
+  // Rate-limit session closure to prevent rapid session churn attacks.
+  if (!allowRequest(req as unknown as AllowRequestReq, "session-close")) {
+    sendJson(res, 429, {
+      success: false,
+      error: "RATE_LIMITED",
+      message: "session close rate limit exceeded",
+    });
+    return;
+  }
+
   const { state } = ctx;
 
   const pool = state.pool;
