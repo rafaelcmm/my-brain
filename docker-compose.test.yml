@@ -1,0 +1,34 @@
+# Ephemeral Postgres for integration tests.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   TEST_DB_URL=postgres://mybrain_test:mybrain_test@localhost:5433/mybrain_test \
+#     pnpm --filter my-brain-orchestrator run test:integration
+#   docker compose -f docker-compose.test.yml down -v
+#
+# The ruvector extension is required for embedding_vector columns.
+# Uses the same ruvector-postgres image as the production stack so extension
+# availability matches the real deployment environment exactly.
+
+name: my-brain-test
+
+services:
+  my-brain-test-db:
+    image: ruvnet/ruvector-postgres:latest
+    container_name: my-brain-test-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: mybrain_test
+      POSTGRES_PASSWORD: mybrain_test
+      POSTGRES_DB: mybrain_test
+    volumes:
+      - ./src/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mybrain_test -d mybrain_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    tmpfs:
+      # Use RAM disk to avoid persistent test data and speed up CI.
+      - /var/lib/postgresql/data

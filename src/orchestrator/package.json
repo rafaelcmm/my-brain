@@ -13,7 +13,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "pnpm run typecheck",
-    "test": "node --import tsx --test test/**/*.test.ts"
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "test:integration": "node --import tsx --test test/**/*.integration.test.ts"
   },
   "dependencies": {
     "@ruvector/ruvllm": "^2.5.0",
