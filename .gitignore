@@ -30,3 +30,6 @@ Thumbs.db
 # Runtime and backups
 *.bak
 *.previous
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo

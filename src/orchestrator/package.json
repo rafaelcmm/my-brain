@@ -8,15 +8,21 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node src/index.mjs",
-    "dev": "node --watch src/index.mjs",
-    "lint": "node --check src/index.mjs",
-    "test": "node --test"
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "pnpm run typecheck",
+    "test": "node --import tsx --test test/**/*.test.ts"
   },
   "dependencies": {
     "@ruvector/ruvllm": "^2.5.0",
     "@ruvector/server": "^0.1.0",
     "pg": "^8.20.0",
     "ruvector": "^0.2.22"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }

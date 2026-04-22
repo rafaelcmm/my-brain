@@ -4,19 +4,35 @@
   "private": true,
   "description": "Self-hosted memory and orchestration layer for MCP clients.",
   "license": "MIT",
+  "packageManager": "pnpm@9.15.4",
+  "workspaces": [
+    "src/orchestrator",
+    "src/mcp-bridge"
+  ],
   "scripts": {
     "docker:up": "docker compose up -d --build",
     "docker:up:cpu": "docker compose -f docker-compose.yml up -d --build",
-    "docker:init:cpu": "npm run docker:up:cpu",
+    "docker:init:cpu": "pnpm run docker:up:cpu",
     "docker:down": "docker compose down",
     "docker:down:cpu": "docker compose -f docker-compose.yml down",
     "docker:restart": "docker compose restart",
     "docker:logs": "docker compose logs -f",
-    "lint": "npm run lint --prefix src/orchestrator",
-    "test": "npm run test --prefix src/orchestrator",
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "lint": "pnpm exec eslint src/orchestrator src/mcp-bridge && pnpm run format:check",
+    "test": "pnpm -r --if-present run test",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "prettier": "^3.8.3"
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.9.1",
+    "@types/pg": "^8.20.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.38.0",
+    "globals": "^16.4.0",
+    "prettier": "^3.8.3",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }
