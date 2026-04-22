@@ -16,6 +16,49 @@ import type { IntelligenceEngine } from "../types/ambient.js";
 // Loaded via CommonJS require because the native bindings use module.exports.
 const require = createRequire(import.meta.url);
 
+interface IntelligenceEngineFactory {
+  createIntelligenceEngine: (opts: {
+    embeddingDim: number;
+    maxMemories: number;
+    enableSona: boolean;
+    enableAttention: boolean;
+  }) => IntelligenceEngine;
+}
+
+/**
+ * Attempts to resolve the intelligence engine factory from known package entrypoints.
+ *
+ * Some upstream package versions publish a broken `main` field while still shipping
+ * a valid `dist/index.js`. This fallback chain keeps startup stable while preserving
+ * the same runtime contract.
+ *
+ * @returns Factory object containing `createIntelligenceEngine`.
+ * @throws {Error} When no candidate module exposes a usable factory.
+ */
+function loadIntelligenceEngineFactory(): IntelligenceEngineFactory {
+  const moduleCandidates = ["ruvector", "ruvector/dist/index.js"];
+  const failures: string[] = [];
+
+  for (const candidate of moduleCandidates) {
+    try {
+      const loaded = require(candidate) as Partial<IntelligenceEngineFactory>;
+      if (typeof loaded.createIntelligenceEngine === "function") {
+        return {
+          createIntelligenceEngine: loaded.createIntelligenceEngine,
+        };
+      }
+      failures.push(`${candidate}: missing createIntelligenceEngine`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${candidate}: ${message}`);
+    }
+  }
+
+  throw new Error(
+    `intelligence factory resolution failed: ${failures.join(" | ")}`,
+  );
+}
+
 /**
  * Subset of orchestrator config consumed by intelligence and LLM init.
  */
@@ -73,14 +116,7 @@ export function initializeIntelligenceEngine(
   pushDegradedReason: (reason: string) => void,
 ): IntelligenceEngine | null {
   try {
-    const { createIntelligenceEngine } = require("ruvector") as {
-      createIntelligenceEngine: (opts: {
-        embeddingDim: number;
-        maxMemories: number;
-        enableSona: boolean;
-        enableAttention: boolean;
-      }) => IntelligenceEngine;
-    };
+    const { createIntelligenceEngine } = loadIntelligenceEngineFactory();
 
     const engine = createIntelligenceEngine({
       embeddingDim: config.embeddingDim,
@@ -104,6 +140,9 @@ export function initializeIntelligenceEngine(
     return engine;
   } catch (error) {
     state.error = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      `[my-brain] intelligence init failed: ${state.error}\n`,
+    );
     pushDegradedReason("intelligence engine failed");
     return null;
   }
@@ -152,6 +191,7 @@ export function initializeLlmRuntime(
     return llm;
   } catch (error) {
     state.error = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`[my-brain] llm init failed: ${state.error}\n`);
     pushDegradedReason("llm runtime failed");
     return null;
   }

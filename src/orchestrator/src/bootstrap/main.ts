@@ -184,11 +184,11 @@ async function initializeRuntime(): Promise<void> {
     degraded,
   );
 
-  // Engine readiness = all three core dependencies are up
+  // Engine readiness tracks memory operations capability. Embedding warmup can
+  // fail independently while intelligence-engine embeddings still work.
   state.engine.loaded =
     state.db.connected &&
     state.db.adrSchemasReady &&
-    state.embedding.ready &&
     Boolean(state.intelligenceEngine);
 
   if (!state.engine.loaded) {

@@ -27,4 +27,3 @@ export interface IntelligenceEngine {
 
 declare module "ruvector";
 declare module "@ruvector/ruvllm";
-declare module "@ruvector/server";

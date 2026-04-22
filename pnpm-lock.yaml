@@ -60,15 +60,12 @@ importers:
       '@ruvector/ruvllm':
         specifier: ^2.5.0
         version: 2.5.4
-      '@ruvector/server':
-        specifier: ^0.1.0
-        version: 0.1.0
       pg:
         specifier: ^8.20.0
         version: 8.20.0
       ruvector:
-        specifier: ^0.2.22
-        version: 0.2.23(@ruvector/ruvllm@2.5.4)(zod@4.3.6)
+        specifier: 0.2.22
+        version: 0.2.22(@ruvector/ruvllm@2.5.4)(zod@4.3.6)
     devDependencies:
       tsx:
         specifier: ^4.20.6
@@ -440,10 +437,6 @@ packages:
 
   '@ruvector/rvf@0.1.9':
     resolution: {integrity: sha512-W40NLeSj/+FwIHT0+v3soFrtk4pnAZL5Ghx93qAsZkuwriNw2y6vGPnsapflQyp34WgMN362syIRiACXx3KW8g==}
-
-  '@ruvector/server@0.1.0':
-    resolution: {integrity: sha512-EwzTQgtikDQTNxptsagtpHrmKLqnMu75YtNEv78zk33MCrOb2zqdSZ48wSJJIOCgPnV87g2bRYkSR1zZCtqdQQ==}
-    hasBin: true
 
   '@ruvector/sona-darwin-arm64@0.1.4':
     resolution: {integrity: sha512-XLXGnlcrrVM00cTsq7VyGhWu2Fvr4zJQD1bktthR3j0r4Y1PXwnw1QPHVtdcKzKmZ5WKPDGxsgRNPUKAIT/PRA==}
@@ -1336,18 +1329,15 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  ruvector@0.2.23:
-    resolution: {integrity: sha512-ANJYDfiaJVhSMrUTVPjOKcVDKvucTuPdWdemM+ghw/PitqaNoqmKC/KNm3g3bbsEJfg846jZ2sVToEYI1eiIaQ==}
+  ruvector@0.2.22:
+    resolution: {integrity: sha512-C8XQNls25xs7kpDWMWFimhz0aQyMgik3lDLkA6gwfByhVGCSHbfyHuO2GqeismQqGGWiqdtYlIaeDbO6v/0ryA==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     peerDependencies:
-      '@ruvector/diskann': '>=0.1.0'
       '@ruvector/pi-brain': '>=0.1.0'
       '@ruvector/router': '>=0.1.0'
       '@ruvector/ruvllm': '>=2.0.0'
     peerDependenciesMeta:
-      '@ruvector/diskann':
-        optional: true
       '@ruvector/pi-brain':
         optional: true
       '@ruvector/router':
@@ -1818,8 +1808,6 @@ snapshots:
       '@ruvector/rvf-solver': 0.1.8
       '@ruvector/rvf-wasm': 0.1.6
     optional: true
-
-  '@ruvector/server@0.1.0': {}
 
   '@ruvector/sona-darwin-arm64@0.1.4':
     optional: true
@@ -2725,7 +2713,7 @@ snapshots:
   ruvector-core-win32-x64-msvc@0.1.29:
     optional: true
 
-  ruvector@0.2.23(@ruvector/ruvllm@2.5.4)(zod@4.3.6):
+  ruvector@0.2.22(@ruvector/ruvllm@2.5.4)(zod@4.3.6):
     dependencies:
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
       '@ruvector/attention': 0.1.32

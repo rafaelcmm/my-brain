@@ -32,3 +32,17 @@ services:
     tmpfs:
       # Use RAM disk to avoid persistent test data and speed up CI.
       - /var/lib/postgresql/data
+
+  my-brain-test-db-smoke:
+    image: ruvnet/ruvector-postgres:latest
+    depends_on:
+      my-brain-test-db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: mybrain_test
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        psql -h my-brain-test-db -U mybrain_test -d mybrain_test -c "SELECT extversion FROM pg_extension WHERE extname = 'ruvector';" >/dev/null
+        psql -h my-brain-test-db -U mybrain_test -d mybrain_test -c "SELECT ruvector_version();" >/dev/null
+    restart: "no"

@@ -33,7 +33,7 @@ export interface Capabilities {
  */
 export function getCapabilities(state: RuntimeState): Capabilities {
   const vectorReady = state.db.connected && state.db.adrSchemasReady;
-  const engineReady = state.engine.loaded && state.embedding.ready;
+  const engineReady = state.engine.loaded;
   return {
     engine: engineReady,
     vectorDb: vectorReady,

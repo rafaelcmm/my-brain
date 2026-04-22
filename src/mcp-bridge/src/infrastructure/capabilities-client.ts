@@ -11,6 +11,18 @@ export class CapabilitiesClient {
   private readonly cacheMs = 10_000;
 
   /**
+   * Emits bounded diagnostics for capability fetch failures so engine=false causes are visible.
+   *
+   * @param context - Stable failure location identifier.
+   * @param error - Caught error value.
+   */
+  private logFailure(context: string, error: unknown): void {
+    const raw = error instanceof Error ? error.message : String(error);
+    const msg = raw.length > 240 ? `${raw.slice(0, 240)}...` : raw;
+    process.stderr.write(`[my-brain] ${context}: ${msg}\n`);
+  }
+
+  /**
    * @param config Runtime bridge configuration.
    */
   constructor(private readonly config: BridgeConfig) {}
@@ -46,7 +58,8 @@ export class CapabilitiesClient {
       this.cachedCapabilities = body.capabilities ?? {};
       this.cachedCapabilitiesAt = now;
       return this.cachedCapabilities;
-    } catch {
+    } catch (error) {
+      this.logFailure("bridge capabilities fetch failed", error);
       return this.cachedCapabilities ?? {};
     }
   }
@@ -87,7 +100,8 @@ export class CapabilitiesClient {
           : [],
         db: body.db ?? {},
       };
-    } catch {
+    } catch (error) {
+      this.logFailure("bridge capabilities payload fetch failed", error);
       return {
         success: false,
         capabilities: await this.getCapabilities(),

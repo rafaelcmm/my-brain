@@ -95,12 +95,29 @@ before(async () => {
     adrSchemasReady: false,
     error: null,
   };
-  await initializeDatabase(
-    pool,
+  // Integration setup must not throw on degraded warnings so test bootstrap can
+  // expose root-cause context in CI logs before assertions fail.
+  const pushDegraded = (reason: string): void => {
+    console.warn(`[integration] degraded: ${reason}`);
+  };
+  const initialized = await initializeDatabase(
     { dbUrl: TEST_DB_URL!, embeddingDim: 1024 },
     dbState,
+    pushDegraded,
   );
+  assert.ok(
+    initialized,
+    "initializeDatabase must return a pool when DB is reachable",
+  );
+  pool = initialized;
   assert.ok(dbState.connected, "DB must connect before integration tests run");
+  // Guard against false-green bootstrap where Postgres is reachable but the
+  // ruvector extension did not activate.
+  assert.ok(
+    typeof dbState.extensionVersion === "string" &&
+      dbState.extensionVersion.length > 0,
+    "ruvector extension version must be detected during bootstrap",
+  );
 
   // Purge any leftover rows from previous imperfect teardowns.
   await pool.query(
