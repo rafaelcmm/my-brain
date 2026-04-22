@@ -54,7 +54,7 @@ const FAKE_EMBEDDING = Array.from({ length: 1024 }, (_, i) =>
 );
 
 /** Same vector slightly perturbed — used to test near-duplicate detection. */
-const NEAR_DUPLICATE_EMBEDDING = FAKE_EMBEDDING.map((v, i) =>
+const _NEAR_DUPLICATE_EMBEDDING = FAKE_EMBEDDING.map((v, i) =>
   i < 4 ? v * 0.9999 : v,
 );
 
