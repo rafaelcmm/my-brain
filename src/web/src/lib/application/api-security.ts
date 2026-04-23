@@ -36,7 +36,10 @@ const memoryLimiter = new FixedWindowLimiter();
  * Derive best-effort client IP from reverse-proxy headers.
  */
 export function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")[0]
+    ?.trim();
   if (forwarded) {
     return forwarded;
   }
@@ -47,7 +50,10 @@ export function getClientIp(request: NextRequest): string {
 /**
  * Evaluate login fixed-window limit keyed by client IP.
  */
-export function isLoginRateLimited(request: NextRequest, maxAttemptsPerMinute: number): boolean {
+export function isLoginRateLimited(
+  request: NextRequest,
+  maxAttemptsPerMinute: number,
+): boolean {
   return !loginLimiter.allow(getClientIp(request), maxAttemptsPerMinute);
 }
 

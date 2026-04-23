@@ -90,6 +90,14 @@
 
 :3000 {
 	import security_headers
+	@login path /api/auth/login
+	rate_limit @login {
+		zone my_brain_web_login_zone {
+			key {remote_host}
+			events 10
+			window 1m
+		}
+	}
 	reverse_proxy my-brain-web:3000 {
 		header_up Host {host}
 	}

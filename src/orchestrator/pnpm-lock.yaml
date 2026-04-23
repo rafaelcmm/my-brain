@@ -11,15 +11,19 @@ importers:
       '@ruvector/ruvllm':
         specifier: ^2.5.0
         version: 2.5.4
-      '@ruvector/server':
-        specifier: ^0.1.0
-        version: 0.1.0
       pg:
         specifier: ^8.20.0
         version: 8.20.0
       ruvector:
-        specifier: ^0.2.22
+        specifier: 0.2.22
         version: 0.2.22(@ruvector/ruvllm@2.5.4)(zod@4.3.6)
+    devDependencies:
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
 packages:
 

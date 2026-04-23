@@ -26,6 +26,19 @@ const environmentSchema = z.object({
 });
 
 /**
+ * Raised when environment validation fails.
+ */
+export class EnvironmentConfigError extends Error {
+  readonly issues: string[];
+
+  constructor(issues: string[]) {
+    super(`Invalid web environment: ${issues.join("; ")}`);
+    this.name = "EnvironmentConfigError";
+    this.issues = issues;
+  }
+}
+
+/**
  * Parse and validate environment variables.
  * Throws when required variables are missing or invalid.
  */
@@ -35,8 +48,8 @@ export function loadEnvironment(): Environment {
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join("; ");
-    throw new Error(`Invalid web environment: ${issues}`);
+      .filter(Boolean);
+    throw new EnvironmentConfigError(issues);
   }
 
   return parsed.data;

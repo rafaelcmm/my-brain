@@ -41,7 +41,10 @@ export async function handleMemoryGraph(
 
   const requestUrl = new URL(req.url ?? "/v1/memory/graph", "http://localhost");
   const limit = Math.min(
-    Math.max(parseInteger(requestUrl.searchParams.get("limit") ?? "120", 120), 10),
+    Math.max(
+      parseInteger(requestUrl.searchParams.get("limit") ?? "120", 120),
+      10,
+    ),
     300,
   );
 
@@ -70,12 +73,15 @@ export async function handleMemoryGraph(
 
   const nodes = rows.rows.map((row) => ({
     id: row.memory_id,
-    label: row.content.length > 96 ? `${row.content.slice(0, 96)}...` : row.content,
+    label:
+      row.content.length > 96 ? `${row.content.slice(0, 96)}...` : row.content,
     type: row.type,
     scope: row.scope,
     size: Math.max(1, row.use_count + (row.vote_bias > 0 ? 1 : 0)),
     repo_name: row.repo_name,
-    tags: Array.isArray(row.tags) ? row.tags.filter((tag) => typeof tag === "string") : [],
+    tags: Array.isArray(row.tags)
+      ? row.tags.filter((tag) => typeof tag === "string")
+      : [],
   }));
 
   const edges: Array<{
@@ -99,7 +105,11 @@ export async function handleMemoryGraph(
         continue;
       }
 
-      if (left.repo_name && right.repo_name && left.repo_name === right.repo_name) {
+      if (
+        left.repo_name &&
+        right.repo_name &&
+        left.repo_name === right.repo_name
+      ) {
         edges.push({
           source: left.id,
           target: right.id,
@@ -110,7 +120,9 @@ export async function handleMemoryGraph(
       }
 
       const leftTags = new Set(left.tags as string[]);
-      const overlap = (right.tags as string[]).filter((tag) => leftTags.has(tag)).length;
+      const overlap = (right.tags as string[]).filter((tag) =>
+        leftTags.has(tag),
+      ).length;
       if (overlap > 0) {
         edges.push({
           source: left.id,

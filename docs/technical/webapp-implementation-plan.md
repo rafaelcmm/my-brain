@@ -14,16 +14,16 @@ The workflow strictly follows `~/.claude/rules/code-change-workflow.md`:
 
 Read these files before writing any code. Do not guess project conventions.
 
-| File | Why |
-| ---- | --- |
-| `AGENTS.md` | Cross-tool operating contract |
-| `docker-compose.yml` | Service topology, networks, secrets, volumes |
-| `src/gateway/Caddyfile` | Bearer auth, rate limits, reverse-proxy pattern |
-| `src/orchestrator/src/http/router.ts` | REST endpoints the webapp will call |
-| `src/orchestrator/src/http/handlers/*.ts` | Payload shapes for each endpoint |
-| `src/db/init/02-memory-metadata.sql` | Metadata schema — drives filters, summary cards, graph nodes |
-| `src/orchestrator/src/domain/types.ts` | Shared domain types to mirror in the web package |
-| `docs/technical/architecture.md` | Existing architecture constraints |
+| File                                      | Why                                                          |
+| ----------------------------------------- | ------------------------------------------------------------ |
+| `AGENTS.md`                               | Cross-tool operating contract                                |
+| `docker-compose.yml`                      | Service topology, networks, secrets, volumes                 |
+| `src/gateway/Caddyfile`                   | Bearer auth, rate limits, reverse-proxy pattern              |
+| `src/orchestrator/src/http/router.ts`     | REST endpoints the webapp will call                          |
+| `src/orchestrator/src/http/handlers/*.ts` | Payload shapes for each endpoint                             |
+| `src/db/init/02-memory-metadata.sql`      | Metadata schema — drives filters, summary cards, graph nodes |
+| `src/orchestrator/src/domain/types.ts`    | Shared domain types to mirror in the web package             |
+| `docs/technical/architecture.md`          | Existing architecture constraints                            |
 
 ---
 
@@ -144,15 +144,15 @@ All files must stay under 300 logic lines. Split when they approach the limit.
 
 Add to `.env.example` and `docker-compose.yml`:
 
-| Var | Purpose | Where consumed |
-| --- | ------- | -------------- |
-| `MYBRAIN_WEB_PORT` | Host port for the webapp via Caddy | compose + Caddy |
-| `MYBRAIN_WEB_SESSION_SECRET` | 32+ byte random, encrypts session cookie | web container |
-| `MYBRAIN_WEB_ORCHESTRATOR_URL` | `http://my-brain-orchestrator:8080` | web container |
-| `MYBRAIN_INTERNAL_API_KEY` | Reused from existing stack | web container |
-| `MYBRAIN_WEB_RATE_LIMIT_LOGIN` | Login attempts/min | Caddy |
-| `MYBRAIN_WEB_PUBLIC_BASE_URL` | Base URL for absolute links | web container |
-| `MYBRAIN_WEB_LOG_LEVEL` | pino level | web container |
+| Var                            | Purpose                                  | Where consumed  |
+| ------------------------------ | ---------------------------------------- | --------------- |
+| `MYBRAIN_WEB_PORT`             | Host port for the webapp via Caddy       | compose + Caddy |
+| `MYBRAIN_WEB_SESSION_SECRET`   | 32+ byte random, encrypts session cookie | web container   |
+| `MYBRAIN_WEB_ORCHESTRATOR_URL` | `http://my-brain-orchestrator:8080`      | web container   |
+| `MYBRAIN_INTERNAL_API_KEY`     | Reused from existing stack               | web container   |
+| `MYBRAIN_WEB_RATE_LIMIT_LOGIN` | Login attempts/min                       | Caddy           |
+| `MYBRAIN_WEB_PUBLIC_BASE_URL`  | Base URL for absolute links              | web container   |
+| `MYBRAIN_WEB_LOG_LEVEL`        | pino level                               | web container   |
 
 ---
 
@@ -177,6 +177,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I1 — Scaffold Next.js package**
+
 - **Owner:** `typescript-specialist`
 - **Scope:** Create `src/web/` with Next.js latest (App Router, TypeScript strict, Turbopack dev, `output: "standalone"`). Add to `pnpm-workspace.yaml`. Add `tsconfig.json` extending `tsconfig.base.json`. Configure ESLint + Prettier to match repo.
 - **Acceptance:** `pnpm --filter my-brain-web dev` boots on port 3000 and serves a placeholder page. `pnpm run lint` passes. `pnpm run typecheck` passes.
@@ -186,6 +187,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I2 — Hexagonal skeleton + domain types**
+
 - **Owner:** `design-architect`
 - **Scope:** Create `lib/domain/`, `lib/application/`, `lib/ports/`, `lib/infrastructure/`, `lib/config/` folders. Define domain types: `Memory`, `MemoryId`, `Scope`, `MetadataFields`, `GraphNode`, `GraphEdge`, `GraphSnapshot`, `BrainSummary`, `QueryRequest`, `QueryResponse`. Define port interfaces `OrchestratorClient`, `SessionStore`, `Logger`. Add `config/env.ts` with Zod validation of all env vars from section 3. **No implementations yet, no dependencies on `next`.**
 - **Acceptance:** Types mirror the orchestrator's response shapes from `src/orchestrator/src/domain/types.ts`. No file > 300 lines. No cross-layer import violations (use `eslint-plugin-boundaries`).
@@ -195,6 +197,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I3 — Orchestrator HTTP adapter**
+
 - **Owner:** `typescript-specialist`
 - **Scope:** Implement `HttpOrchestratorClient` in `lib/infrastructure/orchestrator/`. One method per port action. Use `fetch` with a small `requestJson` helper **inside the adapter only** (not shared). Inject bearer + `X-Mybrain-Internal-Key` headers. Parse responses with Zod DTOs in `dto/`, then map to domain types in `mappers/`. Split files per endpoint if a single file exceeds 300 lines.
 - **Acceptance:** Adapter implements every port method. All network IO flows through this file. Zod validation on every response. Errors wrapped in typed domain errors (`OrchestratorUnavailableError`, `OrchestratorAuthError`, `OrchestratorValidationError`).
@@ -204,6 +207,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I4 — Session store + auth use case**
+
 - **Owner:** `security-reviewer` (owns), `typescript-specialist` (implements)
 - **Scope:** Implement `iron-session` (or `jose` JWT) session cookie: `httpOnly`, `secure` in prod, `SameSite=Strict`, 2h sliding TTL, signed with `MYBRAIN_WEB_SESSION_SECRET`. Implement `SessionStore` port with in-memory encrypted bearer storage keyed by session id (so the bearer is never in the cookie payload). Implement `authenticate.usecase.ts`: takes the pasted token, calls `orchestratorClient.getCapabilities()`, on 200 creates a session. Add CSRF helper for Server Actions.
 - **Acceptance:** Cookie flags verified in tests. Bearer token never serialised into the client-accessible payload. Replaying a stolen cookie without the server-side store entry fails.
@@ -213,6 +217,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I5 — Login + logout routes and guard**
+
 - **Owner:** `frontend-specialist`
 - **Scope:** `/login` page with minimal form (paste token, submit). `POST /api/auth/login` Route Handler invokes `authenticate.usecase`. `POST /api/auth/logout` destroys the session. `(authed)/layout.tsx` reads the session in a Server Component and redirects to `/login` if absent. Add friendly errors for invalid token / orchestrator down. Rate-limit login at the Caddy layer.
 - **Acceptance:** Unauthenticated users hitting `/dashboard` are redirected. Logged-in users cannot re-enter `/login`. Logout clears the cookie and the server-side bearer.
@@ -222,6 +227,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I6 — Dashboard with brain summary**
+
 - **Owner:** `frontend-specialist`
 - **Scope:** `/dashboard` Server Component calls `GetBrainSummaryUseCase`. Cards: total memories, memories by scope, memories by type, top tags, top frameworks, top languages, capabilities panel (`/v1/capabilities`), learning stats (`/v1/learning/stats`), degraded-reasons banner. A **new orchestrator endpoint** `GET /v1/memory/summary` may be needed — see TODO I11.
 - **Acceptance:** Page renders all cards within one request; loading/error states via `error.tsx` + `loading.tsx`. No client JS bundle for static cards. Cards paginate if list > 10.
@@ -231,6 +237,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I7 — Memories list + filters**
+
 - **Owner:** `frontend-specialist`
 - **Scope:** `/memories` Server Component with URL-based filters (scope, type, repo, language, tag, search-text). Pagination via cursor. Uses `ListMemoriesUseCase` → `orchestratorClient.listMemories`. Row click → `/memories/[id]`.
 - **Acceptance:** Filter changes reflected in URL, preserved on refresh. Bulk select + forget action available (calls `/v1/memory/forget`).
@@ -240,6 +247,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I8 — Manual add memory (MD editor)**
+
 - **Owner:** `frontend-specialist`
 - **Scope:** `/memories/new` page with CodeMirror 6 Markdown editor (split pane preview via `unified` + `remark-parse` + `remark-gfm` + `rehype-sanitize`). Metadata side panel: type, scope, repo, language, frameworks (multi), tags (multi), path, symbol, source, author, agent, custom JSON fields. Zod-validate before submit. Server Action calls `CreateMemoryUseCase` → `POST /v1/memory`.
 - **Acceptance:** Editor persists draft in `sessionStorage`. Preview sanitised. Submit redirects to the new memory's detail page. Invalid metadata shown inline with field errors.
@@ -249,6 +257,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I9 — Query interface (tool response viewer)**
+
 - **Owner:** `frontend-specialist`
 - **Scope:** `/query` page. Dropdown to pick a tool: `mb_recall`, `mb_digest`, raw REST endpoint. Form built dynamically from a tool schema in `lib/domain/query.ts`. Submit → Server Action calls the matching orchestrator endpoint and returns both parsed response and raw JSON. Render: collapsible JSON tree + pretty-printed summary + latency.
 - **Acceptance:** Every tool request shows response time, status, payload sent, raw JSON, parsed view. Errors rendered with redacted stack.
@@ -258,6 +267,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I10 — Graph view**
+
 - **Owner:** `frontend-specialist`
 - **Scope:** `/graph` page. Uses React Flow with elkjs layout (in a Web Worker). Nodes = memories, edges = computed relations. Relations source: shared `repo_name`, shared `tags[]`, and embedding similarity > 0.85. Node size ∝ `use_count + vote_bias`. Node colour by `type`. Side panel opens on node click with full metadata + link to `/memories/[id]`. Controls: filter by scope/language, cluster toggle, zoom-to-fit, export PNG.
 - **Acceptance:** Handles ≥ 2000 nodes at 30fps on a mid-range laptop. Layout computed off the main thread. Initial data loaded via Server Component; interactive updates via TanStack Query.
@@ -267,6 +277,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I11 — Orchestrator: aggregate + graph endpoints**
+
 - **Owner:** `database-specialist` (SQL) + `typescript-specialist` (handler)
 - **Scope:** Add two orchestrator endpoints required by dashboard and graph:
   1. `GET /v1/memory/summary` — counts by scope/type/language/framework, totals, top-20 tags. Single SQL with `COUNT(*) FILTER (WHERE …)`.
@@ -280,6 +291,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 ---
 
 **TODO I12 — Compose + gateway wiring**
+
 - **Owner:** `docker-specialist` + `devops-specialist`
 - **Scope:**
   1. Multistage `Dockerfile` in `src/web/` producing a `node:20-bookworm-slim` runner from Next.js `standalone` output. Non-root user. `HEALTHCHECK` against `/api/health`.
@@ -297,6 +309,7 @@ Every TODO has: `id`, `owner` (specialist agent), `scope`, `acceptance criteria`
 Scope guidance: v1 is intentionally unit-test-heavy. **No Playwright / E2E / browser automation in v1** — the cost/complexity is not justified for a single-operator tool. Manual browser verification at the end of TODO I5, I6, I7, I8, I9, I10 is acceptable and must be recorded in the commit body. E2E is a candidate for a future iteration once the surface stabilises.
 
 **TODO T1 — Unit tests for domain and use cases**
+
 - **Owner:** `typescript-specialist`
 - **Scope:** Vitest. Cover every use case in `lib/application/` with happy + sad paths. Mock ports. Cover domain value objects (`MetadataFields`, `GraphSnapshot`, filter mappers) and Zod schemas. Target > 90% branch coverage in `lib/application/` and `lib/domain/`.
 - **Verification:** `pnpm --filter my-brain-web test` green. Coverage report surfaced in the test script output.
@@ -305,6 +318,7 @@ Scope guidance: v1 is intentionally unit-test-heavy. **No Playwright / E2E / bro
 ---
 
 **TODO T2 — Adapter + session unit tests**
+
 - **Owner:** `typescript-specialist`
 - **Scope:** Test `HttpOrchestratorClient` against a mocked orchestrator using `msw` (Zod-rejection on malformed responses, header injection, error-class mapping). Test the session store (cookie flags, TTL sliding, CSRF helper, bearer encryption-at-rest in the in-memory store). Test the login/logout Route Handlers and the `(authed)` guard by invoking them as functions with mocked cookies and ports — **no browser**.
 - **Verification:** `pnpm --filter my-brain-web test` green.
@@ -313,6 +327,7 @@ Scope guidance: v1 is intentionally unit-test-heavy. **No Playwright / E2E / bro
 ---
 
 **TODO T3 — Orchestrator endpoint tests**
+
 - **Owner:** `database-specialist`
 - **Scope:** Integration tests for `/v1/memory/summary` and `/v1/memory/graph` using the repo's existing test infra.
 - **Commit:** `test(orchestrator): cover summary and graph endpoints`
@@ -322,6 +337,7 @@ Scope guidance: v1 is intentionally unit-test-heavy. **No Playwright / E2E / bro
 ### 5.3 Final Checkup TODOs
 
 **TODO F1 — Security review (blocking)**
+
 - **Owner:** `security-reviewer`
 - **Scope:** Review auth (session cookie flags, CSRF, bearer handling, rate limit), dependency CVEs (`pnpm audit`), SSRF (user-controlled URLs?), XSS in Markdown preview (confirm `rehype-sanitize` schema), secret exposure (no bearer in client bundle — grep `.next/standalone` for the token env var name). Must produce actionable findings and apply fixes before close.
 - **Commit:** `fix(web): apply security review remediations` (only if changes needed)
@@ -329,18 +345,21 @@ Scope guidance: v1 is intentionally unit-test-heavy. **No Playwright / E2E / bro
 ---
 
 **TODO F2 — Performance review**
+
 - **Owner:** `frontend-specialist` + `database-specialist`
 - **Scope:** Next.js build-time bundle analyser (≤ 200KB gzipped per non-graph route), manual Lighthouse run on the dashboard (perf ≥ 90; graph exempt) with the number recorded in the commit body, orchestrator `EXPLAIN ANALYZE` on the two new endpoints.
 
 ---
 
 **TODO F3 — Architecture review**
+
 - **Owner:** `design-architect`
 - **Scope:** Verify hexagonal boundaries: domain has no infra imports, application has no framework imports, UI never touches infra directly. Run `eslint-plugin-boundaries`. File sizes within limits.
 
 ---
 
 **TODO F4 — Documentation Completion Step (blocking — final gate)**
+
 - **Owner:** `documentation-specialist`
 - **Scope:** Enforce `~/.claude/rules/commenting-standards.md`. Apply skills: `commenting-standards`, `documentation-best-practices`, `typescript-documentation-best-practices`.
   - Every new class/module/function/method/exported type has a contract-level docblock.
@@ -355,6 +374,7 @@ Scope guidance: v1 is intentionally unit-test-heavy. **No Playwright / E2E / bro
 ---
 
 **TODO F5 — Lint / format / build / typecheck**
+
 - **Owner:** `devops-specialist`
 - **Scope:** `pnpm install` → `pnpm run lint` → `npx prettier --check .` → `pnpm -r run typecheck` → `pnpm -r run build` → `pnpm -r run test` → `docker compose build`. All green. If anything fails, loop back to the responsible TODO.
 - **Commit:** `chore: final lint/build/test pass` (if cleanup needed)

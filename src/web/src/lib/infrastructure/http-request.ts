@@ -24,11 +24,7 @@ export async function makeRequest(
   url: string,
   options: RequestOptions = {},
 ): Promise<{ status: number; data: unknown }> {
-  const {
-    method = "GET" as const,
-    headers = {},
-    body,
-  } = options;
+  const { method = "GET" as const, headers = {}, body } = options;
 
   const config: RequestInit = {
     method,

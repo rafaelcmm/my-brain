@@ -29,12 +29,24 @@ const eslintConfig = defineConfig([
             { from: "domain", allow: ["domain"] },
             { from: "ports", allow: ["domain", "ports"] },
             { from: "application", allow: ["domain", "ports", "application"] },
-            { from: "infrastructure", allow: ["domain", "ports", "infrastructure"] },
+            {
+              from: "infrastructure",
+              allow: ["domain", "ports", "infrastructure"],
+            },
             {
               from: "composition",
-              allow: ["domain", "ports", "application", "infrastructure", "composition"],
+              allow: [
+                "domain",
+                "ports",
+                "application",
+                "infrastructure",
+                "composition",
+              ],
             },
-            { from: "app", allow: ["domain", "application", "composition", "app"] },
+            {
+              from: "app",
+              allow: ["domain", "application", "composition", "app"],
+            },
           ],
         },
       ],

@@ -65,6 +65,28 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 8. Stop stack:
    docker compose down
 
+## Webapp
+
+1. Open UI at `http://127.0.0.1:${MYBRAIN_WEB_PORT:-3000}`.
+2. Sign in using the same bearer token from `.secrets/auth-token`.
+3. Web session is stored server-side; browser only gets an httpOnly `session` cookie.
+4. Protected routes:
+   - `/dashboard`
+   - `/memories` and `/memories/[id]`
+   - `/memories/new`
+   - `/query`
+   - `/graph`
+5. Sign-out calls `/api/auth/logout` and clears server session + cookie.
+
+### Webapp Troubleshooting
+
+1. Login returns `503 Orchestrator unavailable`:
+   check orchestrator health and internal key consistency.
+2. Login returns `401 Invalid or expired token`:
+   verify token in `.secrets/auth-token` and paste again.
+3. Graph page loads but no nodes:
+   verify seeded memory data and `/v1/memory/graph` response.
+
 ### Postman Minimal General Test
 
 Use the bundled collection `my-brain (minimal)` for a compact sanity flow:

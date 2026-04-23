@@ -16,13 +16,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (!sessionId) {
     return applyNoStoreHeaders(
-      NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 }),
+      NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      ),
     );
   }
 
   if (!csrfToken || !(await verifySessionCsrfToken(sessionId, csrfToken))) {
     return applyNoStoreHeaders(
-      NextResponse.json({ success: false, error: "Invalid CSRF token" }, { status: 403 }),
+      NextResponse.json(
+        { success: false, error: "Invalid CSRF token" },
+        { status: 403 },
+      ),
     );
   }
 

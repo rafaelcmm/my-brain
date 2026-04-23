@@ -92,8 +92,7 @@ export function LoginForm() {
           </button>
 
           <p className="text-xs text-gray-600 text-center">
-            Lost token? See
-            {" "}
+            Lost token? See{" "}
             <a className="underline" href="/docs/runbooks/local-operations.md">
               local operations runbook
             </a>

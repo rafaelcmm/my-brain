@@ -1,7 +1,5 @@
 import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
-import {
-  OrchestratorAuthError,
-} from "@/lib/ports/orchestrator-client.port";
+import { OrchestratorAuthError } from "@/lib/ports/orchestrator-client.port";
 import type { SessionStore } from "@/lib/ports/orchestrator-client.port";
 
 /**

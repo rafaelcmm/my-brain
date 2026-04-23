@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuthenticateUseCase } from "./authenticate.usecase";
-import type { OrchestratorClient, SessionStore } from "../ports/orchestrator-client.port";
+import type {
+  OrchestratorClient,
+  SessionStore,
+} from "../ports/orchestrator-client.port";
 import { OrchestratorAuthError } from "../ports/orchestrator-client.port";
 
 function createSessionStoreMock(): SessionStore {
@@ -59,7 +62,9 @@ describe("AuthenticateUseCase", () => {
 
     const useCase = new AuthenticateUseCase(() => client, sessionStore);
 
-    await expect(useCase.authenticate("bad")).rejects.toThrow("Invalid or expired token");
+    await expect(useCase.authenticate("bad")).rejects.toThrow(
+      "Invalid or expired token",
+    );
     expect(sessionStore.createSession).not.toHaveBeenCalled();
   });
 });

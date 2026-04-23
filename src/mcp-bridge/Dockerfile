@@ -13,6 +13,7 @@ RUN python3 -m venv "${VIRTUAL_ENV}" \
 
 WORKDIR /app
 
+COPY tsconfig.base.json /tsconfig.base.json
 COPY src/mcp-bridge/package.json src/mcp-bridge/package-lock.json ./
 RUN npm ci
 

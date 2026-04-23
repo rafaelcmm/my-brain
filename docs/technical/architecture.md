@@ -9,6 +9,7 @@ This document describes runtime architecture for local my-brain deployments.
 3. Orchestrator: REST API, runtime bootstrap, memory/learning services.
 4. Postgres: durable storage for vectors and metadata.
 5. Ollama: local LLM and embedding backends.
+6. Web app (Next.js): authenticated operator UI for dashboard, memory workflows, query runner, and graph explorer.
 
 ## Data model
 
@@ -22,6 +23,24 @@ This document describes runtime architecture for local my-brain deployments.
 2. Gateway validates token and strips `Authorization` before upstream.
 3. MCP requests route to bridge; REST requests route to orchestrator/ollama.
 4. Orchestrator coordinates model, vector, metadata, and learning paths.
+
+## Web auth flow
+
+1. User opens `/login` and submits bearer token to `POST /api/auth/login`.
+2. Route validates token via orchestrator capabilities and creates encrypted server-side session.
+3. Browser receives httpOnly `session` cookie; bearer token never stored client-side.
+4. Protected routes resolve session server-side and proxy to orchestrator through composition ports.
+5. Mutating web routes enforce CSRF token (`x-csrf-token`) and per-session rate limits.
+6. `POST /api/auth/logout` destroys session and expires cookie.
+
+## Web API endpoints
+
+1. `GET /api/health`: web readiness endpoint used by compose healthcheck.
+2. `POST /api/auth/login`: token-to-session exchange.
+3. `POST /api/auth/logout`: session invalidation.
+4. `POST /api/memory/create`: authenticated memory creation proxy.
+5. `POST /api/memory/forget`: authenticated memory deletion proxy.
+6. `POST /api/memory/query`: authenticated query runner (`mb_recall`, `mb_digest`, `mb_search`) with latency envelope.
 
 ## Runtime modes
 

@@ -1,4 +1,9 @@
-import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from "crypto";
+import {
+  randomBytes,
+  createCipheriv,
+  createDecipheriv,
+  scryptSync,
+} from "crypto";
 import type { SessionStore } from "@/lib/ports/orchestrator-client.port";
 
 /**
@@ -22,7 +27,11 @@ export class InMemorySessionStore implements SessionStore {
     }
 
     // Derive fixed 256-bit key from caller-provided secret to avoid raw UTF-8 key material.
-    this.derivedKey = scryptSync(this.encryptionSecret, "my-brain:web:session:v1", 32);
+    this.derivedKey = scryptSync(
+      this.encryptionSecret,
+      "my-brain:web:session:v1",
+      32,
+    );
   }
 
   /**
@@ -64,7 +73,10 @@ export class InMemorySessionStore implements SessionStore {
     }
   }
 
-  async createSession(bearerToken: string, ttl = 2 * 60 * 60 * 1000): Promise<string> {
+  async createSession(
+    bearerToken: string,
+    ttl = 2 * 60 * 60 * 1000,
+  ): Promise<string> {
     const sessionId = randomBytes(16).toString("hex");
     const encryptedBearer = this.encryptBearer(bearerToken);
     const csrfToken = randomBytes(32).toString("hex");

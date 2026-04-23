@@ -59,11 +59,36 @@ export default async function MemoriesPage({
         <h1 className="text-3xl font-extrabold text-gray-900">Memories</h1>
 
         <form className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-white p-4 rounded-lg shadow">
-          <input name="search" placeholder="Search" defaultValue={searchParams?.search} className="border rounded px-3 py-2" />
-          <input name="scope" placeholder="scope" defaultValue={searchParams?.scope} className="border rounded px-3 py-2" />
-          <input name="type" placeholder="type" defaultValue={searchParams?.type} className="border rounded px-3 py-2" />
-          <input name="language" placeholder="language" defaultValue={searchParams?.language} className="border rounded px-3 py-2" />
-          <button type="submit" className="bg-blue-600 text-white rounded px-3 py-2">Filter</button>
+          <input
+            name="search"
+            placeholder="Search"
+            defaultValue={searchParams?.search}
+            className="border rounded px-3 py-2"
+          />
+          <input
+            name="scope"
+            placeholder="scope"
+            defaultValue={searchParams?.scope}
+            className="border rounded px-3 py-2"
+          />
+          <input
+            name="type"
+            placeholder="type"
+            defaultValue={searchParams?.type}
+            className="border rounded px-3 py-2"
+          />
+          <input
+            name="language"
+            placeholder="language"
+            defaultValue={searchParams?.language}
+            className="border rounded px-3 py-2"
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 text-white rounded px-3 py-2"
+          >
+            Filter
+          </button>
         </form>
 
         <MemoriesListClient memories={list.memories} />

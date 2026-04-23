@@ -183,11 +183,16 @@ services:
       MYBRAIN_INTERNAL_API_KEY: ${MYBRAIN_INTERNAL_API_KEY:-my-brain-internal-local-key}
       MYBRAIN_WEB_PUBLIC_BASE_URL: ${MYBRAIN_WEB_PUBLIC_BASE_URL:-http://localhost:${MYBRAIN_WEB_PORT:-3000}}
       MYBRAIN_WEB_LOG_LEVEL: ${MYBRAIN_WEB_LOG_LEVEL:-info}
+      MYBRAIN_WEB_RATE_LIMIT_LOGIN: ${MYBRAIN_WEB_RATE_LIMIT_LOGIN:-5}
       NODE_ENV: production
     expose:
       - "3000"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/login || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "fetch(''http://localhost:3000/api/health'').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
       interval: 10s
       timeout: 5s
       retries: 10

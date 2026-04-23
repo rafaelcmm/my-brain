@@ -13,6 +13,15 @@ docker compose ps
 ./src/scripts/smoke-test.sh
 ```
 
+## Open webapp
+
+```bash
+WEB_PORT="${MYBRAIN_WEB_PORT:-3000}"
+xdg-open "http://127.0.0.1:${WEB_PORT}" 2>/dev/null || echo "open http://127.0.0.1:${WEB_PORT}"
+```
+
+Login uses token from `.secrets/auth-token` and creates an httpOnly `session` cookie.
+
 ## Inspect metrics
 
 ```bash
@@ -37,6 +46,23 @@ docker compose down
 ```bash
 ./src/scripts/rotate-token.sh
 ```
+
+## Rotate MYBRAIN_WEB_SESSION_SECRET
+
+1. Update `.env` with a new high-entropy value (at least 32 chars):
+
+```bash
+openssl rand -base64 48
+```
+
+2. Replace `MYBRAIN_WEB_SESSION_SECRET=...` in `.env`.
+3. Restart web container:
+
+```bash
+docker compose up -d --force-recreate my-brain-web
+```
+
+4. Expect active browser sessions to be invalidated and require login again.
 
 ## Emergency response
 

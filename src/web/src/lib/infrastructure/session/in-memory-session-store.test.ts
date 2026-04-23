@@ -31,12 +31,17 @@ describe("InMemorySessionStore", () => {
   });
 
   it("cannot decrypt data with different secret", async () => {
-    const sourceStore = new InMemorySessionStore("0123456789abcdef0123456789abcdef");
+    const sourceStore = new InMemorySessionStore(
+      "0123456789abcdef0123456789abcdef",
+    );
     const sessionId = await sourceStore.createSession("bearer-token");
 
     const sessions = (
       sourceStore as unknown as {
-        sessions: Map<string, { bearer: string; csrf: string; expiresAt: number }>;
+        sessions: Map<
+          string,
+          { bearer: string; csrf: string; expiresAt: number }
+        >;
       }
     ).sessions;
     const sourceSession = sessions.get(sessionId);
@@ -44,10 +49,15 @@ describe("InMemorySessionStore", () => {
       throw new Error("Expected session to exist");
     }
 
-    const targetStore = new InMemorySessionStore("fedcba9876543210fedcba9876543210");
+    const targetStore = new InMemorySessionStore(
+      "fedcba9876543210fedcba9876543210",
+    );
     const targetSessions = (
       targetStore as unknown as {
-        sessions: Map<string, { bearer: string; csrf: string; expiresAt: number }>;
+        sessions: Map<
+          string,
+          { bearer: string; csrf: string; expiresAt: number }
+        >;
       }
     ).sessions;
     targetSessions.set("reused", { ...sourceSession });

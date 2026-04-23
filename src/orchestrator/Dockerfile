@@ -40,4 +40,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --retries=6 \
   CMD curl -fsS http://localhost:8080/health || exit 1
 
-CMD ["node", "src/index.mjs"]
+CMD ["node", "src/index.js"]

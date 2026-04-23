@@ -19,8 +19,10 @@ fi
 token="$(cat "$TOKEN_FILE")"
 rest_port="$(grep -E '^MYBRAIN_REST_PORT=' "$ENV_FILE" | cut -d= -f2 | tr -d '"')"
 mcp_port="$(grep -E '^MYBRAIN_MCP_PORT=' "$ENV_FILE" | cut -d= -f2 | tr -d '"')"
+web_port="$(grep -E '^MYBRAIN_WEB_PORT=' "$ENV_FILE" | cut -d= -f2 | tr -d '"')"
 : "${rest_port:=8080}"
 : "${mcp_port:=3333}"
+: "${web_port:=3000}"
 
 # Enforce least-privilege secret file modes before probing network paths.
 if find .secrets -type d ! -perm 700 | grep -q .; then
@@ -86,5 +88,26 @@ retry_until_code "410" "GET /sse with token" \
   curl --max-time 5 -s -o /dev/null -w '%{http_code}' \
   -H "Authorization: Bearer $token" \
   "http://127.0.0.1:${mcp_port}/sse"
+
+# Validate web login flow and protected dashboard reachability.
+cookie_jar="$(mktemp)"
+trap 'rm -f "$cookie_jar"' EXIT
+
+login_code="$(curl --max-time 8 -s -o /dev/null -w '%{http_code}' \
+  -c "$cookie_jar" \
+  -H 'Content-Type: application/json' \
+  -d "{\"token\":\"${token}\"}" \
+  "http://127.0.0.1:${web_port}/api/auth/login" || true)"
+[[ "$login_code" == "200" ]] || { echo "expected 200 web login, got $login_code" >&2; exit 1; }
+
+dashboard_code="$(curl --max-time 8 -s -o /dev/null -w '%{http_code}' \
+  -b "$cookie_jar" \
+  "http://127.0.0.1:${web_port}/dashboard" || true)"
+# In production mode the session cookie is secure-only; local HTTP probes can
+# receive a redirect when the cookie is intentionally withheld by the client.
+[[ "$dashboard_code" == "200" || "$dashboard_code" == "307" ]] || {
+  echo "expected 200/307 dashboard, got $dashboard_code" >&2
+  exit 1
+}
 
 echo "smoke test passed"

@@ -48,7 +48,10 @@ export async function authenticateToken(token: string): Promise<string> {
 /**
  * Resolve and validate bearer from session cookie.
  */
-export async function resolveSessionBearer(): Promise<{ sessionId: string; bearer: string } | null> {
+export async function resolveSessionBearer(): Promise<{
+  sessionId: string;
+  bearer: string;
+} | null> {
   const sessionId = await getSessionIdFromCookies();
   if (!sessionId) {
     return null;
