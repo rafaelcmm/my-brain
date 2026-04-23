@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { LogoutButton } from "@/app/(authed)/logout-button";
 import { getSessionCsrfToken, resolveSessionBearer } from "@/lib/composition/auth";
 
@@ -26,11 +27,11 @@ export default async function AuthedLayout({
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
           <nav className="flex items-center gap-4 text-sm font-medium text-gray-700">
-            <a href="/dashboard" className="hover:text-gray-900">Dashboard</a>
-            <a href="/memories" className="hover:text-gray-900">Memories</a>
-            <a href="/editor" className="hover:text-gray-900">Editor</a>
-            <a href="/query" className="hover:text-gray-900">Query</a>
-            <a href="/graph" className="hover:text-gray-900">Graph</a>
+            <Link href="/dashboard" className="hover:text-gray-900">Dashboard</Link>
+            <Link href="/memories" className="hover:text-gray-900">Memories</Link>
+            <Link href="/editor" className="hover:text-gray-900">Editor</Link>
+            <Link href="/query" className="hover:text-gray-900">Query</Link>
+            <Link href="/graph" className="hover:text-gray-900">Graph</Link>
           </nav>
           <LogoutButton />
         </div>

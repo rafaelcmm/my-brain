@@ -1,4 +1,27 @@
 import { getAuthenticatedClient } from "@/lib/composition/auth";
+import { MemoriesListClient } from "@/app/(authed)/memories/memories-list-client";
+
+function buildNextPageUrl(
+  nextCursor: string,
+  searchParams?: {
+    scope?: string;
+    type?: string;
+    language?: string;
+    tag?: string;
+    search?: string;
+  },
+): string {
+  const params = new URLSearchParams();
+  params.set("cursor", nextCursor);
+
+  if (searchParams?.scope) params.set("scope", searchParams.scope);
+  if (searchParams?.type) params.set("type", searchParams.type);
+  if (searchParams?.language) params.set("language", searchParams.language);
+  if (searchParams?.tag) params.set("tag", searchParams.tag);
+  if (searchParams?.search) params.set("search", searchParams.search);
+
+  return `?${params.toString()}`;
+}
 
 /**
  * Memories page with server-side filters and pagination cursor.
@@ -43,27 +66,12 @@ export default async function MemoriesPage({
           <button type="submit" className="bg-blue-600 text-white rounded px-3 py-2">Filter</button>
         </form>
 
-        <div className="bg-white rounded-lg shadow divide-y">
-          {list.memories.length === 0 && (
-            <div className="p-4 text-gray-600">No memories found.</div>
-          )}
-          {list.memories.map((memory) => (
-            <article key={memory.id} className="p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="text-xs uppercase tracking-wide text-gray-500">
-                  {memory.type} · {memory.scope}
-                </div>
-                <div className="text-xs text-gray-500">{memory.created_at}</div>
-              </div>
-              <p className="mt-2 text-gray-900 whitespace-pre-wrap">{memory.content}</p>
-            </article>
-          ))}
-        </div>
+        <MemoriesListClient memories={list.memories} />
 
         {list.next_cursor && (
           <a
             className="inline-block bg-gray-900 text-white rounded px-4 py-2"
-            href={`?cursor=${encodeURIComponent(list.next_cursor)}${searchParams?.scope ? `&scope=${encodeURIComponent(searchParams.scope)}` : ""}${searchParams?.type ? `&type=${encodeURIComponent(searchParams.type)}` : ""}${searchParams?.language ? `&language=${encodeURIComponent(searchParams.language)}` : ""}${searchParams?.search ? `&search=${encodeURIComponent(searchParams.search)}` : ""}`}
+            href={buildNextPageUrl(list.next_cursor, searchParams)}
           >
             Next page
           </a>
