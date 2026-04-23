@@ -46,7 +46,10 @@ export class InMemorySessionStore implements SessionStore {
    */
   private decryptBearer(encrypted: string): string | null {
     try {
-      const [ivHex, tagHex, cipherHex] = encrypted.split(":");
+      const parts = encrypted.split(":");
+      if (parts.length !== 3) return null;
+
+      const [ivHex, tagHex, cipherHex] = parts as [string, string, string];
       const iv = Buffer.from(ivHex, "hex");
       const authTag = Buffer.from(tagHex, "hex");
       const salt = this.encryptionSecret.slice(0, 32);
@@ -107,7 +110,7 @@ export class InMemorySessionStore implements SessionStore {
   async verifyCSRFToken(sessionId: string, token: string): Promise<boolean> {
     const session = this.sessions.get(sessionId);
 
-    if (!session || Date.now() > session.expiresAt) {
+      if (!session || Date.now() > session.expiresAt) {
       return false;
     }
 
