@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Memory } from "@/lib/domain";
 import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
 
@@ -12,6 +13,7 @@ interface MemoriesListClientProps {
  * Client-side selection and bulk-forget controls for memories list page.
  */
 export function MemoriesListClient({ memories }: MemoriesListClientProps) {
+  const router = useRouter();
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,37 +31,48 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
     setBusy(true);
     setStatus(null);
 
-    try {
-      for (const id of selectedIds) {
-        const response = await fetch("/api/memory/forget", {
+    // Fire all forget requests concurrently so UI doesn't block per item.
+    const csrfToken = readCsrfTokenFromMeta();
+    const results = await Promise.allSettled(
+      selectedIds.map((id) =>
+        fetch("/api/memory/forget", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-csrf-token": readCsrfTokenFromMeta(),
+            "x-csrf-token": csrfToken,
           },
           body: JSON.stringify({ id }),
-        });
+        }).then(async (res) => {
+          if (!res.ok) {
+            const payload = (await res.json()) as { error?: string };
+            throw new Error(payload.error ?? "Failed to forget memory");
+          }
+        }),
+      ),
+    );
 
-        if (!response.ok) {
-          const payload = (await response.json()) as { error?: string };
-          throw new Error(payload.error ?? "Failed to forget memory");
-        }
-      }
+    const failures = results.filter((r) => r.status === "rejected");
 
+    if (failures.length > 0) {
+      const messages = failures.map((r) =>
+        r.status === "rejected" && r.reason instanceof Error
+          ? r.reason.message
+          : "Unknown error",
+      );
+      setStatus(`${failures.length} failed: ${messages.join("; ")}`);
+    } else {
       setStatus(`${selectedIds.length} memories forgotten.`);
-      window.location.reload();
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Failed to forget memory");
-      setBusy(false);
     }
+
+    setBusy(false);
+    // Refresh server component data without full page reload.
+    router.refresh();
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          {selectedIds.length} selected
-        </p>
+        <p className="text-sm text-gray-600">{selectedIds.length} selected</p>
         <button
           type="button"
           onClick={forgetSelected}
@@ -95,13 +108,20 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
                 </span>
               </label>
               <div className="flex items-center gap-3">
-                <a href={`/memories/${encodeURIComponent(memory.id)}`} className="text-sm underline text-blue-700">
+                <a
+                  href={`/memories/${encodeURIComponent(memory.id)}`}
+                  className="text-sm underline text-blue-700"
+                >
                   Open
                 </a>
-                <span className="text-xs text-gray-500">{memory.created_at}</span>
+                <span className="text-xs text-gray-500">
+                  {memory.created_at}
+                </span>
               </div>
             </div>
-            <p className="mt-2 text-gray-900 whitespace-pre-wrap">{memory.content}</p>
+            <p className="mt-2 text-gray-900 whitespace-pre-wrap">
+              {memory.content}
+            </p>
           </article>
         ))}
       </div>
