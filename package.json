@@ -19,7 +19,7 @@
     "docker:logs": "docker compose logs -f",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "lint": "pnpm exec eslint src/orchestrator src/mcp-bridge && pnpm run format:check",
+    "lint": "pnpm exec eslint src/orchestrator src/mcp-bridge src/web && pnpm run format:check",
     "test": "pnpm -r --if-present run test",
     "format:check": "prettier --check ."
   },

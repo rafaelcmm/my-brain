@@ -1,0 +1,41 @@
+{
+  "name": "my-brain-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "next": "16.2.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "^3.23.8",
+    "@tanstack/react-query": "^5.45.0",
+    "@xyflow/react": "^12.2.0",
+    "elkjs": "^0.9.3",
+    "iron-session": "^8.4.2",
+    "pino": "^8.20.0",
+    "jose": "^5.2.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "eslint-plugin-boundaries": "^4.1.2",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^1.2.0",
+    "msw": "^2.1.0",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/jest-dom": "^6.4.2"
+  }
+}

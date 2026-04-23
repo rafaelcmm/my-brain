@@ -1,3 +1,4 @@
 packages:
   - src/orchestrator
   - src/mcp-bridge
+  - src/web
