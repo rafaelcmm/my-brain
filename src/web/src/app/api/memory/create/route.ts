@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isMemoryRateLimited } from "@/lib/application/api-security";
+import { applyNoStoreHeaders, isMemoryRateLimited } from "@/lib/application/api-security";
+import { CreateMemoryUseCase } from "@/lib/application/create-memory.usecase";
 import {
   getAuthenticatedClient,
   getSessionIdFromCookies,
@@ -14,24 +15,33 @@ import {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const sessionId = await getSessionIdFromCookies();
   if (!sessionId) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return applyNoStoreHeaders(NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    ));
   }
 
   const csrfToken = request.headers.get("x-csrf-token")?.trim();
   if (!csrfToken || !(await verifySessionCsrfToken(sessionId, csrfToken))) {
-    return NextResponse.json({ success: false, error: "Invalid CSRF token" }, { status: 403 });
+    return applyNoStoreHeaders(NextResponse.json(
+      { success: false, error: "Invalid CSRF token" },
+      { status: 403 },
+    ));
   }
 
   if (isMemoryRateLimited(request, sessionId)) {
-    return NextResponse.json(
+    return applyNoStoreHeaders(NextResponse.json(
       { success: false, error: "Too many requests" },
       { status: 429 },
-    );
+    ));
   }
 
   const client = await getAuthenticatedClient();
   if (!client) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return applyNoStoreHeaders(NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    ));
   }
 
   let payload: {
@@ -49,35 +59,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       metadata?: Record<string, unknown>;
     };
   } catch {
-    return NextResponse.json(
+    return applyNoStoreHeaders(NextResponse.json(
       { success: false, error: "Invalid JSON payload" },
       { status: 400 },
-    );
+    ));
   }
 
   if (!payload.content || !payload.type || !payload.scope) {
-    return NextResponse.json(
+    return applyNoStoreHeaders(NextResponse.json(
       { success: false, error: "content, type, and scope are required" },
       { status: 400 },
-    );
+    ));
   }
 
   try {
-    const response = await client.createMemory(
-      payload.content,
-      payload.type,
-      payload.scope,
-      payload.metadata ?? {},
-    );
+    const useCase = new CreateMemoryUseCase(client);
+    const response = await useCase.execute({
+      content: payload.content,
+      type: payload.type,
+      scope: payload.scope,
+      metadata: payload.metadata ?? {},
+    });
 
-    return NextResponse.json({ success: true, data: response });
+    return applyNoStoreHeaders(NextResponse.json({ success: true, data: response }));
   } catch (error) {
-    return NextResponse.json(
+    return applyNoStoreHeaders(NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to create memory",
+        error:
+          error instanceof Error ? error.message : "Failed to create memory",
       },
       { status: 500 },
-    );
+    ));
   }
 }
