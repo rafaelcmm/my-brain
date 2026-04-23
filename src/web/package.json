@@ -12,16 +12,19 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@uiw/react-codemirror": "^4.25.9",
+    "@xyflow/react": "^12.2.0",
+    "elkjs": "^0.9.3",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "zod": "^3.23.8",
-    "@tanstack/react-query": "^5.45.0",
-    "@xyflow/react": "^12.2.0",
-    "elkjs": "^0.9.3",
-    "iron-session": "^8.0.4",
-    "pino": "^8.20.0",
-    "jose": "^5.2.3"
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -31,11 +34,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "eslint-plugin-boundaries": "^4.1.2",
+    "msw": "^2.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^1.2.0",
-    "msw": "^2.1.0",
-    "@testing-library/react": "^14.2.1",
-    "@testing-library/jest-dom": "^6.4.2"
+    "vitest": "^1.2.0"
   }
 }
