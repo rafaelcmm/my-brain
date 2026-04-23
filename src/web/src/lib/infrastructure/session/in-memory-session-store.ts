@@ -1,4 +1,4 @@
-import { randomBytes, createCipheriv, createDecipheriv } from "crypto";
+import { randomBytes, createCipheriv, createDecipheriv, scryptSync } from "crypto";
 import type { SessionStore } from "@/lib/ports/orchestrator-client.port";
 
 /**
@@ -14,11 +14,15 @@ export class InMemorySessionStore implements SessionStore {
     string,
     { bearer: string; csrf: string; expiresAt: number }
   > = new Map();
+  private readonly derivedKey: Buffer;
 
   constructor(private encryptionSecret: string) {
-    if (encryptionSecret.length < 32) {
-      throw new Error("Encryption secret must be at least 32 bytes");
+    if (encryptionSecret.trim().length < 16) {
+      throw new Error("Encryption secret must be at least 16 characters");
     }
+
+    // Derive fixed 256-bit key from caller-provided secret to avoid raw UTF-8 key material.
+    this.derivedKey = scryptSync(this.encryptionSecret, "my-brain:web:session:v1", 32);
   }
 
   /**
@@ -26,12 +30,7 @@ export class InMemorySessionStore implements SessionStore {
    */
   private encryptBearer(bearer: string): string {
     const iv = randomBytes(16);
-    const salt = this.encryptionSecret.slice(0, 32);
-    const cipher = createCipheriv(
-      "aes-256-gcm",
-      Buffer.from(salt, "utf-8"),
-      iv,
-    );
+    const cipher = createCipheriv("aes-256-gcm", this.derivedKey, iv);
 
     let encrypted = cipher.update(bearer, "utf-8", "hex");
     encrypted += cipher.final("hex");
@@ -52,13 +51,8 @@ export class InMemorySessionStore implements SessionStore {
       const [ivHex, tagHex, cipherHex] = parts as [string, string, string];
       const iv = Buffer.from(ivHex, "hex");
       const authTag = Buffer.from(tagHex, "hex");
-      const salt = this.encryptionSecret.slice(0, 32);
 
-      const decipher = createDecipheriv(
-        "aes-256-gcm",
-        Buffer.from(salt, "utf-8"),
-        iv,
-      );
+      const decipher = createDecipheriv("aes-256-gcm", this.derivedKey, iv);
       decipher.setAuthTag(authTag);
 
       let decrypted = decipher.update(cipherHex, "hex", "utf-8");
@@ -110,7 +104,7 @@ export class InMemorySessionStore implements SessionStore {
   async verifyCSRFToken(sessionId: string, token: string): Promise<boolean> {
     const session = this.sessions.get(sessionId);
 
-      if (!session || Date.now() > session.expiresAt) {
+    if (!session || Date.now() > session.expiresAt) {
       return false;
     }
 
