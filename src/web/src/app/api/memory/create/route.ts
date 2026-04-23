@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { isMemoryRateLimited } from "@/lib/application/api-security";
-import { getAuthenticatedClient } from "@/lib/application/server-auth";
-import { getSessionStore } from "@/lib/infrastructure/session/store";
+import {
+  getAuthenticatedClient,
+  getSessionIdFromCookies,
+  verifySessionCsrfToken,
+} from "@/lib/composition/auth";
 
 /**
  * POST /api/memory/create
@@ -10,14 +12,13 @@ import { getSessionStore } from "@/lib/infrastructure/session/store";
  * Server-side proxy for memory creation so bearer never reaches browser code.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const cookieStore = await cookies();
-  const sessionId = cookieStore.get("session")?.value;
+  const sessionId = await getSessionIdFromCookies();
   if (!sessionId) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   const csrfToken = request.headers.get("x-csrf-token")?.trim();
-  if (!csrfToken || !(await getSessionStore().verifyCSRFToken(sessionId, csrfToken))) {
+  if (!csrfToken || !(await verifySessionCsrfToken(sessionId, csrfToken))) {
     return NextResponse.json({ success: false, error: "Invalid CSRF token" }, { status: 403 });
   }
 

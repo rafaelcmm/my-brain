@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { readCsrfTokenFromMeta } from "@/lib/infrastructure/browser/csrf";
+import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
 
 /**
  * Manual memory capture page.

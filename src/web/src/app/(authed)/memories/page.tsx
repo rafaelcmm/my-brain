@@ -1,4 +1,4 @@
-import { getAuthenticatedClient } from "@/lib/application/server-auth";
+import { getAuthenticatedClient } from "@/lib/composition/auth";
 
 /**
  * Memories page with server-side filters and pagination cursor.
@@ -21,11 +21,11 @@ export default async function MemoriesPage({
   }
 
   const filters = {
-    scope: searchParams?.scope,
-    type: searchParams?.type,
-    language: searchParams?.language,
-    tag: searchParams?.tag,
-    search: searchParams?.search,
+    ...(searchParams?.scope ? { scope: searchParams.scope } : {}),
+    ...(searchParams?.type ? { type: searchParams.type } : {}),
+    ...(searchParams?.language ? { language: searchParams.language } : {}),
+    ...(searchParams?.tag ? { tag: searchParams.tag } : {}),
+    ...(searchParams?.search ? { search: searchParams.search } : {}),
   };
 
   const list = await client.listMemories(filters, searchParams?.cursor);

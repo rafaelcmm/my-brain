@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { applyNoStoreHeaders } from "@/lib/application/api-security";
-import { getSessionStore } from "@/lib/infrastructure/session/store";
+import {
+  destroySession,
+  getSessionIdFromCookies,
+  verifySessionCsrfToken,
+} from "@/lib/composition/auth";
 
 /**
  * POST /api/auth/logout
  * Clear authenticated session when CSRF token matches active session.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const cookieStore = await cookies();
-  const sessionId = cookieStore.get("session")?.value;
+  const sessionId = await getSessionIdFromCookies();
   const csrfToken = request.headers.get("x-csrf-token")?.trim();
 
   if (!sessionId) {
@@ -18,15 +20,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  if (!csrfToken || !(await getSessionStore().verifyCSRFToken(sessionId, csrfToken))) {
+  if (!csrfToken || !(await verifySessionCsrfToken(sessionId, csrfToken))) {
     return applyNoStoreHeaders(
       NextResponse.json({ success: false, error: "Invalid CSRF token" }, { status: 403 }),
     );
   }
 
-  if (sessionId) {
-    await getSessionStore().destroySession(sessionId);
-  }
+  await destroySession(sessionId);
 
   const response = applyNoStoreHeaders(NextResponse.json({ success: true }));
 

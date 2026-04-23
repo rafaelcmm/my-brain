@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyNoStoreHeaders, isLoginRateLimited } from "@/lib/application/api-security";
-import { AuthenticateUseCase } from "@/lib/application/authenticate.usecase";
+import { authenticateToken } from "@/lib/composition/auth";
 import { env } from "@/lib/config/env";
-import { HttpOrchestratorClient } from "@/lib/infrastructure/orchestrator/http-orchestrator-client";
-import { getSessionStore } from "@/lib/infrastructure/session/store";
-import {
-  OrchestratorAuthError,
-  OrchestratorUnavailableError,
-} from "@/lib/ports/orchestrator-client.port";
 
 /**
  * POST /api/auth/login
@@ -44,17 +38,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     ));
   }
 
-  const createClient = (bearerToken: string) =>
-    new HttpOrchestratorClient(
-      config.MYBRAIN_WEB_ORCHESTRATOR_URL,
-      bearerToken,
-      config.MYBRAIN_INTERNAL_API_KEY,
-    );
-
-  const useCase = new AuthenticateUseCase(createClient, getSessionStore());
-
   try {
-    const sessionId = await useCase.authenticate(token);
+    const sessionId = await authenticateToken(token);
     const response = applyNoStoreHeaders(NextResponse.json({ success: true }));
 
     response.cookies.set("session", sessionId, {
@@ -67,14 +52,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return response;
   } catch (error) {
-    if (error instanceof OrchestratorAuthError) {
+    if (error instanceof Error && error.name === "OrchestratorAuthError") {
       return applyNoStoreHeaders(NextResponse.json(
         { success: false, error: "Invalid or expired token" },
         { status: 401 },
       ));
     }
 
-    if (error instanceof OrchestratorUnavailableError) {
+    if (error instanceof Error && error.name === "OrchestratorUnavailableError") {
       return applyNoStoreHeaders(NextResponse.json(
         { success: false, error: "Orchestrator unavailable" },
         { status: 503 },

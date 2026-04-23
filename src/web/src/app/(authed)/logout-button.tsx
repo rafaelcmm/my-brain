@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { readCsrfTokenFromMeta } from "@/lib/infrastructure/browser/csrf";
+import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
 
 /**
  * Logout action executed with explicit CSRF header.

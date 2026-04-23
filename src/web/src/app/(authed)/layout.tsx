@@ -1,8 +1,7 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { LogoutButton } from "@/app/(authed)/logout-button";
-import { getSessionStore } from "@/lib/infrastructure/session/store";
+import { getSessionCsrfToken, resolveSessionBearer } from "@/lib/composition/auth";
 
 /**
  * Protected route group layout.
@@ -14,19 +13,12 @@ export default async function AuthedLayout({
 }: {
   children: ReactNode;
 }): Promise<ReactNode> {
-  const cookieStore = await cookies();
-  const sessionId = cookieStore.get("session")?.value;
-
-  if (!sessionId) {
+  const session = await resolveSessionBearer();
+  if (!session) {
     redirect("/login");
   }
 
-  const bearer = await getSessionStore().getBearer(sessionId);
-  if (!bearer) {
-    redirect("/login");
-  }
-
-  const csrfToken = await getSessionStore().getCSRFToken(sessionId);
+  const csrfToken = await getSessionCsrfToken(session.sessionId);
 
   return (
     <div className="min-h-screen bg-gray-50">
