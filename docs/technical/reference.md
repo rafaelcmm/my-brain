@@ -18,6 +18,9 @@ This file is API and configuration reference for maintainers.
 - `POST /v1/memory/vote`: stores up/down feedback for memory id.
 - `POST /v1/memory/forget`: soft or hard forget by memory id.
 - `POST /v1/memory/digest`: grouped summary across type/language/repo windows.
+- `GET /v1/memory/summary`: dashboard aggregates (totals, scope/type counts, top tags/frameworks/languages, learning stats).
+- `GET /v1/memory/list`: paginated memory list with filters (`scope`, `type`, `repo_name`, `language`, `tag`, `search`, `cursor`, `limit`).
+- `GET /v1/memory/graph`: graph snapshot (`nodes`, `edges`, `total_count`) built from shared repo/tag relations.
 - `POST /v1/memory/backfill`: batch-bounded repair for rows missing `content_sha1`, `embedding`, or
   `embedding_vector`. Each call processes at most 1000 rows and returns `{ processed: N }`. Full
   repair of a large corpus requires looping until `processed === 0` — use

@@ -14,11 +14,12 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 1. Streamable HTTP MCP endpoint at /mcp (MCP spec 2024-11-05+).
 2. Auth gateway with shared bearer token validation for MCP and REST.
 3. Full runtime by default: Postgres + orchestrator + MCP bridge + local Ollama model.
-4. Install and operations scripts:
+4. Next.js web app for dashboard, memory CRUD, query runner, and graph view.
+5. Install and operations scripts:
    install.sh, rotate-token.sh, smoke-test.sh.
-5. CI and release automation templates:
+6. CI and release automation templates:
    lint/test/compose validation, tag-driven release workflow, GHCR publish.
-6. Model-invoked Claude skills and curator agent templates under .claude/.
+7. Model-invoked Claude skills and curator agent templates under .claude/.
 
 ## Quick Install
 
@@ -53,13 +54,15 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
    # alias: npm run docker:init:cpu
 3. Check services:
    docker compose ps
-4. Run smoke test:
+4. Open web UI:
+   http://127.0.0.1:${MYBRAIN_WEB_PORT:-3000} (default 3000)
+5. Run smoke test:
    ./src/scripts/smoke-test.sh
-5. Backfill legacy memory metadata (after schema/runtime upgrades):
+6. Backfill legacy memory metadata (after schema/runtime upgrades):
    ./src/scripts/backfill-memory-metadata.sh
-6. Read logs:
+7. Read logs:
    docker compose logs -f my-brain-orchestrator
-7. Stop stack:
+8. Stop stack:
    docker compose down
 
 ### Postman Minimal General Test
@@ -123,7 +126,9 @@ High-impact variables:
 8. MYBRAIN_MAX_REQUEST_BODY_BYTES: max accepted JSON request body size (default 1MB).
 9. MYBRAIN_PROMETHEUS_PORT: bridge metrics endpoint port (`/metrics`, default 9090).
 10. MYBRAIN_INTERNAL_API_KEY: shared internal key used between gateway, bridge, and orchestrator.
-11. MYBRAIN_LLM_GPU_COUNT: number of GPUs requested by default startup (default 1).
+11. MYBRAIN_WEB_SESSION_SECRET: web session encryption secret (>=32 chars).
+12. MYBRAIN_WEB_PORT: gateway exposed web UI port (default 3000).
+13. MYBRAIN_LLM_GPU_COUNT: number of GPUs requested by default startup (default 1).
 
 GPU note:
 `docker compose up` loads `docker-compose.override.yml` automatically, which enables

@@ -87,3 +87,10 @@
 		header_up X-Mybrain-Internal-Key {$MYBRAIN_INTERNAL_API_KEY}
 	}
 }
+
+:3000 {
+	import security_headers
+	reverse_proxy my-brain-web:3000 {
+		header_up Host {host}
+	}
+}

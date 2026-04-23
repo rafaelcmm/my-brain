@@ -167,6 +167,32 @@ services:
     ports:
       - "${MYBRAIN_BIND_HOST:-127.0.0.1}:${MYBRAIN_PROMETHEUS_PORT:-9090}:9090"
 
+  my-brain-web:
+    image: my-brain/web:local
+    build:
+      context: .
+      dockerfile: src/web/Dockerfile
+    container_name: my-brain-web
+    restart: unless-stopped
+    depends_on:
+      my-brain-orchestrator:
+        condition: service_healthy
+    environment:
+      MYBRAIN_WEB_SESSION_SECRET: ${MYBRAIN_WEB_SESSION_SECRET:-change-me-change-me-change-me-1234}
+      MYBRAIN_WEB_ORCHESTRATOR_URL: http://my-brain-orchestrator:8080
+      MYBRAIN_INTERNAL_API_KEY: ${MYBRAIN_INTERNAL_API_KEY:-my-brain-internal-local-key}
+      MYBRAIN_WEB_PUBLIC_BASE_URL: ${MYBRAIN_WEB_PUBLIC_BASE_URL:-http://localhost:${MYBRAIN_WEB_PORT:-3000}}
+      MYBRAIN_WEB_LOG_LEVEL: ${MYBRAIN_WEB_LOG_LEVEL:-info}
+      NODE_ENV: production
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/login || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   my-brain-gateway:
     image: my-brain/gateway:local
     build:
@@ -179,6 +205,8 @@ services:
         condition: service_healthy
       my-brain-orchestrator:
         condition: service_healthy
+      my-brain-web:
+        condition: service_healthy
     environment:
       MYBRAIN_CORS_ORIGINS: ${MYBRAIN_CORS_ORIGINS:-http://localhost,http://127.0.0.1}
       MYBRAIN_INTERNAL_API_KEY: ${MYBRAIN_INTERNAL_API_KEY:-my-brain-internal-local-key}
@@ -190,3 +218,4 @@ services:
     ports:
       - "${MYBRAIN_BIND_HOST:-127.0.0.1}:${MYBRAIN_MCP_PORT:-3333}:3333"
       - "${MYBRAIN_BIND_HOST:-127.0.0.1}:${MYBRAIN_REST_PORT:-8080}:8080"
+      - "${MYBRAIN_BIND_HOST:-127.0.0.1}:${MYBRAIN_WEB_PORT:-3000}:3000"
