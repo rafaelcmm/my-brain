@@ -55,8 +55,8 @@ Legend: ✅ done. 🟡 partial. ❌ missing. ⚫ out of scope now.
 | F-FEAT2   | Markdown editor with live preview        | ✅    | CodeMirror 6 + remark/rehype sanitize. sessionStorage draft. |
 | F-FEAT3   | Dashboard — 8 insight cards              | ✅    | Degraded-mode banner present. |
 | F-FEAT4   | Query toggle (parsed/raw) + latency      | ✅    | JsonTree component. |
-| F-FEAT5   | Memory detail page                       | 🟡    | Exists. Metadata rendered as `<pre>JSON</pre>`. Shallow. |
-| F-FEAT6   | Bulk forget                              | 🟡    | Loops single-call `forget` + `window.location.reload()`. Works but crude. |
+| F-FEAT5   | Memory detail page                       | ✅    | Structured metadata rendering with sys.* vs user sections. `src/web/src/app/(authed)/memories/[id]/page.tsx`. |
+| F-FEAT6   | Bulk forget                              | ✅    | Concurrent `Promise.allSettled` with partial-failure UI and `router.refresh()`. `src/web/src/app/(authed)/memories/memories-list-client.tsx`. |
 
 ### P2 (Testing / Docs)
 
@@ -65,10 +65,10 @@ Legend: ✅ done. 🟡 partial. ❌ missing. ⚫ out of scope now.
 | F-TEST1   | Adapter contract tests (msw)             | ✅    | 5 tests, happy + 401 + 5xx + malformed. |
 | F-TEST2   | Route-handler tests                      | ✅    | 6 tests. Query + logout. |
 | F-TEST3   | Session contract tests                   | ✅    | Create/destroy/non-ascii/cross-secret. |
-| F-TEST4   | Use-case unit tests                      | 🟡    | `create-memory.usecase.test.ts`, `run-query.usecase.test.ts` exist. `get-brain-summary`, `get-memory-graph` use-cases have no tests. |
-| F-DOC1    | Update `docs/technical/architecture.md`  | 🟡    | Modified but not verified against final shape. |
+| F-TEST4   | Use-case unit tests                      | ✅    | All use-cases have tests: `get-brain-summary.usecase.test.ts` (2), `get-memory-graph.usecase.test.ts` (2), plus `create-memory.usecase.test.ts` and `run-query.usecase.test.ts`. |
+| F-DOC1    | Update `docs/technical/architecture.md`  | ✅    | Updated with current deployment architecture, hexagonal layers, and API contracts. |
 | F-OPS1    | Compose wiring + gateway                 | ✅    | `docker-compose.yml`, `Caddyfile`. |
-| F-OPS2    | Dead deps pruned                         | ❌    | `iron-session`, `jose`, `pino`, `@tanstack/react-query`, `@testing-library/*` still present. Zero imports. |
+| F-OPS2    | Dead deps pruned                         | ✅    | Removed: `iron-session`, `jose`, `pino`, `@tanstack/react-query`, `@testing-library/*`. Verified zero imports. |
 
 ### P3 (Polish)
 
@@ -76,8 +76,8 @@ Legend: ✅ done. 🟡 partial. ❌ missing. ⚫ out of scope now.
 |-----------|------------------------------------------|-------|-------|
 | F-POL1    | Login redirect + error copy              | ✅    | Commit `701af62`. |
 | F-POL2    | Dashboard loading/error boundaries       | ✅    | `loading.tsx`, `error.tsx` present. |
-| F-POL3    | Adapter DTO schemas (zod)                | ❌    | Still raw `as { ... }` casts. No `mappers/`. |
-| F-POL4    | Cache-Control no-store on authed HTML    | ❌    | Not applied to route handlers' HTML responses. |
+| F-POL3    | Adapter DTO schemas (zod)                | ✅    | Implemented: `orchestrator-response.dto.ts` (5 zod schemas), `memory.mapper.ts`. Replaces all raw casts. |
+| F-POL4    | Cache-Control no-store on authed HTML    | ✅    | `applyNoStoreHeaders` helper applied to all auth routes (query, create, forget). Verified in tests. |
 
 ---
 
