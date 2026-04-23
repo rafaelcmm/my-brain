@@ -133,21 +133,17 @@ export interface BrainSummary {
   /** Total number of memories. */
   total_memories: number;
   /** Count by scope. */
-  by_scope: Record<MemoryScope, number>;
+  by_scope: Record<string, number>;
   /** Count by type. */
-  by_type: Record<MemoryType, number>;
+  by_type: Record<string, number>;
   /** Top 20 tags with counts. */
   top_tags: Array<{ tag: string; count: number }>;
   /** Top 10 frameworks with counts. */
   top_frameworks: Array<{ framework: string; count: number }>;
   /** Top 10 languages with counts. */
   top_languages: Array<{ language: string; count: number }>;
-  /** Learning statistics. */
-  learning_stats: {
-    total_recalls: number;
-    total_digests: number;
-    accuracy_ratio: number;
-  };
+  /** Learning statistics from orchestrator runtime. */
+  learning_stats: Record<string, number>;
 }
 
 /**

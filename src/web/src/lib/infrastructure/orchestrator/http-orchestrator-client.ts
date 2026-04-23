@@ -1,3 +1,4 @@
+import type { GraphSnapshot, Memory } from "@/lib/domain/types";
 import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
 import {
   OrchestratorAuthError,
@@ -18,11 +19,16 @@ export class HttpOrchestratorClient implements OrchestratorClient {
   ) {}
 
   private getHeaders(): Record<string, string> {
-    return {
-      Authorization: `Bearer ${this.bearerToken}`,
+    const headers: Record<string, string> = {
       "X-Mybrain-Internal-Key": this.internalKey,
       "Content-Type": "application/json",
     };
+
+    if (this.bearerToken) {
+      headers.Authorization = `Bearer ${this.bearerToken}`;
+    }
+
+    return headers;
   }
 
   private async request(
@@ -77,43 +83,73 @@ export class HttpOrchestratorClient implements OrchestratorClient {
   }
 
   async getCapabilities(): Promise<{ version: string; mode: string }> {
-    const data = await this.request("/v1/capabilities");
-    return data as { version: string; mode: string };
+    const data = (await this.request("/v1/capabilities")) as {
+      capabilities?: { engine?: boolean };
+    };
+
+    return {
+      version: "unknown",
+      mode: data.capabilities?.engine ? "engine" : "fallback",
+    };
   }
 
   async health(): Promise<boolean> {
     try {
-      await this.request("/v1/capabilities");
+      await this.request("/ready");
       return true;
     } catch {
       return false;
     }
   }
 
-  async getBrainSummary(): Promise<Record<string, unknown>> {
+  async getBrainSummary(): Promise<{
+    total_memories: number;
+    by_scope: Record<string, number>;
+    by_type: Record<string, number>;
+    top_tags: Array<{ tag: string; count: number }>;
+    top_frameworks: Array<{ framework: string; count: number }>;
+    top_languages: Array<{ language: string; count: number }>;
+    learning_stats: Record<string, number>;
+  }> {
     const data = await this.request("/v1/memory/summary");
-    return data as Record<string, unknown>;
+    return data as {
+      total_memories: number;
+      by_scope: Record<string, number>;
+      by_type: Record<string, number>;
+      top_tags: Array<{ tag: string; count: number }>;
+      top_frameworks: Array<{ framework: string; count: number }>;
+      top_languages: Array<{ language: string; count: number }>;
+      learning_stats: Record<string, number>;
+    };
   }
 
   async listMemories(
     filters?: Record<string, unknown>,
     cursor?: string,
-  ): Promise<{ memories: unknown[]; next_cursor?: string }> {
+  ): Promise<{ memories: Memory[]; next_cursor?: string | null }> {
     const params = new URLSearchParams();
     if (cursor) params.append("cursor", cursor);
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, String(value));
+        if (value !== undefined && value !== null && value !== "") {
+          params.append(key, String(value));
+        }
       });
     }
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const data = await this.request(`/v1/memory/list${query}`);
-    return data as { memories: unknown[]; next_cursor?: string };
+    const parsed = data as { memories?: Memory[]; next_cursor?: string | null };
+
+    return {
+      memories: parsed.memories ?? [],
+      next_cursor: parsed.next_cursor ?? null,
+    };
   }
 
   async getMemory(id: string): Promise<unknown> {
-    return this.request(`/v1/memory/${id}`);
+    const data = await this.listMemories({ search: id }, "0");
+    return data.memories.find((memory) => memory.id === id) ?? null;
   }
 
   async createMemory(
@@ -131,31 +167,31 @@ export class HttpOrchestratorClient implements OrchestratorClient {
   }
 
   async forgetMemory(id: string): Promise<void> {
-    await this.request(`/v1/memory/${id}`, "DELETE");
+    await this.request("/v1/memory/forget", "POST", { memory_id: id });
   }
 
   async getMemoryGraph(
     limit?: number,
     minSimilarity?: number,
-  ): Promise<{ nodes: unknown[]; edges: unknown[] }> {
+  ): Promise<GraphSnapshot> {
     const params = new URLSearchParams();
     if (limit) params.append("limit", String(limit));
     if (minSimilarity) params.append("minSimilarity", String(minSimilarity));
 
     const query = params.toString() ? `?${params.toString()}` : "";
     const data = await this.request(`/v1/memory/graph${query}`);
-    return data as { nodes: unknown[]; edges: unknown[] };
+    return data as GraphSnapshot;
   }
 
   async recall(query: string, scope?: string): Promise<unknown> {
-    return this.request("/v1/recall", "POST", {
+    return this.request("/v1/memory/recall", "POST", {
       query,
       scope,
     });
   }
 
   async digest(scope?: string, type?: string): Promise<unknown> {
-    return this.request("/v1/digest", "POST", {
+    return this.request("/v1/memory/digest", "POST", {
       scope,
       type,
     });

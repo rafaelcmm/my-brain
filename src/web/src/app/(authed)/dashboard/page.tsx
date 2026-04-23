@@ -1,62 +1,61 @@
 import { Suspense } from "react";
-import { cookies } from "next/headers";
-import { env } from "@/lib/config/env";
-import { HttpOrchestratorClient } from "@/lib/infrastructure/orchestrator/http-orchestrator-client";
+import { getAuthenticatedClient } from "@/lib/application/server-auth";
 
 /**
  * Dashboard page - displays brain summary and recent memories.
  * Requires authenticated session.
  */
 async function BrainSummary() {
-  const cookieStore = await cookies();
-  const sessionId = cookieStore.get("session")?.value;
-
-  if (!sessionId) {
+  const client = await getAuthenticatedClient();
+  if (!client) {
     return <div>Unauthorized</div>;
   }
 
+  let summary:
+    | {
+        total_memories: number;
+        by_scope: Record<string, number>;
+        by_type: Record<string, number>;
+      }
+    | null = null;
+  let errorMessage: string | null = null;
+
   try {
-    const config = env();
-    const client = new HttpOrchestratorClient(
-      config.MYBRAIN_WEB_ORCHESTRATOR_URL,
-      "", // bearer token not needed for internal endpoints
-      config.MYBRAIN_INTERNAL_API_KEY,
-    );
-
-    const summary = await client.getBrainSummary();
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900">Total Memories</h3>
-          <p className="mt-2 text-3xl font-extrabold text-blue-600">
-            {summary.total_memories}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900">Scopes</h3>
-          <p className="mt-2 text-2xl font-semibold text-gray-700">
-            {Object.keys(summary.scope_stats || {}).length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-medium text-gray-900">Graph Nodes</h3>
-          <p className="mt-2 text-3xl font-extrabold text-green-600">
-            {summary.graph_node_count || 0}
-          </p>
-        </div>
-      </div>
-    );
+    summary = await client.getBrainSummary();
   } catch (error) {
+    errorMessage = error instanceof Error ? error.message : "Unknown error";
+  }
+
+  if (!summary) {
     return (
       <div className="bg-red-50 rounded-lg p-4">
-        <p className="text-red-800">
-          Failed to load brain summary:{" "}
-          {error instanceof Error ? error.message : "Unknown error"}
-        </p>
+        <p className="text-red-800">Failed to load brain summary: {errorMessage}</p>
       </div>
     );
   }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-gray-900">Total Memories</h3>
+        <p className="mt-2 text-3xl font-extrabold text-blue-600">
+          {summary.total_memories}
+        </p>
+      </div>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-gray-900">Scopes</h3>
+        <p className="mt-2 text-2xl font-semibold text-gray-700">
+          {Object.keys(summary.by_scope || {}).length}
+        </p>
+      </div>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-gray-900">Memory Types</h3>
+        <p className="mt-2 text-3xl font-extrabold text-green-600">
+          {Object.keys(summary.by_type || {}).length}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardPage() {

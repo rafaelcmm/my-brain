@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { getSessionStore } from "@/lib/infrastructure/session/store";
 
 /**
  * Protected route group layout.
@@ -19,5 +20,28 @@ export default async function AuthedLayout({
     redirect("/login");
   }
 
-  return <>{children}</>;
+  const bearer = await getSessionStore().getBearer(sessionId);
+  if (!bearer) {
+    redirect("/login");
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
+          <nav className="flex items-center gap-4 text-sm font-medium text-gray-700">
+            <a href="/dashboard" className="hover:text-gray-900">Dashboard</a>
+            <a href="/memories" className="hover:text-gray-900">Memories</a>
+            <a href="/editor" className="hover:text-gray-900">Editor</a>
+            <a href="/query" className="hover:text-gray-900">Query</a>
+            <a href="/graph" className="hover:text-gray-900">Graph</a>
+          </nav>
+          <form action="/api/auth/logout" method="post">
+            <button type="submit" className="text-sm px-3 py-1.5 rounded bg-gray-900 text-white">Logout</button>
+          </form>
+        </div>
+      </header>
+      {children}
+    </div>
+  );
 }

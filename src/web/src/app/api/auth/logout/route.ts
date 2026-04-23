@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { getSessionStore } from "@/lib/infrastructure/session/store";
 
 /**
  * POST /api/auth/logout
@@ -6,6 +8,12 @@ import { NextResponse } from "next/server";
  * Response: { success: boolean }
  */
 export async function POST() {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get("session")?.value;
+  if (sessionId) {
+    await getSessionStore().destroySession(sessionId);
+  }
+
   const response = NextResponse.json({ success: true });
 
   // Clear session cookie

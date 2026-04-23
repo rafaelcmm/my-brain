@@ -1,3 +1,5 @@
+import type { BrainSummary, GraphSnapshot, Memory } from "@/lib/domain/types";
+
 /**
  * Port: HTTP client for communicating with the orchestrator REST API.
  * Implementations should inject the bearer token and handle errors.
@@ -21,7 +23,7 @@ export interface OrchestratorClient {
    * Get brain summary statistics.
    * @returns BrainSummary object.
    */
-    getBrainSummary(): Promise<BrainSummary>;
+  getBrainSummary(): Promise<BrainSummary>;
 
   /**
    * List memories with optional filters and pagination.
@@ -36,7 +38,7 @@ export interface OrchestratorClient {
     language?: string;
     tag?: string;
     search?: string;
-  }, cursor?: string): Promise<{ memories: unknown[]; next_cursor?: string }>;
+  }, cursor?: string): Promise<{ memories: Memory[]; next_cursor?: string | null }>;
 
   /**
    * Get a single memory by ID.
@@ -68,10 +70,7 @@ export interface OrchestratorClient {
    * @param limit Maximum number of nodes.
    * @param minSimilarity Minimum similarity threshold for edges.
    */
-  getMemoryGraph(limit?: number, minSimilarity?: number): Promise<{
-    nodes: unknown[];
-    edges: unknown[];
-  }>;
+  getMemoryGraph(limit?: number, minSimilarity?: number): Promise<GraphSnapshot>;
 
   /**
    * Run a recall query.
