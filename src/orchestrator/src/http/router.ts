@@ -23,6 +23,7 @@
  *   GET  /v1/memory/summary           → handlers/memory-summary.ts
  *   GET  /v1/memory/list              → handlers/memory-list.ts
  *   GET  /v1/memory/graph             → handlers/memory-graph.ts
+ *   GET  /v1/memory/{id}              → handlers/memory-get.ts
  *   POST /v1/memory/backfill          — heal legacy rows (inline, simple)
  */
 
@@ -50,6 +51,7 @@ import { handleMemoryDigest } from "./handlers/memory-digest.js";
 import { handleMemorySummary } from "./handlers/memory-summary.js";
 import { handleMemoryList } from "./handlers/memory-list.js";
 import { handleMemoryGraph } from "./handlers/memory-graph.js";
+import { handleMemoryGet } from "./handlers/memory-get.js";
 
 // Re-export shared types so callers that already import from router.ts continue to work.
 export type { Capabilities, RouterContext };
@@ -297,6 +299,17 @@ export async function handleRequest(
   // ── GET /v1/memory/graph ───────────────────────────────────────────────────
   if (method === "GET" && url.startsWith("/v1/memory/graph")) {
     return handleMemoryGraph(req, res, ctx);
+  }
+
+  // ── GET /v1/memory/{id} ────────────────────────────────────────────────────
+  if (
+    method === "GET" &&
+    url.startsWith("/v1/memory/") &&
+    !url.startsWith("/v1/memory/list") &&
+    !url.startsWith("/v1/memory/graph") &&
+    !url.startsWith("/v1/memory/summary")
+  ) {
+    return handleMemoryGet(req, res, ctx);
   }
 
   // ── POST /v1/memory/backfill ───────────────────────────────────────────────

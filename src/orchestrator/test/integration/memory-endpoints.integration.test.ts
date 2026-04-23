@@ -11,7 +11,10 @@ import { performance } from "node:perf_hooks";
 import { createInitialRuntimeState } from "../../src/bootstrap/runtime.js";
 import { handleRequest } from "../../src/http/router.js";
 import type { RouterContext } from "../../src/http/router.js";
-import { createPool, initializeDatabase } from "../../src/infrastructure/postgres.js";
+import {
+  createPool,
+  initializeDatabase,
+} from "../../src/infrastructure/postgres.js";
 import { persistMemoryMetadata } from "../../src/infrastructure/postgres-memory.js";
 import type { Pool } from "pg";
 import type { MemoryEnvelope } from "../../src/domain/types.js";
@@ -20,7 +23,9 @@ const TEST_DB_URL = process.env["TEST_DB_URL"];
 const TEST_API_KEY = "test-internal-key";
 
 if (!TEST_DB_URL) {
-  console.log("[integration] Skipping memory-endpoints suite — TEST_DB_URL not set.");
+  console.log(
+    "[integration] Skipping memory-endpoints suite — TEST_DB_URL not set.",
+  );
   process.exit(0);
 }
 
@@ -36,7 +41,9 @@ function makeEnvelope(i: number): MemoryEnvelope {
       language: i % 2 === 0 ? "typescript" : "python",
       frameworks: i % 2 === 0 ? ["nextjs"] : ["fastapi"],
       tags: i % 2 === 0 ? ["web", "memory"] : ["api", "memory"],
-      embedding: Array.from({ length: 1024 }, (_, idx) => (idx === i % 16 ? 1 : 0)),
+      embedding: Array.from({ length: 1024 }, (_, idx) =>
+        idx === i % 16 ? 1 : 0,
+      ),
     },
   };
 }
@@ -49,7 +56,8 @@ function request(opts: {
   body?: unknown;
 }): Promise<{ status: number; body: unknown; latencyMs: number }> {
   return new Promise((resolve, reject) => {
-    const payload = opts.body === undefined ? undefined : JSON.stringify(opts.body);
+    const payload =
+      opts.body === undefined ? undefined : JSON.stringify(opts.body);
     const started = performance.now();
 
     const req = http.request(
@@ -60,7 +68,9 @@ function request(opts: {
         method: opts.method ?? "GET",
         headers: {
           "Content-Type": "application/json",
-          ...(payload ? { "Content-Length": String(Buffer.byteLength(payload)) } : {}),
+          ...(payload
+            ? { "Content-Length": String(Buffer.byteLength(payload)) }
+            : {}),
           ...opts.headers,
         },
       },
@@ -72,7 +82,11 @@ function request(opts: {
         res.on("end", () => {
           const latencyMs = performance.now() - started;
           try {
-            resolve({ status: res.statusCode ?? 0, body: JSON.parse(raw), latencyMs });
+            resolve({
+              status: res.statusCode ?? 0,
+              body: JSON.parse(raw),
+              latencyMs,
+            });
           } catch {
             resolve({ status: res.statusCode ?? 0, body: raw, latencyMs });
           }
@@ -159,9 +173,10 @@ before(async () => {
 
 after(async () => {
   if (insertedIds.length > 0) {
-    await pool.query("DELETE FROM my_brain_memory_metadata WHERE memory_id = ANY($1::text[])", [
-      insertedIds,
-    ]);
+    await pool.query(
+      "DELETE FROM my_brain_memory_metadata WHERE memory_id = ANY($1::text[])",
+      [insertedIds],
+    );
   }
 
   await new Promise<void>((resolve, reject) => {
@@ -207,9 +222,14 @@ describe("GET /v1/memory/list", () => {
     assert.equal(memories.length, 10);
     assert.equal(typeof payload.next_cursor, "string");
 
-    const dates = memories.map((memory) => Date.parse(String(memory.last_seen_at)));
+    const dates = memories.map((memory) =>
+      Date.parse(String(memory.last_seen_at)),
+    );
     for (let i = 1; i < dates.length; i += 1) {
-      assert.ok(dates[i - 1]! >= dates[i]!, "list must be sorted by last_seen_at desc");
+      assert.ok(
+        dates[i - 1]! >= dates[i]!,
+        "list must be sorted by last_seen_at desc",
+      );
     }
   });
 
@@ -250,5 +270,32 @@ describe("GET /v1/memory/graph", () => {
 
     assert.ok(nodes.length > 0, "graph must include nodes");
     assert.ok(Array.isArray(edges), "graph edges must be an array");
+  });
+});
+
+describe("GET /v1/memory/{id}", () => {
+  it("returns exact memory by id", async () => {
+    const targetId = insertedIds[0];
+    assert.ok(targetId, "seeded test memory id must exist");
+
+    const response = await request({
+      port,
+      path: `/v1/memory/${encodeURIComponent(targetId)}`,
+      headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
+    });
+
+    assert.equal(response.status, 200);
+    const payload = response.body as Record<string, unknown>;
+    assert.equal(payload.id, targetId);
+  });
+
+  it("returns 404 for unknown id", async () => {
+    const response = await request({
+      port,
+      path: "/v1/memory/does-not-exist",
+      headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
+    });
+
+    assert.equal(response.status, 404);
   });
 });
