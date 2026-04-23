@@ -1,4 +1,4 @@
-import type { BrainSummary, GraphSnapshot, Memory } from "@/lib/domain/types";
+import type { BrainSummary, GraphSnapshot, Memory } from "@/lib/domain";
 
 /**
  * Port: HTTP client for communicating with the orchestrator REST API.

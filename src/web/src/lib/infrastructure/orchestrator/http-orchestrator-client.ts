@@ -1,4 +1,4 @@
-import type { GraphSnapshot, Memory } from "@/lib/domain/types";
+import type { GraphSnapshot, Memory } from "@/lib/domain";
 import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
 import {
   OrchestratorAuthError,
