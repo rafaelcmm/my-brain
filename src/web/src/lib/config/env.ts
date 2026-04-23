@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Validated server-side environment variables for the webapp.
  */
@@ -11,51 +13,33 @@ export interface Environment {
   NODE_ENV: "development" | "production" | "test";
 }
 
+const environmentSchema = z.object({
+  MYBRAIN_WEB_SESSION_SECRET: z.string().min(16),
+  MYBRAIN_WEB_ORCHESTRATOR_URL: z.string().min(1),
+  MYBRAIN_INTERNAL_API_KEY: z.string().min(1),
+  MYBRAIN_WEB_PUBLIC_BASE_URL: z.string().min(1),
+  MYBRAIN_WEB_RATE_LIMIT_LOGIN: z.coerce.number().int().positive().default(5),
+  MYBRAIN_WEB_LOG_LEVEL: z
+    .enum(["trace", "debug", "info", "warn", "error"])
+    .default("info"),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
+});
+
 /**
- * Parse and validate environment variables at startup.
- * Exits process with error code 1 if validation fails.
+ * Parse and validate environment variables.
+ * Throws when required variables are missing or invalid.
  */
 export function loadEnvironment(): Environment {
-  const requiredVars = [
-    "MYBRAIN_WEB_SESSION_SECRET",
-    "MYBRAIN_WEB_ORCHESTRATOR_URL",
-    "MYBRAIN_INTERNAL_API_KEY",
-    "MYBRAIN_WEB_PUBLIC_BASE_URL",
-  ];
+  const parsed = environmentSchema.safeParse(process.env);
 
-  const missing: string[] = [];
-  for (const varName of requiredVars) {
-    if (!process.env[varName]) {
-      missing.push(varName);
-    }
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join("; ");
+    throw new Error(`Invalid web environment: ${issues}`);
   }
 
-  if (missing.length > 0) {
-    console.error("Missing required environment variables:");
-    missing.forEach((v) => console.error(`  ${v}`));
-    process.exit(1);
-  }
-
-  const sessionSecret = process.env.MYBRAIN_WEB_SESSION_SECRET!;
-  if (sessionSecret.length < 32) {
-    console.error("MYBRAIN_WEB_SESSION_SECRET must be at least 32 characters");
-    process.exit(1);
-  }
-
-  return {
-    MYBRAIN_WEB_SESSION_SECRET: sessionSecret,
-    MYBRAIN_WEB_ORCHESTRATOR_URL: process.env.MYBRAIN_WEB_ORCHESTRATOR_URL!,
-    MYBRAIN_INTERNAL_API_KEY: process.env.MYBRAIN_INTERNAL_API_KEY!,
-    MYBRAIN_WEB_RATE_LIMIT_LOGIN: parseInt(
-      process.env.MYBRAIN_WEB_RATE_LIMIT_LOGIN || "5",
-      10,
-    ),
-    MYBRAIN_WEB_PUBLIC_BASE_URL: process.env.MYBRAIN_WEB_PUBLIC_BASE_URL!,
-    MYBRAIN_WEB_LOG_LEVEL: (process.env.MYBRAIN_WEB_LOG_LEVEL ||
-      "info") as Environment["MYBRAIN_WEB_LOG_LEVEL"],
-    NODE_ENV: (process.env.NODE_ENV ||
-      "production") as Environment["NODE_ENV"],
-  };
+  return parsed.data;
 }
 
 /**
