@@ -8,6 +8,46 @@ import {
   OrchestratorUnavailableError,
 } from "@/lib/ports/orchestrator-client.port";
 
+type LoginWindow = { count: number; startedAt: number };
+
+/**
+ * Process-local login limiter.
+ * Keeps brute-force pressure low even when gateway-side limits are relaxed.
+ */
+const loginWindows = new Map<string, LoginWindow>();
+
+function getClientKey(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (forwarded) {
+    return forwarded;
+  }
+
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
+function isLoginRateLimited(
+  request: NextRequest,
+  maxAttemptsPerMinute: number,
+): boolean {
+  const key = getClientKey(request);
+  const now = Date.now();
+  const windowMs = 60_000;
+  const current = loginWindows.get(key);
+
+  if (!current || now - current.startedAt >= windowMs) {
+    loginWindows.set(key, { count: 1, startedAt: now });
+    return false;
+  }
+
+  if (current.count >= maxAttemptsPerMinute) {
+    return true;
+  }
+
+  current.count += 1;
+  loginWindows.set(key, current);
+  return false;
+}
+
 /**
  * POST /api/auth/login
  *
@@ -15,6 +55,15 @@ import {
  * Cookie stays httpOnly so browser JS never sees bearer material.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const config = env();
+
+  if (isLoginRateLimited(request, config.MYBRAIN_WEB_RATE_LIMIT_LOGIN)) {
+    return NextResponse.json(
+      { success: false, error: "Too many login attempts" },
+      { status: 429 },
+    );
+  }
+
   let payload: { token?: string };
 
   try {
@@ -34,7 +83,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const config = env();
   const createClient = (bearerToken: string) =>
     new HttpOrchestratorClient(
       config.MYBRAIN_WEB_ORCHESTRATOR_URL,
