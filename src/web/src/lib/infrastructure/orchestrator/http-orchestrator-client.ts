@@ -1,4 +1,4 @@
-import type { GraphSnapshot, Memory } from "@/lib/domain";
+import type { BrainSummary, GraphSnapshot, Memory } from "@/lib/domain";
 import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
 import {
   OrchestratorAuthError,
@@ -6,10 +6,18 @@ import {
   OrchestratorValidationError,
 } from "@/lib/ports/orchestrator-client.port";
 import { makeRequest } from "@/lib/infrastructure/http-request";
+import {
+  brainSummaryResponseSchema,
+  capabilitiesResponseSchema,
+  graphSnapshotResponseSchema,
+  memoryByIdResponseSchema,
+  memoryListResponseSchema,
+} from "@/lib/infrastructure/orchestrator/dtos/orchestrator-response.dto";
+import { mapMemoryDtoToDomain } from "@/lib/infrastructure/orchestrator/mappers/memory.mapper";
 
 /**
  * HTTP implementation of OrchestratorClient.
- * Injects Authorization header and handles HTTP-specific errors.
+ * Injects internal auth headers and translates transport failures to domain errors.
  */
 export class HttpOrchestratorClient implements OrchestratorClient {
   constructor(
@@ -18,6 +26,11 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     private internalKey: string,
   ) {}
 
+  /**
+   * Build request headers for orchestrator traffic.
+   *
+   * Why centralized: keeps auth/header policy consistent across all endpoint calls.
+   */
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       "X-Mybrain-Internal-Key": this.internalKey,
@@ -31,6 +44,14 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     return headers;
   }
 
+  /**
+   * Execute request and normalize common HTTP-level failures.
+   *
+   * @param path Relative API path.
+   * @param method HTTP method.
+   * @param body Optional JSON body.
+   * @returns Parsed response payload as unknown for per-endpoint validation.
+   */
   private async request(
     path: string,
     method: "GET" | "POST" | "DELETE" | "PATCH" = "GET",
@@ -45,50 +66,71 @@ export class HttpOrchestratorClient implements OrchestratorClient {
       });
 
       if (status === 401) {
-        throw new OrchestratorAuthError(
-          "Invalid or expired token",
-        );
+        throw new OrchestratorAuthError("Invalid or expired token");
       }
 
       if (status >= 500) {
-        throw new OrchestratorUnavailableError(
-          `Orchestrator error: ${status}`,
-        );
+        throw new OrchestratorUnavailableError(`Orchestrator error: ${status}`);
       }
 
       if (status >= 400) {
-        throw new OrchestratorValidationError(
-          `Request failed: ${status}`,
-        );
+        throw new OrchestratorValidationError(`Request failed: ${status}`);
+      }
+
+      // All adapter endpoints are JSON contracts. String body indicates parse failure.
+      if (typeof data === "string") {
+        throw new OrchestratorValidationError("Malformed JSON response");
       }
 
       return data;
     } catch (error) {
-      if (error instanceof OrchestratorAuthError ||
-          error instanceof OrchestratorUnavailableError ||
-          error instanceof OrchestratorValidationError) {
+      if (
+        error instanceof OrchestratorAuthError ||
+        error instanceof OrchestratorUnavailableError ||
+        error instanceof OrchestratorValidationError
+      ) {
         throw error;
       }
 
       if (error instanceof TypeError) {
         throw new OrchestratorUnavailableError(
-          `Connection failed: ${(error as Error).message}`,
+          `Connection failed: ${error.message}`,
         );
       }
 
       throw new OrchestratorUnavailableError(
-        `Unknown error: ${(error as Error).message}`,
+        `Unknown error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /**
+   * Parse transport payload with explicit runtime schema and standardized error.
+   */
+  private parsePayload<T>(
+    parser: { parse: (value: unknown) => T },
+    payload: unknown,
+    endpoint: string,
+  ): T {
+    try {
+      return parser.parse(payload);
+    } catch (error) {
+      throw new OrchestratorValidationError(
+        `Invalid ${endpoint} payload: ${error instanceof Error ? error.message : "schema mismatch"}`,
       );
     }
   }
 
   async getCapabilities(): Promise<{ version: string; mode: string }> {
-    const data = (await this.request("/v1/capabilities")) as {
-      capabilities?: { engine?: boolean };
-    };
+    const payload = await this.request("/v1/capabilities");
+    const data = this.parsePayload(
+      capabilitiesResponseSchema,
+      payload,
+      "/v1/capabilities",
+    );
 
     return {
-      version: "unknown",
+      version: data.db?.extensionVersion ?? "unavailable",
       mode: data.capabilities?.engine ? "engine" : "fallback",
     };
   }
@@ -102,25 +144,13 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     }
   }
 
-  async getBrainSummary(): Promise<{
-    total_memories: number;
-    by_scope: Record<string, number>;
-    by_type: Record<string, number>;
-    top_tags: Array<{ tag: string; count: number }>;
-    top_frameworks: Array<{ framework: string; count: number }>;
-    top_languages: Array<{ language: string; count: number }>;
-    learning_stats: Record<string, number>;
-  }> {
-    const data = await this.request("/v1/memory/summary");
-    return data as {
-      total_memories: number;
-      by_scope: Record<string, number>;
-      by_type: Record<string, number>;
-      top_tags: Array<{ tag: string; count: number }>;
-      top_frameworks: Array<{ framework: string; count: number }>;
-      top_languages: Array<{ language: string; count: number }>;
-      learning_stats: Record<string, number>;
-    };
+  async getBrainSummary(): Promise<BrainSummary> {
+    const payload = await this.request("/v1/memory/summary");
+    return this.parsePayload(
+      brainSummaryResponseSchema,
+      payload,
+      "/v1/memory/summary",
+    );
   }
 
   async listMemories(
@@ -138,18 +168,27 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     }
 
     const query = params.toString() ? `?${params.toString()}` : "";
-    const data = await this.request(`/v1/memory/list${query}`);
-    const parsed = data as { memories?: Memory[]; next_cursor?: string | null };
+    const payload = await this.request(`/v1/memory/list${query}`);
+    const data = this.parsePayload(
+      memoryListResponseSchema,
+      payload,
+      "/v1/memory/list",
+    );
 
     return {
-      memories: parsed.memories ?? [],
-      next_cursor: parsed.next_cursor ?? null,
+      memories: data.memories.map(mapMemoryDtoToDomain),
+      next_cursor: data.next_cursor ?? null,
     };
   }
 
-  async getMemory(id: string): Promise<unknown> {
-    const data = await this.listMemories({ search: id }, "0");
-    return data.memories.find((memory) => memory.id === id) ?? null;
+  async getMemory(id: string): Promise<Memory | null> {
+    const payload = await this.request(`/v1/memory/${encodeURIComponent(id)}`);
+    const data = this.parsePayload(
+      memoryByIdResponseSchema,
+      payload,
+      "/v1/memory/{id}",
+    );
+    return data ? mapMemoryDtoToDomain(data) : null;
   }
 
   async createMemory(
@@ -175,12 +214,19 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     minSimilarity?: number,
   ): Promise<GraphSnapshot> {
     const params = new URLSearchParams();
-    if (limit) params.append("limit", String(limit));
-    if (minSimilarity) params.append("minSimilarity", String(minSimilarity));
+    if (limit !== undefined) params.append("limit", String(limit));
+    if (minSimilarity !== undefined)
+      params.append("minSimilarity", String(minSimilarity));
 
     const query = params.toString() ? `?${params.toString()}` : "";
-    const data = await this.request(`/v1/memory/graph${query}`);
-    return data as GraphSnapshot;
+    const payload = await this.request(`/v1/memory/graph${query}`);
+    // Cast required: Zod parses node/edge ids as plain string; domain uses branded MemoryId.
+    // Data is validated by schema before this cast — no fabricated structure.
+    return this.parsePayload(
+      graphSnapshotResponseSchema,
+      payload,
+      "/v1/memory/graph",
+    ) as unknown as GraphSnapshot;
   }
 
   async recall(query: string, scope?: string): Promise<unknown> {

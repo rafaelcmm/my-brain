@@ -31,19 +31,23 @@ export interface OrchestratorClient {
    * @param cursor Optional pagination cursor.
    * @returns Array of memories and next cursor.
    */
-  listMemories(filters?: {
-    scope?: string;
-    type?: string;
-    repo?: string;
-    language?: string;
-    tag?: string;
-    search?: string;
-  }, cursor?: string): Promise<{ memories: Memory[]; next_cursor?: string | null }>;
+  listMemories(
+    filters?: {
+      scope?: string;
+      type?: string;
+      repo?: string;
+      language?: string;
+      tag?: string;
+      search?: string;
+    },
+    cursor?: string,
+  ): Promise<{ memories: Memory[]; next_cursor?: string | null }>;
 
   /**
    * Get a single memory by ID.
+   * @returns The memory if found, or null if it does not exist or was forgotten.
    */
-  getMemory(id: string): Promise<unknown>;
+  getMemory(id: string): Promise<Memory | null>;
 
   /**
    * Create a new memory.
@@ -70,7 +74,10 @@ export interface OrchestratorClient {
    * @param limit Maximum number of nodes.
    * @param minSimilarity Minimum similarity threshold for edges.
    */
-  getMemoryGraph(limit?: number, minSimilarity?: number): Promise<GraphSnapshot>;
+  getMemoryGraph(
+    limit?: number,
+    minSimilarity?: number,
+  ): Promise<GraphSnapshot>;
 
   /**
    * Run a recall query.
@@ -87,7 +94,10 @@ export interface OrchestratorClient {
  * Domain errors emitted by OrchestratorClient.
  */
 export class OrchestratorError extends Error {
-  constructor(message: string, readonly code: string) {
+  constructor(
+    message: string,
+    readonly code: string,
+  ) {
     super(message);
     this.name = "OrchestratorError";
   }
