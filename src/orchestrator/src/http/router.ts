@@ -20,6 +20,9 @@
  *   POST /v1/session/open             → handlers/session.ts
  *   POST /v1/session/close            → handlers/session.ts
  *   POST /v1/memory/digest            → handlers/memory-digest.ts
+ *   GET  /v1/memory/summary           → handlers/memory-summary.ts
+ *   GET  /v1/memory/list              → handlers/memory-list.ts
+ *   GET  /v1/memory/graph             → handlers/memory-graph.ts
  *   POST /v1/memory/backfill          — heal legacy rows (inline, simple)
  */
 
@@ -44,6 +47,9 @@ import { handleMemoryVote } from "./handlers/memory-vote.js";
 import { handleMemoryForget } from "./handlers/memory-forget.js";
 import { handleSessionOpen, handleSessionClose } from "./handlers/session.js";
 import { handleMemoryDigest } from "./handlers/memory-digest.js";
+import { handleMemorySummary } from "./handlers/memory-summary.js";
+import { handleMemoryList } from "./handlers/memory-list.js";
+import { handleMemoryGraph } from "./handlers/memory-graph.js";
 
 // Re-export shared types so callers that already import from router.ts continue to work.
 export type { Capabilities, RouterContext };
@@ -276,6 +282,21 @@ export async function handleRequest(
   // ── POST /v1/memory/digest ─────────────────────────────────────────────────
   if (method === "POST" && url === "/v1/memory/digest") {
     return handleMemoryDigest(req, res, ctx);
+  }
+
+  // ── GET /v1/memory/summary ─────────────────────────────────────────────────
+  if (method === "GET" && url === "/v1/memory/summary") {
+    return handleMemorySummary(req, res, ctx);
+  }
+
+  // ── GET /v1/memory/list ────────────────────────────────────────────────────
+  if (method === "GET" && url.startsWith("/v1/memory/list")) {
+    return handleMemoryList(req, res, ctx);
+  }
+
+  // ── GET /v1/memory/graph ───────────────────────────────────────────────────
+  if (method === "GET" && url.startsWith("/v1/memory/graph")) {
+    return handleMemoryGraph(req, res, ctx);
   }
 
   // ── POST /v1/memory/backfill ───────────────────────────────────────────────
