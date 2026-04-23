@@ -21,7 +21,7 @@ export interface OrchestratorClient {
    * Get brain summary statistics.
    * @returns BrainSummary object.
    */
-  getBrainSummary(): Promise<Record<string, unknown>>;
+    getBrainSummary(): Promise<BrainSummary>;
 
   /**
    * List memories with optional filters and pagination.
