@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { readCsrfTokenFromMeta } from "@/lib/infrastructure/browser/csrf";
 
 /**
  * Manual memory capture page.
@@ -21,7 +22,10 @@ export default function EditorPage() {
     try {
       const response = await fetch("/api/memory/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": readCsrfTokenFromMeta(),
+        },
         body: JSON.stringify({ content, type, scope, metadata: {} }),
       });
 

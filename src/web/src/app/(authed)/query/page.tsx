@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { readCsrfTokenFromMeta } from "@/lib/infrastructure/browser/csrf";
 
 /**
  * Query runner for recall and digest endpoints.
@@ -19,7 +20,10 @@ export default function QueryPage() {
     try {
       const response = await fetch("/api/memory/query", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": readCsrfTokenFromMeta(),
+        },
         body: JSON.stringify({ tool, query }),
       });
       const payload = (await response.json()) as Record<string, unknown>;

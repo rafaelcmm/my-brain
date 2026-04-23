@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { isMemoryRateLimited } from "@/lib/application/api-security";
 import { getAuthenticatedClient } from "@/lib/application/server-auth";
+import { getSessionStore } from "@/lib/infrastructure/session/store";
 
 /**
  * POST /api/memory/create
@@ -7,6 +10,24 @@ import { getAuthenticatedClient } from "@/lib/application/server-auth";
  * Server-side proxy for memory creation so bearer never reaches browser code.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get("session")?.value;
+  if (!sessionId) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const csrfToken = request.headers.get("x-csrf-token")?.trim();
+  if (!csrfToken || !(await getSessionStore().verifyCSRFToken(sessionId, csrfToken))) {
+    return NextResponse.json({ success: false, error: "Invalid CSRF token" }, { status: 403 });
+  }
+
+  if (isMemoryRateLimited(request, sessionId)) {
+    return NextResponse.json(
+      { success: false, error: "Too many requests" },
+      { status: 429 },
+    );
+  }
+
   const client = await getAuthenticatedClient();
   if (!client) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
