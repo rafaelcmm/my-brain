@@ -5,7 +5,12 @@ const tsParser = require("@typescript-eslint/parser");
 
 module.exports = [
   {
-    ignores: ["**/dist/**", "**/node_modules/**"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/.turbopack/**",
+    ],
   },
   {
     ...js.configs.recommended,
