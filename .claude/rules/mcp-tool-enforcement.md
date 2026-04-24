@@ -52,6 +52,11 @@ When `hooks_capabilities` reports `engine=false`:
 2. Capture calls must include metadata envelope fields whenever derivable: `repo`, `project`, `language`, `frameworks`, `tags`, `source`, `author`, `agent`.
 3. Dedup is mandatory before `mb_remember`; skip save when best hit similarity is `>0.85`.
 4. Tools must stay silent by default unless user explicitly asks about memory operations.
+5. `mb_remember` content must use concise Markdown format:
+   - Heading `## <short lesson title>`
+   - `4-7` bullets (recommended: Context, Rule, Why, Apply)
+   - Optional one fenced code block with `<=8` lines
+   - Preferred length `80-220` words; compress if `>300`
 
 ## Validation Gate
 

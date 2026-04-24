@@ -17,6 +17,36 @@ Capture only durable items:
 
 Do not capture trivial acknowledgments, transient logs, or one-off noise.
 
+## Memory content format (mandatory)
+
+All captured memories must use concise Markdown.
+
+Required shape:
+
+1. Heading: `## <short lesson title>`.
+2. Body: `4-7` bullets, one idea per bullet.
+3. Optional code block: at most one fenced block with `<=8` lines.
+4. Keep wording context-free so the note is reusable across sessions.
+
+Length target:
+
+1. Preferred: `80-220` words.
+2. Too short: `<50` words is usually not durable.
+3. Too long: `>300` words must be compressed before save.
+
+Bullet schema (recommended order):
+
+1. `- Context:` where this applies.
+2. `- Rule:` decision/fix/pattern to follow.
+3. `- Why:` rationale or failure mode.
+4. `- Apply:` concrete trigger or reuse cue.
+
+Avoid:
+
+1. Single-line vague notes.
+2. Long narrative prose.
+3. Environment-specific noise that will age poorly.
+
 ## Dynamic similarity threshold
 
 Use these thresholds for dedup and recall trust:

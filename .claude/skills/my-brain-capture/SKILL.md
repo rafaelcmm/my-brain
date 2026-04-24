@@ -5,7 +5,11 @@ description: Automatically invoked after work that produces durable knowledge wo
 
 # my-brain Capture
 
-1. Distill durable lesson into 1-3 context-free sentences.
+1. Draft memory content in concise Markdown format:
+   - `## <short lesson title>` heading.
+   - `4-7` bullets (recommended order: `Context`, `Rule`, `Why`, `Apply`).
+   - Optional one fenced code block with `<=8` lines.
+   - Keep length near `80-220` words; avoid `<50` or `>300`.
 2. Classify `type` as one of:
    - `decision`, `fix`, `convention`, `gotcha`, `tradeoff`, `pattern`, `reference`
 3. Call `mb_context_probe` to fill metadata defaults (`repo`, `project`, `language`, `frameworks`, `author`).
