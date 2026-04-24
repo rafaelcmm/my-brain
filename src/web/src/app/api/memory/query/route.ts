@@ -109,6 +109,8 @@ function normalizeQueryRequest(payload: unknown): QueryRequest {
       query: record.query,
       scope: record.scope,
       type: record.type,
+      mode: record.mode,
+      model: record.model,
     },
   };
 }

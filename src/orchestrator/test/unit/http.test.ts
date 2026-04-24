@@ -278,4 +278,28 @@ describe("POST /v1/memory/recall validation", () => {
       "invalid body must return error",
     );
   });
+
+  it("returns 400 when mode is invalid", async () => {
+    const { status } = await request({
+      port,
+      path: "/v1/memory/recall",
+      method: "POST",
+      headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
+      body: { query: "hello", mode: "bad" },
+    });
+
+    assert.equal(status, 400);
+  });
+
+  it("returns 400 when processed mode uses unsupported model", async () => {
+    const { status } = await request({
+      port,
+      path: "/v1/memory/recall",
+      method: "POST",
+      headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
+      body: { query: "hello", mode: "processed", model: "llama3" },
+    });
+
+    assert.equal(status, 400);
+  });
 });

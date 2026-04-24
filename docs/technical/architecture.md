@@ -40,7 +40,7 @@ This document describes runtime architecture for local my-brain deployments.
 3. `POST /api/auth/logout`: session invalidation.
 4. `POST /api/memory/create`: authenticated memory creation proxy.
 5. `POST /api/memory/forget`: authenticated memory deletion proxy.
-6. `POST /api/memory/query`: authenticated query runner (`mb_recall`, `mb_digest`, `mb_search`) with latency envelope.
+6. `POST /api/memory/query`: authenticated query runner (`mb_recall`, `mb_digest`, `mb_search`) with raw or processed query mode. Processed mode pins model `qwen3.5:0.8b` and returns `original_query` + `processed_query` metadata.
 
 ## Runtime modes
 

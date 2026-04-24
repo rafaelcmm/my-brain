@@ -1,4 +1,10 @@
-import type { BrainSummary, GraphSnapshot, Memory } from "@/lib/domain";
+import type {
+  BrainSummary,
+  GraphSnapshot,
+  Memory,
+  ProcessedQueryModel,
+  QueryMode,
+} from "@/lib/domain";
 import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
 import {
   OrchestratorAuthError,
@@ -241,10 +247,17 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     ) as unknown as GraphSnapshot;
   }
 
-  async recall(query: string, scope?: string): Promise<unknown> {
+  async recall(
+    query: string,
+    scope?: string,
+    mode?: QueryMode,
+    model?: ProcessedQueryModel,
+  ): Promise<unknown> {
     return this.request("/v1/memory/recall", "POST", {
       query,
       scope,
+      mode,
+      model,
     });
   }
 

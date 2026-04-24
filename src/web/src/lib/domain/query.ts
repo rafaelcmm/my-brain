@@ -4,6 +4,16 @@
 export type QueryTool = "mb_recall" | "mb_digest" | "mb_search";
 
 /**
+ * Query execution mode for recall-like tools.
+ */
+export type QueryMode = "raw" | "processed";
+
+/**
+ * Processed mode currently supports one pinned model to keep evaluation deterministic.
+ */
+export type ProcessedQueryModel = "qwen3.5:0.8b";
+
+/**
  * Query request envelope.
  */
 export interface QueryRequest {

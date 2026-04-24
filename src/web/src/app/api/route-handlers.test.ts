@@ -96,6 +96,40 @@ describe("POST /api/memory/query", () => {
     expect(payload.success).toBe(false);
     expect(payload.error).toContain("orchestrator unavailable");
   });
+
+  it("passes processed mode and pinned model to orchestrator recall", async () => {
+    const recall = vi.fn(async () => ({ success: true }));
+    authMocks.getSessionIdFromCookies.mockResolvedValue("s1");
+    authMocks.verifySessionCsrfToken.mockResolvedValue(true);
+    authMocks.getAuthenticatedClient.mockResolvedValue({
+      recall,
+      digest: vi.fn(),
+    });
+
+    const { POST } = await import("@/app/api/memory/query/route");
+    const response = await POST(
+      createPostRequest(
+        "http://localhost/api/memory/query",
+        JSON.stringify({
+          tool: "mb_recall",
+          params: {
+            query: "hello",
+            mode: "processed",
+            model: "qwen3.5:0.8b",
+          },
+        }),
+        "csrf",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(recall).toHaveBeenCalledWith(
+      "hello",
+      undefined,
+      "processed",
+      "qwen3.5:0.8b",
+    );
+  });
 });
 
 describe("POST /api/auth/logout", () => {

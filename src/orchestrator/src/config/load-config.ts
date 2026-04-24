@@ -56,6 +56,10 @@ export function loadConfig() {
     mode: FULL_MODE,
     logLevel: process.env.MYBRAIN_LOG_LEVEL ?? "info",
     llmModel: process.env.MYBRAIN_LLM_MODEL ?? "qwen3.5:0.8b",
+    recallProcessTimeoutMs: parseInteger(
+      process.env.MYBRAIN_RECALL_PROCESS_TIMEOUT_MS,
+      180_000,
+    ),
     dbUrl: process.env.MYBRAIN_DB_URL ?? "",
     llmUrl: process.env.MYBRAIN_LLM_URL ?? "",
     embeddingModel:

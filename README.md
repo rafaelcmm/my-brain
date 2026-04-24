@@ -81,7 +81,7 @@ Sign in using the bearer token from `.secrets/auth-token`. The web UI gives you:
 - 📊 **Dashboard** — memory totals, learning stats, top tags
 - 📚 **Memories** — browse, filter, view, delete entries
 - ✍️ **New memory** — Markdown editor with live preview
-- 🔍 **Query runner** — call `mb_recall`, `mb_digest`, `mb_search` with a latency envelope
+- 🔍 **Query runner** — run raw queries or processed queries (Qwen `qwen3.5:0.8b`) across `mb_recall`, `mb_digest`, `mb_search` with a latency envelope
 - 🕸️ **Graph explorer** — visualize how memories relate by shared repo and tags
 
 Browser only ever sees an httpOnly `session` cookie — your bearer token is never stored client-side.

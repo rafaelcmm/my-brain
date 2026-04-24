@@ -7,6 +7,8 @@ export type {
   MemoryType,
 } from "@/lib/domain/memory";
 export type {
+  ProcessedQueryModel,
+  QueryMode,
   QueryRequest,
   QueryResponse,
   QueryTool,

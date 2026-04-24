@@ -3,7 +3,8 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
-import type { QueryTool } from "@/lib/domain";
+import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
+import type { ProcessedQueryModel, QueryMode, QueryTool } from "@/lib/domain";
 
 interface QueryApiResponse {
   success: boolean;
@@ -62,12 +63,16 @@ function JsonTree({ value, label }: { value: unknown; label?: string }) {
  */
 export default function QueryPage() {
   const [tool, setTool] = useState<QueryTool>("mb_recall");
+  const [queryMode, setQueryMode] = useState<QueryMode>("raw");
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState("");
   const [type, setType] = useState("");
   const [viewMode, setViewMode] = useState<"parsed" | "raw">("parsed");
   const [result, setResult] = useState<QueryApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const processedModel: ProcessedQueryModel = "qwen3.5:0.8b";
+  const isRecallLikeTool = tool === "mb_recall" || tool === "mb_search";
 
   async function run(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -86,6 +91,11 @@ export default function QueryPage() {
             query,
             scope,
             type,
+            mode: isRecallLikeTool ? queryMode : undefined,
+            model:
+              isRecallLikeTool && queryMode === "processed"
+                ? processedModel
+                : undefined,
           },
         }),
       });
@@ -108,6 +118,12 @@ export default function QueryPage() {
   return (
     <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Query" },
+          ]}
+        />
         <h1 className="text-3xl font-extrabold text-slate-900">Query Runner</h1>
 
         <form
@@ -117,7 +133,14 @@ export default function QueryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <select
               value={tool}
-              onChange={(event) => setTool(event.target.value as QueryTool)}
+              onChange={(event) => {
+                const nextTool = event.target.value as QueryTool;
+                setTool(nextTool);
+                if (nextTool === "mb_search") {
+                  // Preserve legacy mb_search behavior as processed recall.
+                  setQueryMode("processed");
+                }
+              }}
               className="ds-input"
             >
               <option value="mb_recall">mb_recall</option>
@@ -131,6 +154,15 @@ export default function QueryPage() {
               className="ds-input"
               disabled={tool === "mb_digest"}
             />
+            <select
+              value={queryMode}
+              onChange={(event) => setQueryMode(event.target.value as QueryMode)}
+              className="ds-input"
+              disabled={!isRecallLikeTool || tool === "mb_search"}
+            >
+              <option value="raw">raw query</option>
+              <option value="processed">processed query</option>
+            </select>
             <input
               value={scope}
               onChange={(event) => setScope(event.target.value)}
@@ -145,6 +177,12 @@ export default function QueryPage() {
               disabled={tool !== "mb_digest"}
             />
           </div>
+
+          {isRecallLikeTool && queryMode === "processed" ? (
+            <p className="text-xs text-slate-500">
+              processed model: {processedModel}
+            </p>
+          ) : null}
 
           <button
             type="submit"

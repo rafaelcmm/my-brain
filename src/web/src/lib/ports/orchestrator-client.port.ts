@@ -1,4 +1,10 @@
-import type { BrainSummary, GraphSnapshot, Memory } from "@/lib/domain";
+import type {
+  BrainSummary,
+  GraphSnapshot,
+  Memory,
+  ProcessedQueryModel,
+  QueryMode,
+} from "@/lib/domain";
 
 /**
  * Port: HTTP client for communicating with the orchestrator REST API.
@@ -81,8 +87,16 @@ export interface OrchestratorClient {
 
   /**
    * Run a recall query.
+   *
+   * Processed mode rewrites the query server-side with a pinned LLM model
+   * before embedding and ranking.
    */
-  recall(query: string, scope?: string): Promise<unknown>;
+  recall(
+    query: string,
+    scope?: string,
+    mode?: QueryMode,
+    model?: ProcessedQueryModel,
+  ): Promise<unknown>;
 
   /**
    * Run a digest query.
