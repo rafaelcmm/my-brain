@@ -26,12 +26,10 @@ import { queryRecallCandidates } from "../../infrastructure/postgres-memory.js";
 import { getDefaultRecallThreshold } from "../router-context.js";
 import { normalizeRecallFilters } from "./memory-recall.filters.js";
 import { scoreAndRankCandidates } from "./memory-recall.scoring.js";
-import { processRecallQuery } from "../../infrastructure/query-processing.js";
+import { wrapWithSynthesis } from "./_envelope.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */
 type AllowRequestReq = Parameters<typeof allowRequest>[0];
-
-const PROCESSED_QUERY_MODEL = "qwen3.5:0.8b";
 
 /**
  * Handles POST /v1/memory/recall: embeds query, scores candidates, returns ranked results.
@@ -78,45 +76,6 @@ export async function handleMemoryRecall(
     return;
   }
 
-  const rawMode = payload["mode"];
-  const modeRaw =
-    rawMode === undefined
-      ? "raw"
-      : (sanitizeText(rawMode, 16) ?? "").toLowerCase();
-  const mode = modeRaw;
-
-  if (mode !== "raw" && mode !== "processed") {
-    sendJson(res, 400, {
-      success: false,
-      error: "INVALID_INPUT",
-      message: "mode must be raw or processed",
-    });
-    return;
-  }
-
-  const requestedModel = sanitizeText(payload["model"], 64);
-  if (mode === "raw" && requestedModel) {
-    sendJson(res, 400, {
-      success: false,
-      error: "INVALID_INPUT",
-      message: "model is only allowed when mode is processed",
-    });
-    return;
-  }
-
-  // Validate model for processed mode before hitting orchestration infrastructure.
-  if (mode === "processed") {
-    const effectiveModel = requestedModel || config.llmModel;
-    if (effectiveModel !== PROCESSED_QUERY_MODEL) {
-      sendJson(res, 400, {
-        success: false,
-        error: "INVALID_INPUT",
-        message: `processed mode only supports model ${PROCESSED_QUERY_MODEL}`,
-      });
-      return;
-    }
-  }
-
   const topK = Math.min(
     Math.max(
       parseInteger(String(payload["top_k"] ?? payload["topK"] ?? "8"), 8),
@@ -144,71 +103,7 @@ export async function handleMemoryRecall(
     const filters = normalizeRecallFilters(payload);
     const candidateLimit = Math.min(Math.max(topK * 6, 30), 150);
 
-    let queryForRecall = originalQuery;
-    let processedQueryMeta:
-      | {
-          original_query: string;
-          processed_query: string;
-          model: string;
-          processing_latency_ms: number;
-          processing_fallback?: boolean;
-          processing_error?: string;
-        }
-      | undefined;
-    let synthesizedAnswerMeta:
-      | {
-          synthesized_answer: string;
-          synthesis_model: string;
-          synthesis_latency_ms: number;
-          synthesis_error?: string;
-        }
-      | undefined;
-
-    if (mode === "processed") {
-      const model = requestedModel || config.llmModel;
-      // Model already validated above; this assertion is a safety guard only.
-      if (model !== PROCESSED_QUERY_MODEL) {
-        sendJson(res, 400, {
-          success: false,
-          error: "INVALID_INPUT",
-          message: `processed mode only supports model ${PROCESSED_QUERY_MODEL}`,
-        });
-        return;
-      }
-
-      const processStartedAt = Date.now();
-      try {
-        const processed = await processRecallQuery({
-          llmUrl: config.llmUrl,
-          model,
-          query: originalQuery,
-          timeoutMs: config.recallProcessTimeoutMs,
-        });
-        queryForRecall = processed.processedQuery;
-        processedQueryMeta = {
-          original_query: processed.originalQuery,
-          processed_query: processed.processedQuery,
-          model: processed.model,
-          processing_latency_ms: processed.latencyMs,
-        };
-      } catch (processingError) {
-        // Keep recall available for operators even when rewrite model is cold or flaky.
-        queryForRecall = originalQuery;
-        processedQueryMeta = {
-          original_query: originalQuery,
-          processed_query: originalQuery,
-          model,
-          processing_latency_ms: Date.now() - processStartedAt,
-          processing_fallback: true,
-          processing_error:
-            processingError instanceof Error
-              ? processingError.message
-              : "query rewrite failed",
-        };
-      }
-    }
-
-    const queryEmbedding = await ctx.getCachedEmbedding(queryForRecall);
+    const queryEmbedding = await ctx.getCachedEmbedding(originalQuery);
 
     const pool = state.pool;
     const candidates = pool
@@ -222,61 +117,26 @@ export async function handleMemoryRecall(
 
     const filtered = await scoreAndRankCandidates(
       candidates,
-      queryForRecall,
+      originalQuery,
       queryEmbedding,
       topK,
       minScore,
       { pool, getCachedEmbedding: ctx.getCachedEmbedding },
     );
 
-    if (mode === "processed" && filtered.length > 0) {
-      const synthesisModel = requestedModel || config.llmModel;
-      try {
-        const synthesized = await ctx.synthesis.synthesize(
-          "mb_recall",
-          originalQuery,
-          {
-            query: queryForRecall,
-            top_k: topK,
-            min_score: minScore,
-            results: filtered,
-          },
-          config.synthTimeoutMs,
-        );
-
-        synthesizedAnswerMeta = {
-          synthesized_answer: synthesized.summary,
-          synthesis_model: synthesized.model || synthesisModel,
-          synthesis_latency_ms: synthesized.latencyMs,
-        };
-      } catch (synthesisError) {
-        synthesizedAnswerMeta = {
-          synthesized_answer: "",
-          synthesis_model: synthesisModel,
-          synthesis_latency_ms: 0,
-          synthesis_error:
-            synthesisError instanceof Error
-              ? synthesisError.message
-              : "answer synthesis failed",
-        };
-      }
-    }
-
     incrementMetric("mb_recall_total", {
       result: filtered.length > 0 ? "hit" : "miss",
     });
     observeDurationMs("mb_recall_latency_ms", Date.now() - recallStart);
 
-    sendJson(res, 200, {
-      success: true,
-      query: queryForRecall,
-      mode,
+    const envelope = await wrapWithSynthesis(ctx, "mb_recall", originalQuery, {
+      query: originalQuery,
       top_k: topK,
       min_score: minScore,
-      ...(processedQueryMeta ?? { original_query: originalQuery }),
-      ...(synthesizedAnswerMeta ?? {}),
       results: filtered,
     });
+
+    sendJson(res, 200, envelope);
   } catch (error) {
     logInternalError("recall failure", error, config.logLevel);
     sendJson(res, 500, {

@@ -273,27 +273,15 @@ describe("POST /v1/memory/recall validation", () => {
     );
   });
 
-  it("returns 400 when mode is invalid", async () => {
+  it("returns 503 for valid query when engine is unavailable", async () => {
     const { status } = await request({
       port,
       path: "/v1/memory/recall",
       method: "POST",
       headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
-      body: { query: "hello", mode: "bad" },
+      body: { query: "hello" },
     });
 
-    assert.equal(status, 400);
-  });
-
-  it("returns 400 when processed mode uses unsupported model", async () => {
-    const { status } = await request({
-      port,
-      path: "/v1/memory/recall",
-      method: "POST",
-      headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
-      body: { query: "hello", mode: "processed", model: "llama3" },
-    });
-
-    assert.equal(status, 400);
+    assert.equal(status, 503);
   });
 });
