@@ -129,15 +129,20 @@ export async function handleMemoryWrite(
       );
       incrementMetric("mb_dedup_hits_total");
       incrementMetric("mb_remember_total");
-      const envelopePayload = await wrapWithSynthesis(ctx, "mb_remember", null, {
-        memory_id: duplicate.memoryId,
-        scope: envelope.scope,
-        type: envelope.type,
-        deduped: true,
-        dedup_reason: duplicate.reason,
-        matched_id: duplicate.memoryId,
-        score: Number(duplicate.score.toFixed(3)),
-      });
+      const envelopePayload = await wrapWithSynthesis(
+        ctx,
+        "mb_remember",
+        null,
+        {
+          memory_id: duplicate.memoryId,
+          scope: envelope.scope,
+          type: envelope.type,
+          deduped: true,
+          dedup_reason: duplicate.reason,
+          matched_id: duplicate.memoryId,
+          score: Number(duplicate.score.toFixed(3)),
+        },
+      );
       sendJson(res, 200, envelopePayload);
       return;
     }

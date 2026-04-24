@@ -76,11 +76,11 @@ export interface CapabilitiesData {
 export interface OrchestratorClient {
   /**
    * Get orchestrator capabilities (auth check).
-    * @returns v2 capabilities envelope on success.
+   * @returns v2 capabilities envelope on success.
    * @throws OrchestratorAuthError on 401.
    * @throws OrchestratorUnavailableError on connection failure.
    */
-    getCapabilities(): Promise<ToolResponseEnvelope<CapabilitiesData>>;
+  getCapabilities(): Promise<ToolResponseEnvelope<CapabilitiesData>>;
 
   /**
    * Check health of the orchestrator.
@@ -151,12 +151,18 @@ export interface OrchestratorClient {
   /**
    * Run a recall query.
    */
-  recall(query: string, scope?: string): Promise<ToolResponseEnvelope<RecallData>>;
+  recall(
+    query: string,
+    scope?: string,
+  ): Promise<ToolResponseEnvelope<RecallData>>;
 
   /**
    * Run a digest query.
    */
-  digest(scope?: string, type?: string): Promise<ToolResponseEnvelope<DigestData>>;
+  digest(
+    scope?: string,
+    type?: string,
+  ): Promise<ToolResponseEnvelope<DigestData>>;
 }
 
 /**

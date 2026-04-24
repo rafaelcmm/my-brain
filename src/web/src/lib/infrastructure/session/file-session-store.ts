@@ -5,14 +5,7 @@ import {
   scryptSync,
   timingSafeEqual,
 } from "crypto";
-import {
-  mkdir,
-  readFile,
-  rename,
-  unlink,
-  writeFile,
-  chmod,
-} from "fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile, chmod } from "fs/promises";
 import { dirname } from "path";
 import type { SessionStore } from "@/lib/ports/orchestrator-client.port";
 
@@ -56,9 +49,7 @@ export class FileSessionStore implements SessionStore {
   /**
    * Acquire lock around read-modify-write operations shared by multiple runtimes.
    */
-  private async withExclusiveLock<T>(
-    operation: () => Promise<T>,
-  ): Promise<T> {
+  private async withExclusiveLock<T>(operation: () => Promise<T>): Promise<T> {
     const maxAttempts = 40;
     const retryDelayMs = 25;
 
@@ -158,7 +149,9 @@ export class FileSessionStore implements SessionStore {
   /**
    * Persist sessions atomically to disk so parallel runtimes see consistent data.
    */
-  private async writeSessions(sessions: Map<string, SessionRecord>): Promise<void> {
+  private async writeSessions(
+    sessions: Map<string, SessionRecord>,
+  ): Promise<void> {
     await mkdir(dirname(this.storagePath), { recursive: true, mode: 0o700 });
 
     const payload = JSON.stringify(Object.fromEntries(sessions), null, 0);
@@ -174,7 +167,10 @@ export class FileSessionStore implements SessionStore {
   /**
    * Remove expired sessions from map in-memory representation.
    */
-  private pruneExpired(sessions: Map<string, SessionRecord>, now: number): void {
+  private pruneExpired(
+    sessions: Map<string, SessionRecord>,
+    now: number,
+  ): void {
     for (const [id, session] of sessions.entries()) {
       if (now > session.expiresAt) {
         sessions.delete(id);

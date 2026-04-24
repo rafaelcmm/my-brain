@@ -35,7 +35,12 @@ export class RunQueryUseCase {
       } else {
         const query = asOptionalString(request.params.query)?.trim();
         if (!query) {
-          return emptyErrorResponse(startedAt, request, "query is required", 400);
+          return emptyErrorResponse(
+            startedAt,
+            request,
+            "query is required",
+            400,
+          );
         }
 
         envelope = await this.client.recall(

@@ -62,7 +62,9 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
   const [minEdgeWeight, setMinEdgeWeight] = useState<number>(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showOnlyNeighbors, setShowOnlyNeighbors] = useState(false);
-  const [enabledReasons, setEnabledReasons] = useState<Record<EdgeReason, boolean>>({
+  const [enabledReasons, setEnabledReasons] = useState<
+    Record<EdgeReason, boolean>
+  >({
     "shared-repo": true,
     "shared-tags": true,
     similarity: true,
@@ -340,7 +342,10 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
         {Object.entries(REASON_CONFIG).map(([reason, config]) => {
           const typedReason = reason as EdgeReason;
           return (
-            <label key={reason} className="text-sm text-gray-700 flex items-center gap-2">
+            <label
+              key={reason}
+              className="text-sm text-gray-700 flex items-center gap-2"
+            >
               <input
                 type="checkbox"
                 checked={enabledReasons[typedReason]}
@@ -419,7 +424,10 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
               <p>Nodes: {filteredGraph.nodes.length}</p>
               <p>Edges: {filteredGraph.edges.length}</p>
               <p>
-                Focus: {selectedNodeId ? `${neighborhoodNodeIds.size - 1} connected` : "none"}
+                Focus:{" "}
+                {selectedNodeId
+                  ? `${neighborhoodNodeIds.size - 1} connected`
+                  : "none"}
               </p>
             </div>
           </div>
@@ -429,7 +437,10 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
               Relation legend
             </h2>
             {Object.entries(REASON_CONFIG).map(([reason, config]) => (
-              <p key={reason} className="text-sm text-gray-700 flex items-center gap-2">
+              <p
+                key={reason}
+                className="text-sm text-gray-700 flex items-center gap-2"
+              >
                 <span
                   className="inline-block w-2.5 h-2.5 rounded-full"
                   style={{ backgroundColor: config.color }}

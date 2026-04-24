@@ -138,85 +138,92 @@ export default async function DashboardPage({
         <div className="ds-card-masonry md:columns-2 xl:columns-3">
           <div className="ds-card-masonry-item">
             <div className="ds-card">
-            <p className={cardLabelClass}>Total memories</p>
-            <p className={`${cardMetricClass} text-[#2E3192]`}>
-              {summary.total_memories}
-            </p>
+              <p className={cardLabelClass}>Total memories</p>
+              <p className={`${cardMetricClass} text-[#2E3192]`}>
+                {summary.total_memories}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card">
-            <p className={cardLabelClass}>Scopes tracked</p>
-            <p className={`${cardMetricClass} text-[#00ADEF]`}>
-              {Object.keys(summary.by_scope).length}
-            </p>
+              <p className={cardLabelClass}>Scopes tracked</p>
+              <p className={`${cardMetricClass} text-[#00ADEF]`}>
+                {Object.keys(summary.by_scope).length}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card">
-            <p className={cardLabelClass}>Types tracked</p>
-            <p className={`${cardMetricClass} text-slate-900`}>
-              {Object.keys(summary.by_type).length}
-            </p>
+              <p className={cardLabelClass}>Types tracked</p>
+              <p className={`${cardMetricClass} text-slate-900`}>
+                {Object.keys(summary.by_type).length}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Top tags</p>
-            {renderTopEntryList(topTags.slice(0, 5), "No tags yet")}
+              <p className={cardLabelClass}>Top tags</p>
+              {renderTopEntryList(topTags.slice(0, 5), "No tags yet")}
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Top frameworks</p>
-            {renderTopEntryList(topFrameworks.slice(0, 5), "No frameworks yet")}
+              <p className={cardLabelClass}>Top frameworks</p>
+              {renderTopEntryList(
+                topFrameworks.slice(0, 5),
+                "No frameworks yet",
+              )}
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Top languages</p>
-            {renderTopEntryList(topLanguages.slice(0, 5), "No languages yet")}
+              <p className={cardLabelClass}>Top languages</p>
+              {renderTopEntryList(topLanguages.slice(0, 5), "No languages yet")}
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Capabilities</p>
-            <p className="text-sm text-slate-700">
-              Engine: {capabilities.data.capabilities.engine ? "on" : "off"}
-            </p>
-            <p className="text-sm text-slate-700">
-              Vector DB: {capabilities.data.features.vectorDb ? "on" : "off"}
-            </p>
-            <p className="text-sm text-slate-700">
-              SONA: {capabilities.data.features.sona ? "on" : "off"}
-            </p>
-            <p className="text-sm text-slate-700">
-              Attention: {capabilities.data.features.attention ? "on" : "off"}
-            </p>
+              <p className={cardLabelClass}>Capabilities</p>
+              <p className="text-sm text-slate-700">
+                Engine: {capabilities.data.capabilities.engine ? "on" : "off"}
+              </p>
+              <p className="text-sm text-slate-700">
+                Vector DB: {capabilities.data.features.vectorDb ? "on" : "off"}
+              </p>
+              <p className="text-sm text-slate-700">
+                SONA: {capabilities.data.features.sona ? "on" : "off"}
+              </p>
+              <p className="text-sm text-slate-700">
+                Attention: {capabilities.data.features.attention ? "on" : "off"}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card ds-card-accent space-y-2">
-            <p className={cardLabelClass}>Learning stats</p>
-            {learningEntries.length === 0 ? (
-              <p className="text-sm text-slate-600">No learning signals yet</p>
-            ) : (
-              <ul className="space-y-2 text-sm text-slate-800">
-                {learningEntries.map(([label, count]) => (
-                  <li key={label} className="flex justify-between gap-3">
-                    <span className="truncate">{toTitleLabel(label)}</span>
-                    <span className="font-semibold text-slate-900">{count}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <p className={cardLabelClass}>Learning stats</p>
+              {learningEntries.length === 0 ? (
+                <p className="text-sm text-slate-600">
+                  No learning signals yet
+                </p>
+              ) : (
+                <ul className="space-y-2 text-sm text-slate-800">
+                  {learningEntries.map(([label, count]) => (
+                    <li key={label} className="flex justify-between gap-3">
+                      <span className="truncate">{toTitleLabel(label)}</span>
+                      <span className="font-semibold text-slate-900">
+                        {count}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>

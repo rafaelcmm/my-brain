@@ -51,7 +51,9 @@ function makeMemoryEnvelope(content: string): MemoryEnvelope {
       language: "typescript",
       frameworks: ["nextjs"],
       tags: ["memory", "integration"],
-      embedding: Array.from({ length: 1024 }, (_, index) => (index === 0 ? 1 : 0)),
+      embedding: Array.from({ length: 1024 }, (_, index) =>
+        index === 0 ? 1 : 0,
+      ),
     },
   };
 }
@@ -63,7 +65,8 @@ function request(opts: {
   headers?: Record<string, string>;
 }): Promise<{ status: number; body: Record<string, unknown> }> {
   return new Promise((resolve, reject) => {
-    const payload = opts.body === undefined ? undefined : JSON.stringify(opts.body);
+    const payload =
+      opts.body === undefined ? undefined : JSON.stringify(opts.body);
     const req = http.request(
       {
         hostname: "127.0.0.1",
@@ -143,7 +146,9 @@ before(async () => {
   await persistMemoryMetadata(
     pool,
     seedId,
-    makeMemoryEnvelope("Seed memory used by vote/forget/recall integration tests"),
+    makeMemoryEnvelope(
+      "Seed memory used by vote/forget/recall integration tests",
+    ),
   );
 
   llmServer = http.createServer((req, res) => {
@@ -302,7 +307,9 @@ describe("synthesis envelope status=ok", () => {
     });
     assert.equal(open.status, 200);
     assertEnvelope(open.body, "ok");
-    const sessionId = String((open.body.data as Record<string, unknown>)["session_id"]);
+    const sessionId = String(
+      (open.body.data as Record<string, unknown>)["session_id"],
+    );
 
     const close = await request({
       method: "POST",
@@ -377,7 +384,9 @@ describe("synthesis envelope status=fallback", () => {
       body: { agent: "integration-fallback-close" },
     });
     assert.equal(open.status, 200);
-    const sessionId = String((open.body.data as Record<string, unknown>)["session_id"]);
+    const sessionId = String(
+      (open.body.data as Record<string, unknown>)["session_id"],
+    );
 
     const close = await request({
       method: "POST",

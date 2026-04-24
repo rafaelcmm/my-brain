@@ -1,29 +1,30 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented in this file.
 
-The format follows Keep a Changelog and semantic versioning rules.
-
-## [Unreleased]
-
-### Changed
-
-- **[orchestrator] TypeScript Migration**: Complete refactor from single 2666-line `.mjs` monolith to modular TS architecture (hexagonal layers: domain → application → infrastructure → HTTP).
-- **[orchestrator] Router Refactoring**: HTTP router split from 1046 lines to 338-line dispatcher + 6 handler modules (~155-195 lines each) per objective-files rule. Handlers: memory-write, memory-recall, memory-vote, memory-forget, session, memory-digest.
-- **[orchestrator] Router Context Extraction**: Shared types (`Capabilities`, `RouterContext`, `getCapabilities`, `getDefaultRecallThreshold`) extracted to dedicated `router-context.ts` to break circular imports and improve modularity.
-- **[orchestrator] Build Pipeline**: Added TypeScript compiler stage to Dockerfile; orchestrator now compiles `src/` → `dist/` via `pnpm build` before Docker image creation.
-- **[all] tsconfig Alignment**: Root `tsconfig.json` with strict settings added; bridge and orchestrator now extend shared base with `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `useUnknownInCatchVariables`, `verbatimModuleSyntax`, `NodeNext`.
-- **[security] Session Rate Limiting**: POST /v1/session/open and POST /v1/session/close now enforce rate-limiting to prevent session churn attacks.
+## [2.0.0] - 2026-04-24
 
 ### Added
 
-- **[orchestrator] HTTP Handlers Module**: New `src/orchestrator/src/http/handlers/` directory with per-route handler functions (memory-write.ts, memory-recall.ts, memory-vote.ts, memory-forget.ts, session.ts, memory-digest.ts).
-- **[all] Unit Tests**: Comprehensive test suites for orchestrator and bridge; 24/24 passing (22 orchestrator, 2 bridge). Tests cover HTTP routing, auth gating, validation, and domain logic.
-- **[orchestrator] Integration Tests**: New `src/orchestrator/test/integration/postgres-memory.integration.test.ts` with ephemeral Postgres via `docker-compose.test.yml` on port 5433.
-- **[orchestrator] Docker Integration**: `docker-compose.test.yml` with ephemeral Postgres for CI integration tests.
-- **[orchestrator] Documentation**: Complete docblock coverage for all new/changed exports per commenting-standards.
+- v2 synthesis envelope contract for successful tool responses: `success`, `summary`, `data`, `synthesis`.
+- Orchestrator integration coverage for synthesis fallback behavior on `mb_*` endpoints.
+- Prompt template hardening tests and newline sanitization safeguards.
+- Optional Newman execution in smoke test script when available.
+- Web envelope-first domain/port/client/use-case stack and summary-first query UX.
 
-### Fixed
+### Changed
 
-- **[orchestrator] Dockerfile Build**: Now includes compilation stage; previously attempted to run raw `.ts` files without compilation.
-- **[technical] Circular Import**: Resolved by extracting RouterContext and helper functions to router-context.ts module.
+- Web APIs now reject legacy recall `mode`/`model` inputs.
+- Dashboard capabilities rendering moved to boolean capability pills.
+- Orchestrator response utility now accepts typed envelope payloads cleanly.
+- Technical and runbook docs aligned to v2 behavior and env readers.
+
+### Removed
+
+- Legacy recall mode/model toggles and `mb_search` query path from web operator UX.
+- Legacy processed/raw response assumptions in web tests.
+- Legacy references to processed model behavior in active test coverage.
+
+## [1.0.0] - 2025-03-15
+
+- Initial stable release baseline.

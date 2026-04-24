@@ -2,7 +2,10 @@ import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import { wrapWithSynthesis } from "../../src/http/handlers/_envelope.js";
-import { defaultRegistry, renderMetrics } from "../../src/observability/metrics.js";
+import {
+  defaultRegistry,
+  renderMetrics,
+} from "../../src/observability/metrics.js";
 import { createOllamaSynthesis } from "../../src/infrastructure/ollama-synthesis.js";
 
 let server: Server | null = null;
@@ -64,12 +67,9 @@ test("wrapWithSynthesis records ok metrics and returns envelope", async () => {
     },
   } as const;
 
-  const result = await wrapWithSynthesis(
-    ctx as never,
-    "mb_digest",
-    null,
-    { rows: [] },
-  );
+  const result = await wrapWithSynthesis(ctx as never, "mb_digest", null, {
+    rows: [],
+  });
 
   assert.equal(result.success, true);
   assert.equal(result.summary, "digest summary");
@@ -96,7 +96,12 @@ test("wrapWithSynthesis records fallback metrics and preserves data", async () =
   } as const;
 
   const payload = { query: "q", results: [] };
-  const result = await wrapWithSynthesis(ctx as never, "mb_recall", "q", payload);
+  const result = await wrapWithSynthesis(
+    ctx as never,
+    "mb_recall",
+    "q",
+    payload,
+  );
 
   assert.equal(result.success, true);
   assert.equal(result.summary, "");
@@ -131,12 +136,9 @@ test("wrapWithSynthesis returns fallback within timeout window for slow synthesi
   } as const;
 
   const startedAt = Date.now();
-  const result = await wrapWithSynthesis(
-    ctx as never,
-    "mb_digest",
-    null,
-    { rows: [] },
-  );
+  const result = await wrapWithSynthesis(ctx as never, "mb_digest", null, {
+    rows: [],
+  });
   const elapsedMs = Date.now() - startedAt;
 
   assert.equal(result.synthesis.status, "fallback");

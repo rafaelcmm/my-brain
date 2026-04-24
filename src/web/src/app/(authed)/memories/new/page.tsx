@@ -297,9 +297,7 @@ export default function NewMemoryPage() {
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
           <section className="lg:col-span-2 ds-card space-y-4">
-            <p className="ds-card-title">
-              Markdown editor
-            </p>
+            <p className="ds-card-title">Markdown editor</p>
             <CodeMirror
               value={form.content}
               extensions={[markdown()]}
@@ -315,9 +313,7 @@ export default function NewMemoryPage() {
           </section>
 
           <section className="ds-card space-y-3">
-            <p className="ds-card-title">
-              Metadata
-            </p>
+            <p className="ds-card-title">Metadata</p>
 
             <select
               value={form.type}

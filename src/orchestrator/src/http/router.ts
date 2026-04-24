@@ -247,8 +247,8 @@ export async function handleRequest(
       "mb_context_probe",
       typeof payload["cwd"] === "string" ? payload["cwd"] : null,
       {
-      context: buildProjectContext(payload as unknown as ProjectContextHints),
-      degraded: state.degradedReasons.length > 0,
+        context: buildProjectContext(payload as unknown as ProjectContextHints),
+        degraded: state.degradedReasons.length > 0,
       },
     );
     sendJson(res, 200, envelope);

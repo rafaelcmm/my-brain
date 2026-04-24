@@ -1,36 +1,43 @@
-# my-brain Security Model
+# Security (v2)
 
-This document describes runtime security guarantees and operator responsibilities.
+## Boundary Model
 
-## Network and ingress
+- External clients authenticate at gateway with bearer token file secret.
+- Gateway strips external `Authorization` before proxying upstream.
+- Gateway injects `MYBRAIN_INTERNAL_API_KEY` for internal trust chain.
+- Orchestrator verifies internal key plus optional bearer requirement.
 
-1. Default bind host is `127.0.0.1`. Only the Caddy gateway exposes ports to the host.
-2. Gateway validates the bearer token for both the MCP endpoint (`:3333/mcp`) and REST API (`:8080/*`).
-3. Gateway strips the `Authorization` header before forwarding to upstream services and injects the shared `x-mybrain-internal-key` header.
-4. Upstream services (orchestrator, bridge, web) reject requests that do not carry the internal key.
+## Required Defaults
 
-## Token management
+- Keep `MYBRAIN_BIND_HOST=127.0.0.1` unless explicit exposure needed.
+- Keep `MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH=false` by default.
+- Keep `.secrets/` mode `700`; token files mode `600`.
 
-1. The bearer token lives in `.secrets/auth-token` (gitignored, mode 0600).
-2. `src/scripts/rotate-token.sh` rotates the token and triggers a gateway reload.
-3. Minimum token length is enforced at install, rotation, and startup. Default policy is ≥73 characters; absolute floor is 64.
-4. `MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH=true` is permitted only when the orchestrator container user cannot read the token file (EACCES). Default is `false` (fail-closed).
+## Input and Abuse Controls
 
-## Web session
+- Request body size limits enforced by orchestrator bootstrap.
+- JSON schema validation on inbound tool payloads.
+- Endpoint-specific rate limiting before synthesis execution.
+- No client-controlled mode/model toggles for recall synthesis.
 
-1. Operator logs in with the bearer token at `/login`.
-2. Web exchanges the token for an encrypted server-side session and returns an httpOnly `session` cookie.
-3. The bearer token is never stored in the browser.
-4. Mutating web routes require a matching CSRF token (`x-csrf-token`) bound to the active session.
-5. Login route enforces per-IP rate limiting via `MYBRAIN_WEB_RATE_LIMIT_LOGIN`.
+## Synthesis Hardening
 
-## Rate limiting
+- Prompt templates sanitize and compact user-provided snippets.
+- Timeout and abort semantics prevent hanging synthesis calls.
+- Fallback envelope preserves `data` when synthesis unavailable.
 
-1. Orchestrator memory endpoints: fixed-window per-token limit via `MYBRAIN_RATE_LIMIT_PER_MIN` (default 60/min).
-2. Gateway emits `429` on exhausted limits; repeated `401` indicates bad-token retries.
-3. Request body size is bounded by `MYBRAIN_MAX_REQUEST_BODY_BYTES` (default 1 MiB).
+## Operational Checks
 
-## Non-goals
+Run before release or after auth changes:
 
-1. Internet exposure without TLS, stronger auth, or a WAF.
-2. Multi-tenant isolation — a single deployment is scoped to one operator or trusted workstation.
+```bash
+./src/scripts/security-check.sh
+./src/scripts/smoke-test.sh
+```
+
+Verify:
+
+- Unauthorized requests rejected.
+- Internal key required where expected.
+- Gateway header stripping behavior intact.
+- Rate-limit counters increment and 429 path blocks synthesis execution.

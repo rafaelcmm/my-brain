@@ -5,7 +5,7 @@ description: Automatically invoked at the start of any non-trivial response to s
 
 # my-brain Context Retrieval
 
-1. Call `hooks_capabilities` before retrieval.
+1. Call `mcp_my-brain_hooks_capabilities` before retrieval.
 2. Call `mb_context_probe` once per session and cache result.
 3. Call `mb_recall` with:
    - `query`: latest user request
@@ -21,7 +21,7 @@ description: Automatically invoked at the start of any non-trivial response to s
 
 ## Good Example
 
-1. Non-trivial architecture follow-up: `hooks_capabilities` -> `mb_context_probe` -> scoped `mb_recall`, then use only qualified hits.
+1. Non-trivial architecture follow-up: `mcp_my-brain_hooks_capabilities` -> `mb_context_probe` -> scoped `mb_recall`, then use only qualified hits.
 
 ## Bad Example
 

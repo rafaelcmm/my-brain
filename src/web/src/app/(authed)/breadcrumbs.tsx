@@ -23,19 +23,17 @@ export function Breadcrumbs({
   return (
     <nav
       aria-label="Breadcrumb"
-      className={[
-        "ds-breadcrumb",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={["ds-breadcrumb", className].filter(Boolean).join(" ")}
     >
       <ol className="ds-breadcrumb-list">
         {items.map((item, index) => {
           const isCurrent = index === items.length - 1;
 
           return (
-            <li key={`${item.label}:${item.href ?? "current"}`} className="ds-breadcrumb-item">
+            <li
+              key={`${item.label}:${item.href ?? "current"}`}
+              className="ds-breadcrumb-item"
+            >
               {isCurrent ? (
                 <span aria-current="page" className="ds-breadcrumb-current">
                   {item.label}
@@ -47,7 +45,9 @@ export function Breadcrumbs({
               ) : (
                 <span className="ds-breadcrumb-muted">{item.label}</span>
               )}
-              {!isCurrent ? <span className="ds-breadcrumb-separator">/</span> : null}
+              {!isCurrent ? (
+                <span className="ds-breadcrumb-separator">/</span>
+              ) : null}
             </li>
           );
         })}

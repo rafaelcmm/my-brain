@@ -38,7 +38,10 @@ export function createOllamaSynthesis(opts: {
     async synthesize(tool, question, data, timeoutMs) {
       const startedAt = Date.now();
       const endpoint = resolveGenerateEndpoint(opts.llmUrl);
-      const effectiveTimeout = Math.max(timeoutMs || opts.defaultTimeoutMs, 1_000);
+      const effectiveTimeout = Math.max(
+        timeoutMs || opts.defaultTimeoutMs,
+        1_000,
+      );
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), effectiveTimeout);
 
@@ -66,7 +69,9 @@ export function createOllamaSynthesis(opts: {
 
         const payload = (await response.json()) as GeneratePayload;
         const candidate =
-          (typeof payload.response === "string" ? payload.response : undefined) ??
+          (typeof payload.response === "string"
+            ? payload.response
+            : undefined) ??
           (typeof payload.message?.content === "string"
             ? payload.message.content
             : undefined);
@@ -76,7 +81,9 @@ export function createOllamaSynthesis(opts: {
           throw new Error("synthesis returned empty response");
         }
         if (hasInjectionArtifacts(summary)) {
-          throw new Error("synthesis output rejected by injection safety filter");
+          throw new Error(
+            "synthesis output rejected by injection safety filter",
+          );
         }
 
         return {

@@ -14,7 +14,9 @@ const CASES: TemplateCase[] = [
   {
     tool: "mb_capabilities",
     expectedInstruction: "runtime capability state",
-    data: { capabilities: { engine: true, vectorDb: true, embeddingDim: 1024 } },
+    data: {
+      capabilities: { engine: true, vectorDb: true, embeddingDim: 1024 },
+    },
     expectedDataField: "capabilities",
   },
   {
@@ -62,7 +64,10 @@ const CASES: TemplateCase[] = [
   {
     tool: "mb_digest",
     expectedInstruction: "aggregate counts",
-    data: { rows: [{ type: "decision", count: 3 }], learning: { sessions_opened: 2 } },
+    data: {
+      rows: [{ type: "decision", count: 3 }],
+      learning: { sessions_opened: 2 },
+    },
     expectedDataField: "rows",
   },
 ];
@@ -82,11 +87,9 @@ for (const c of CASES) {
 }
 
 test("buildPrompt strips line breaks from question and data snippets", () => {
-  const prompt = buildPrompt(
-    "mb_recall",
-    "Line one\nline two",
-    { results: [{ id: "m1", content: "a\n\nb" }] },
-  );
+  const prompt = buildPrompt("mb_recall", "Line one\nline two", {
+    results: [{ id: "m1", content: "a\n\nb" }],
+  });
 
   assert.ok(!prompt.includes("Line one\nline two"));
   assert.match(prompt, /Question: Line one line two/);

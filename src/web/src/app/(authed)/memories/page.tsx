@@ -100,10 +100,7 @@ export default async function MemoriesPage({
             defaultValue={resolvedParams?.language}
             className="ds-input"
           />
-          <button
-            type="submit"
-            className="ds-btn-primary px-3 py-2"
-          >
+          <button type="submit" className="ds-btn-primary px-3 py-2">
             Filter
           </button>
         </form>

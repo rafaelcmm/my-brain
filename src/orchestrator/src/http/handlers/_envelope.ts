@@ -2,7 +2,10 @@ import type {
   SynthesisToolName,
   ToolResponseEnvelope,
 } from "../../domain/synthesis.js";
-import { incrementMetric, observeDurationMs } from "../../observability/metrics.js";
+import {
+  incrementMetric,
+  observeDurationMs,
+} from "../../observability/metrics.js";
 import type { RouterContext } from "../router-context.js";
 
 /**

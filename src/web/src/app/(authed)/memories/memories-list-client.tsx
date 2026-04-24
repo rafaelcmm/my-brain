@@ -117,9 +117,7 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
         )
         .map((result) => result.value)
         .filter(Boolean);
-      setStatus(
-        summaries[0] || `${selectedIds.length} memories forgotten.`,
-      );
+      setStatus(summaries[0] || `${selectedIds.length} memories forgotten.`);
     }
 
     setBusy(false);
@@ -193,13 +191,18 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
                   {group.label}
                 </span>
                 <span className="text-xs text-gray-500">
-                  {group.memories.length} {group.memories.length === 1 ? "item" : "items"} · {isCollapsed ? "collapsed" : "expanded"}
+                  {group.memories.length}{" "}
+                  {group.memories.length === 1 ? "item" : "items"} ·{" "}
+                  {isCollapsed ? "collapsed" : "expanded"}
                 </span>
               </button>
 
               {!isCollapsed
                 ? group.memories.map((memory) => (
-                    <article key={memory.id} className="p-4 border-t border-gray-100">
+                    <article
+                      key={memory.id}
+                      className="p-4 border-t border-gray-100"
+                    >
                       <div className="flex items-center justify-between gap-4">
                         <label className="flex items-center gap-3">
                           <input

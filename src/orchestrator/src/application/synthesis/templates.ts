@@ -59,13 +59,16 @@ export function buildPrompt(
       "Announce the new tracked session: id, agent, any route confidence hint.",
     mb_session_close:
       "Summarize the closed session: success flag, quality score, reason if provided.",
-    mb_digest: "Give a short natural-language digest of aggregate counts in the payload.",
+    mb_digest:
+      "Give a short natural-language digest of aggregate counts in the payload.",
   };
 
   return [
     instructionByTool[tool],
     GLOBAL_CONSTRAINTS,
-    question ? `Question: ${question.replace(/[\r\n]+/g, " ").slice(0, 1024)}` : "",
+    question
+      ? `Question: ${question.replace(/[\r\n]+/g, " ").slice(0, 1024)}`
+      : "",
     "<<<DATA>>>",
     compact(data),
     "<<<END>>>",

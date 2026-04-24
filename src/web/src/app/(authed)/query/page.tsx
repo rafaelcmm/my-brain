@@ -121,10 +121,7 @@ export default function QueryPage() {
         />
         <h1 className="text-3xl font-extrabold text-slate-900">Query Runner</h1>
 
-        <form
-          onSubmit={run}
-          className="ds-card p-6 space-y-4"
-        >
+        <form onSubmit={run} className="ds-card p-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <select
               value={tool}
@@ -194,7 +191,8 @@ export default function QueryPage() {
 
               {result.synthesis?.status === "fallback" ? (
                 <p className="rounded border border-yellow-500 bg-yellow-100 px-3 py-2 text-sm text-yellow-900">
-                  synthesis fallback: {result.synthesis.error ?? "unknown error"}
+                  synthesis fallback:{" "}
+                  {result.synthesis.error ?? "unknown error"}
                 </p>
               ) : null}
 

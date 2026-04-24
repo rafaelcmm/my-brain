@@ -22,7 +22,10 @@ afterEach(async () => {
 });
 
 async function startFakeServer(
-  handler: (body: string, done: (status: number, payload: unknown) => void) => void,
+  handler: (
+    body: string,
+    done: (status: number, payload: unknown) => void,
+  ) => void,
 ): Promise<string> {
   server = createServer((req, res) => {
     let body = "";
@@ -103,7 +106,8 @@ test("createOllamaSynthesis throws on empty response", async () => {
   });
 
   await assert.rejects(
-    () => synthesis.synthesize("mb_capabilities", null, { engine: true }, 15_000),
+    () =>
+      synthesis.synthesize("mb_capabilities", null, { engine: true }, 15_000),
     /empty response/,
   );
 });
@@ -120,7 +124,8 @@ test("createOllamaSynthesis rejects suspicious injected output", async () => {
   });
 
   await assert.rejects(
-    () => synthesis.synthesize("mb_recall", "question", { results: [] }, 15_000),
+    () =>
+      synthesis.synthesize("mb_recall", "question", { results: [] }, 15_000),
     /injection safety filter/,
   );
 });

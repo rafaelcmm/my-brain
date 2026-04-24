@@ -93,7 +93,8 @@ textarea::placeholder {
 
 .ds-input:focus-visible {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--brand-secondary) 40%, transparent);
   outline: none;
 }
 

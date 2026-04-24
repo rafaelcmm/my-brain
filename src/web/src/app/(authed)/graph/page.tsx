@@ -33,28 +33,20 @@ export default async function GraphPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start auto-rows-min">
           <div className="ds-card">
-            <p className="ds-card-title">
-              Nodes
-            </p>
+            <p className="ds-card-title">Nodes</p>
             <p className="ds-card-metric text-[#2E3192]">
               {graph.nodes.length}
             </p>
           </div>
           <div className="ds-card">
-            <p className="ds-card-title">
-              Edges
-            </p>
+            <p className="ds-card-title">Edges</p>
             <p className="ds-card-metric text-[#00ADEF]">
               {graph.edges.length}
             </p>
           </div>
           <div className="ds-card ds-card-accent">
-            <p className="ds-card-title">
-              Total memories
-            </p>
-            <p className="ds-card-metric text-slate-900">
-              {graph.total_count}
-            </p>
+            <p className="ds-card-title">Total memories</p>
+            <p className="ds-card-metric text-slate-900">{graph.total_count}</p>
           </div>
         </div>
 
