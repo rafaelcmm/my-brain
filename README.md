@@ -1,106 +1,88 @@
-# my-brain
+# 🧠 my-brain
 
-my-brain is self-hosted memory and orchestration layer for MCP-compatible clients like Claude Code, Cursor, and VS Code Copilot Chat. It runs locally with Docker Compose, protects ingress with bearer auth, and exposes one MCP endpoint your tools can connect to.
+> **Your local AI assistants, finally with a memory.**
 
-## Goals
+my-brain is a self-hosted memory and orchestration layer for MCP-compatible clients like **Claude Code**, **Cursor**, and **VS Code Copilot Chat**. Runs locally on Docker Compose, guards every request with bearer auth, and exposes a single MCP endpoint your tools can connect to.
 
-1. Give local AI workflows durable memory that survives editor sessions.
-2. Keep setup simple enough for one-machine installation.
-3. Keep security practical by default: localhost bind + bearer auth + rotatable token.
-4. Provide clear path from personal setup to team-grade release automation.
+---
 
-## What You Get
+## ✨ Features
 
-1. Streamable HTTP MCP endpoint at /mcp (MCP spec 2024-11-05+).
-2. Auth gateway with shared bearer token validation for MCP and REST.
-3. Full runtime by default: Postgres + orchestrator + MCP bridge + local Ollama model.
-4. Next.js web app for dashboard, memory CRUD, query runner, and graph view.
-5. Install and operations scripts:
-   install.sh, rotate-token.sh, smoke-test.sh, backfill-memory-metadata.sh, security-check.sh.
-6. CI and release automation templates:
-   lint/test/compose validation, tag-driven release workflow, GHCR publish.
-7. Model-invoked Claude skills and curator agent templates under .claude/.
+- 🧠 **Durable memory** that survives editor sessions — your AI remembers decisions, bugs, conventions, and context across projects.
+- 🔌 **One MCP endpoint** at `/mcp` (spec 2024-11-05+) — point Claude Code, Cursor, or any MCP client at it and you're in.
+- 🖥️ **Web dashboard** — browse memories, run queries, explore the knowledge graph, manage CRUD from a Next.js UI.
+- 🔐 **Secure by default** — localhost bind, bearer token auth, CSRF-protected web sessions, rotatable secrets.
+- 🐳 **Single-command setup** — Docker Compose brings up Postgres, orchestrator, MCP bridge, Ollama, and web.
+- 🤖 **Ships with an LLM** — bundles Ollama + Qwen so memory ranking and summarization work out of the box.
+- 🧪 **Postman collection** for instant sanity checks.
+- 🚀 **CI/CD templates** — tag-driven releases, GHCR publishing, compose validation.
 
-## Quick Install
+---
 
-### Option A: from repository checkout
+## 🚀 Quick Start
 
-1. Clone this repository.
-2. Run:
-   ./src/scripts/install.sh
-3. Copy token from .secrets/auth-token into your MCP client config.
+### Clone and install
 
-### Option B: one-line bootstrap from a release tag
+```bash
+git clone https://github.com/rafaelcmm/my-brain.git
+cd my-brain
+./src/scripts/install.sh
+```
 
-1. Run:
-   curl -fsSL https://raw.githubusercontent.com/rafaelcmm/my-brain/<tag>/src/scripts/install.sh | bash
-2. Replace <tag> with the release tag you want (example: v0.1.0).
-3. Review printed MCP snippet and paste into your local client config.
+The installer generates a bearer token in `.secrets/auth-token`, writes a working `.env`, and starts the stack.
 
-## Prerequisites
+### Or, one-line bootstrap from a release
 
-1. Docker Engine with docker compose plugin.
-2. git
-3. openssl
-4. curl
+```bash
+curl -fsSL https://raw.githubusercontent.com/rafaelcmm/my-brain/v0.1.0/src/scripts/install.sh | bash
+```
 
-## Daily Usage
+Replace `v0.1.0` with the release tag you want.
 
-1. Start stack:
-   docker compose up -d
-2. If GPU startup fails (missing NVIDIA runtime), start with CPU fallback:
-   pnpm run docker:up:cpu
-   # equivalent: docker compose -f docker-compose.yml up -d --build
-3. Check services:
-   docker compose ps
-4. Open web UI:
-   http://127.0.0.1:${MYBRAIN_WEB_PORT:-3000} (default 3000)
-5. Run smoke test:
-   ./src/scripts/smoke-test.sh
-6. Backfill legacy memory metadata (after schema/runtime upgrades):
-   ./src/scripts/backfill-memory-metadata.sh
-7. Read logs:
-   docker compose logs -f my-brain-orchestrator
-8. Stop stack:
-   docker compose down
+### Daily commands
 
-## Webapp
+```bash
+docker compose up -d           # start everything
+docker compose ps              # check services
+docker compose logs -f         # tail logs
+docker compose down            # stop
+./src/scripts/smoke-test.sh    # quick health check
+```
 
-1. Open UI at `http://127.0.0.1:${MYBRAIN_WEB_PORT:-3000}`.
-2. Sign in using the same bearer token from `.secrets/auth-token`.
-3. Web session is stored server-side; browser only gets an httpOnly `session` cookie.
-4. Protected routes:
-   - `/dashboard`
-   - `/memories` and `/memories/[id]`
-   - `/memories/new`
-   - `/query`
-   - `/graph`
-5. Sign-out calls `/api/auth/logout` and clears server session + cookie.
+💡 **No NVIDIA GPU?** Use `pnpm run docker:up:cpu` for CPU fallback.
 
-### Webapp Troubleshooting
+---
 
-1. Login returns `503 Orchestrator unavailable`:
-   check orchestrator health and internal key consistency.
-2. Login returns `401 Invalid or expired token`:
-   verify token in `.secrets/auth-token` and paste again.
-3. Graph page loads but no nodes:
-   verify seeded memory data and `/v1/memory/graph` response.
+## 📋 Prerequisites
 
-### Postman Minimal General Test
+- 🐳 Docker Engine with the `compose` plugin
+- 📦 git
+- 🔐 openssl
+- 🌐 curl
 
-Use the bundled collection `my-brain (minimal)` for a compact sanity flow:
+---
 
-1. `General Smoke -> Health check`
-2. `General Smoke -> Initialize MCP session`
-3. `General Smoke -> List MCP tools`
-4. `General Smoke -> LLM generate`
+## 🖥️ Web Dashboard
 
-The initialize request auto-saves `Mcp-Session-Id` into `mcp_session_id`.
-The generate request auto-builds JSON payload and uses `think=false` to return direct answer text.
+Once the stack is up, open:
 
-## Connect Client (MCP)
+👉 **http://127.0.0.1:3000**
 
-Use .mcp.json.example as base. Recommended header approach uses environment variable:
+Sign in using the bearer token from `.secrets/auth-token`. The web UI gives you:
+
+- 📊 **Dashboard** — memory totals, learning stats, top tags
+- 📚 **Memories** — browse, filter, view, delete entries
+- ✍️ **New memory** — Markdown editor with live preview
+- 🔍 **Query runner** — call `mb_recall`, `mb_digest`, `mb_search` with a latency envelope
+- 🕸️ **Graph explorer** — visualize how memories relate by shared repo and tags
+
+Browser only ever sees an httpOnly `session` cookie — your bearer token is never stored client-side.
+
+---
+
+## 🔌 Connect an MCP Client
+
+Copy `.mcp.json.example` into your client config. Recommended header form uses an env var:
 
 ```json
 {
@@ -116,100 +98,56 @@ Use .mcp.json.example as base. Recommended header approach uses environment vari
 }
 ```
 
-Then export token in your shell profile:
+Then export the token in your shell profile:
 
 ```bash
 export MYBRAIN_TOKEN="$(cat ~/.my-brain/.secrets/auth-token)"
 ```
 
-## Security Model
+---
 
-1. Default bind host is 127.0.0.1.
-2. Only gateway exposes ports to host.
-3. Gateway validates bearer token for both MCP and REST.
-4. Gateway strips Authorization header before forwarding upstream.
-5. Token rotates with ./src/scripts/rotate-token.sh and triggers gateway reload.
-6. Token minimum length is enforced at install, rotate, and startup (>=64 chars; default policy is 73).
+## 📚 Documentation
 
-## Configuration
+| Topic | Location |
+| --- | --- |
+| 🏗️ Architecture and components | [docs/technical/architecture.md](docs/technical/architecture.md) |
+| 📖 API reference and env vars | [docs/technical/reference.md](docs/technical/reference.md) |
+| ⚙️ Configuration guide | [docs/technical/configuration.md](docs/technical/configuration.md) |
+| 🔐 Security model | [docs/technical/security.md](docs/technical/security.md) |
+| 🛠️ Runbook, troubleshooting, Postman | [docs/runbooks/local-operations.md](docs/runbooks/local-operations.md) |
 
-Main settings are in .env. Start with .env.example.
+---
 
-High-impact variables:
-
-1. MYBRAIN_LLM_MODEL: local model pulled into the always-on Ollama sidecar.
-2. MYBRAIN_BIND_HOST: keep 127.0.0.1 for local-only safety.
-3. MYBRAIN_DB_PASSWORD: generated by installer if placeholder is present.
-4. MYBRAIN_AUTH_TOKEN_FILE: token file path mounted into both gateway and orchestrator. The orchestrator validates the token at startup to confirm the mount is well-formed; set MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH=true if the orchestrator user cannot read the file.
-5. MYBRAIN_ALLOWED_MCP_ORIGINS: browser origins allowed to talk to /mcp.
-6. MYBRAIN_MIN_TOKEN_LENGTH: installer and rotation fail-close threshold.
-7. MYBRAIN_RATE_LIMIT_PER_MIN: orchestrator memory endpoint fixed-window rate limit.
-8. MYBRAIN_MAX_REQUEST_BODY_BYTES: max accepted JSON request body size (default 1MB).
-9. MYBRAIN_PROMETHEUS_PORT: bridge metrics endpoint port (`/metrics`, default 9090).
-10. MYBRAIN_INTERNAL_API_KEY: shared internal key used between gateway, bridge, and orchestrator.
-11. MYBRAIN_WEB_SESSION_SECRET: web session encryption secret (>=32 chars).
-12. MYBRAIN_WEB_PORT: gateway exposed web UI port (default 3000).
-13. MYBRAIN_LLM_GPU_COUNT: number of GPUs requested by default startup (default 1).
-
-GPU note:
-`docker compose up` loads `docker-compose.override.yml` automatically, which enables
-GPU reservation for the LLM service. Using `-f docker-compose.yml` bypasses the
-override and provides CPU fallback mode.
-
-## Repository Map
-
-1. src/orchestrator/: runtime process and container build.
-2. src/mcp-bridge/: Streamable HTTP MCP facade over orchestrator tools.
-3. src/web/: Next.js operator UI (dashboard, memory CRUD, query, graph).
-4. src/gateway/: Caddy auth and reverse-proxy config.
-5. src/db/: database bootstrap SQL.
-6. src/scripts/: install, rotate, smoke, backfill, security-check automation.
-7. postman/: minimal sanity collection for MCP + LLM flow.
-8. .github/workflows/: CI and release pipelines.
-9. docs/: technical implementation docs and runbooks.
-10. .claude/: model-invoked skills and curator agent templates.
-
-## Troubleshooting
-
-1. 401 on /health with token:
-   verify token content and ensure gateway sees .secrets/auth-token.
-2. compose config fails:
-   ensure .env exists and MYBRAIN_DB_PASSWORD is set.
-3. POST /mcp fails:
-   inspect gateway and mcp logs:
-   docker compose logs my-brain-gateway my-brain-mcp
-4. MCP returns "Session not found":
-   run `Initialize session` first and make sure follow-up requests send `Mcp-Session-Id`.
-   In the bundled Postman collection, `Initialize session` now auto-saves this header to `mcp_session_id`.
-5. 410 on /sse or /messages:
-   expected. Legacy SSE is intentionally blocked at the gateway; use POST /mcp.
-6. orchestrator unhealthy:
-   check logs and health endpoint from container network.
-
-## Technical Docs
-
-Implementation details are intentionally separated from this user README:
-
-1. docs/technical/architecture.md
-2. docs/technical/reference.md
-3. docs/runbooks/local-operations.md
-
-## Release and Versioning
-
-1. Releases are generated from pushed git tags that match v\* (example: v0.2.0).
-2. Tag-triggered workflow publishes multi-arch images and release bundle artifacts.
-3. Conventional commits are recommended for readable history and changelog quality.
-
-## Contributing
+## 🤝 Contributing
 
 1. Keep changes scoped and documented.
-2. Run:
+2. Run the standard checks:
+   ```bash
    pnpm install
    pnpm lint
    pnpm test
    pnpm format:check
-3. Validate compose and smoke flow before opening PR.
+   ```
+3. Validate compose + smoke flow before opening a PR.
+4. Use [Conventional Commits](https://www.conventionalcommits.org/) for a readable history.
 
-## Status
+---
 
-Current release baseline is bootstrap-quality and designed for local-first deployments. The full stack is now the only supported runtime profile. Team/internet exposure still requires TLS, stronger auth model, and rate limiting.
+## 📦 Releases
+
+Releases are generated from pushed git tags matching `v*` (example: `v0.2.0`). The tag-triggered
+workflow publishes multi-arch images to GHCR and attaches a release bundle.
+
+---
+
+## 🧭 Status
+
+Current baseline is **bootstrap-quality**, designed for local-first deployments. The full stack is
+the only supported runtime profile. Internet or team exposure still requires TLS, a stronger auth
+model, and a hardened rate-limiting layer.
+
+---
+
+## 📄 License
+
+[MIT](LICENSE.md)

@@ -100,3 +100,33 @@ Check for missing token file, bad permissions, short token length, or wrong pref
 3. Gateway should emit `429` under repeated bad requests.
 4. Gateway must return `410` for `/sse` and `/messages`.
 5. MCP initialize on `/mcp` must return `200`.
+
+## Common failures
+
+1. `401` on `/health` with token: verify token content and ensure gateway sees `.secrets/auth-token`.
+2. `docker compose config` fails: ensure `.env` exists and `MYBRAIN_DB_PASSWORD` is set.
+3. `POST /mcp` fails: inspect gateway and mcp logs:
+   ```bash
+   docker compose logs my-brain-gateway my-brain-mcp
+   ```
+4. MCP returns "Session not found": run `Initialize session` first and make sure follow-up requests send `Mcp-Session-Id`. The bundled Postman collection auto-saves this header to `mcp_session_id`.
+5. `410` on `/sse` or `/messages`: expected. Legacy SSE is intentionally blocked at the gateway; use `POST /mcp`.
+6. Orchestrator unhealthy: check logs and `/ready` endpoint from container network.
+
+## Webapp-specific failures
+
+1. Login returns `503 Orchestrator unavailable`: check orchestrator health and internal key consistency.
+2. Login returns `401 Invalid or expired token`: verify token in `.secrets/auth-token` and paste again.
+3. Graph page loads but no nodes: verify seeded memory data and `/v1/memory/graph` response.
+
+## Postman sanity flow
+
+The bundled collection `my-brain (minimal)` exercises a compact sanity flow:
+
+1. `General Smoke -> Health check`
+2. `General Smoke -> Initialize MCP session`
+3. `General Smoke -> List MCP tools`
+4. `General Smoke -> LLM generate`
+
+The initialize request auto-saves `Mcp-Session-Id` into `mcp_session_id`. The generate
+request auto-builds the JSON payload and uses `think=false` to return direct answer text.

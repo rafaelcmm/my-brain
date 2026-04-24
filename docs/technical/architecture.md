@@ -46,6 +46,19 @@ This document describes runtime architecture for local my-brain deployments.
 
 Single full runtime profile is supported. Degraded capability signaling is exposed through orchestrator capabilities APIs so clients can adjust trust level.
 
+## Repository layout
+
+1. `src/orchestrator/` — runtime process, HTTP API, memory and learning services.
+2. `src/mcp-bridge/` — Streamable HTTP MCP facade over orchestrator tools.
+3. `src/web/` — Next.js operator UI (dashboard, memory CRUD, query, graph).
+4. `src/gateway/` — Caddy ingress, bearer auth, reverse proxy.
+5. `src/db/` — database bootstrap SQL and schema init.
+6. `src/scripts/` — install, rotate, smoke, backfill, security-check automation.
+7. `postman/` — minimal sanity collection for MCP and LLM flows.
+8. `.github/workflows/` — CI and release pipelines.
+9. `docs/` — technical docs and runbooks.
+10. `.claude/` — model-invoked skills and curator agent templates.
+
 ## Design constraints
 
 1. Default bind host remains `127.0.0.1`.
