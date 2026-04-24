@@ -17,12 +17,12 @@ import type http from "node:http";
  *
  * @param res - Node.js ServerResponse to write into.
  * @param status - HTTP status code.
- * @param payload - JSON-serializable response body object.
+ * @param payload - JSON-serializable response body.
  */
 export function sendJson(
   res: http.ServerResponse,
   status: number,
-  payload: Record<string, unknown>,
+  payload: unknown,
 ): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload));
