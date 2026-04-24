@@ -25,6 +25,7 @@ import {
 } from "../../infrastructure/postgres-memory.js";
 import { buildProjectContext } from "../../application/project-context.js";
 import type { ProjectContextHints } from "../../application/project-context.js";
+import { wrapWithSynthesis } from "./_envelope.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */
 type AllowRequestReq = Parameters<typeof allowRequest>[0];
@@ -128,8 +129,7 @@ export async function handleMemoryWrite(
       );
       incrementMetric("mb_dedup_hits_total");
       incrementMetric("mb_remember_total");
-      sendJson(res, 200, {
-        success: true,
+      const envelopePayload = await wrapWithSynthesis(ctx, "mb_remember", null, {
         memory_id: duplicate.memoryId,
         scope: envelope.scope,
         type: envelope.type,
@@ -138,6 +138,7 @@ export async function handleMemoryWrite(
         matched_id: duplicate.memoryId,
         score: Number(duplicate.score.toFixed(3)),
       });
+      sendJson(res, 200, envelopePayload);
       return;
     }
 
@@ -154,12 +155,13 @@ export async function handleMemoryWrite(
     }
     incrementMetric("mb_remember_total");
 
-    sendJson(res, 200, {
-      success: true,
+    const envelopePayload = await wrapWithSynthesis(ctx, "mb_remember", null, {
       memory_id: memoryId,
       scope: envelope.scope,
       type: envelope.type,
+      deduped: false,
     });
+    sendJson(res, 200, envelopePayload);
   } catch (error) {
     const msg =
       typeof error === "object" && error !== null && "message" in error
