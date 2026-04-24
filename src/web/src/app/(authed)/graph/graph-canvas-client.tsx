@@ -22,12 +22,51 @@ interface GraphCanvasClientProps {
 }
 
 /**
+ * Narrow union used by relation filters and edge styling controls.
+ */
+type EdgeReason = GraphSnapshot["edges"][number]["reason"];
+
+/**
+ * Centralized relation styling so legend, toggles, and edge rendering stay consistent.
+ */
+const REASON_CONFIG: Record<
+  EdgeReason,
+  {
+    label: string;
+    color: string;
+    strokeWidth: number;
+  }
+> = {
+  "shared-repo": {
+    label: "Shared repo",
+    color: "#0f766e",
+    strokeWidth: 2,
+  },
+  "shared-tags": {
+    label: "Shared tags",
+    color: "#b45309",
+    strokeWidth: 2,
+  },
+  similarity: {
+    label: "Similarity",
+    color: "#2563eb",
+    strokeWidth: 2.5,
+  },
+};
+
+/**
  * Interactive graph renderer with elk layout, filtering, and inspection panel.
  */
 export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
   const [scopeFilter, setScopeFilter] = useState<string>("all");
   const [minEdgeWeight, setMinEdgeWeight] = useState<number>(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [showOnlyNeighbors, setShowOnlyNeighbors] = useState(false);
+  const [enabledReasons, setEnabledReasons] = useState<Record<EdgeReason, boolean>>({
+    "shared-repo": true,
+    "shared-tags": true,
+    similarity: true,
+  });
   const [layoutedNodes, setLayoutedNodes] = useState<Node[]>([]);
   const [layoutedEdges, setLayoutedEdges] = useState<Edge[]>([]);
   const [isLayouting, setIsLayouting] = useState(false);
@@ -39,12 +78,12 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
   }, [graph.nodes]);
 
   const filteredGraph = useMemo(() => {
-    const nodes = graph.nodes.filter(
+    const nodesByScope = graph.nodes.filter(
       (node) => scopeFilter === "all" || node.scope === scopeFilter,
     );
-    const visibleNodeIds = new Set(nodes.map((node) => node.id));
+    const visibleNodeIds = new Set(nodesByScope.map((node) => node.id));
 
-    const edges = graph.edges.filter((edge) => {
+    const edgesByScope = graph.edges.filter((edge) => {
       if (
         !visibleNodeIds.has(edge.source) ||
         !visibleNodeIds.has(edge.target)
@@ -52,12 +91,61 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
         return false;
       }
 
+      if (!enabledReasons[edge.reason]) {
+        return false;
+      }
+
       const weight = edge.weight ?? 1;
       return weight >= minEdgeWeight;
     });
 
+    if (!showOnlyNeighbors || !selectedNodeId) {
+      return { nodes: nodesByScope, edges: edgesByScope };
+    }
+
+    const neighborIds = new Set<string>([selectedNodeId]);
+    for (const edge of edgesByScope) {
+      if (edge.source === selectedNodeId) {
+        neighborIds.add(edge.target);
+      }
+      if (edge.target === selectedNodeId) {
+        neighborIds.add(edge.source);
+      }
+    }
+
+    const nodes = nodesByScope.filter((node) => neighborIds.has(node.id));
+    const nodeIds = new Set(nodes.map((node) => node.id));
+    const edges = edgesByScope.filter(
+      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target),
+    );
+
     return { nodes, edges };
-  }, [graph, scopeFilter, minEdgeWeight]);
+  }, [
+    enabledReasons,
+    graph,
+    minEdgeWeight,
+    scopeFilter,
+    selectedNodeId,
+    showOnlyNeighbors,
+  ]);
+
+  const neighborhoodNodeIds = useMemo(() => {
+    if (!selectedNodeId) {
+      return new Set<string>();
+    }
+
+    const ids = new Set<string>([selectedNodeId]);
+    for (const edge of filteredGraph.edges) {
+      if (edge.source === selectedNodeId) {
+        ids.add(edge.target);
+      }
+      if (edge.target === selectedNodeId) {
+        ids.add(edge.source);
+      }
+    }
+
+    return ids;
+  }, [filteredGraph.edges, selectedNodeId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +180,9 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
 
       const nodes: Node[] = filteredGraph.nodes.map((node) => {
         const elkNode = layout.children?.find((child) => child.id === node.id);
+        const isSelected = selectedNodeId === node.id;
+        const isNeighbor = neighborhoodNodeIds.has(node.id);
+        const shouldDim = selectedNodeId !== null && !isNeighbor;
 
         return {
           id: node.id,
@@ -108,21 +199,41 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
           style: {
             width: 180,
             borderRadius: 12,
-            border: "1px solid #d1d5db",
+            border: isSelected ? "2px solid #1d4ed8" : "1px solid #d1d5db",
             background: node.type === "decision" ? "#dbeafe" : "#f8fafc",
             fontSize: 12,
             padding: 8,
+            opacity: shouldDim ? 0.3 : 1,
           },
         };
       });
 
-      const edges: Edge[] = filteredGraph.edges.map((edge, index) => ({
-        id: `${edge.source}-${edge.target}-${index}`,
-        source: edge.source,
-        target: edge.target,
-        animated: edge.reason === "similarity",
-        label: edge.reason,
-      }));
+      const edges: Edge[] = filteredGraph.edges.map((edge, index) => {
+        const reasonConfig = REASON_CONFIG[edge.reason];
+        const weight = edge.weight ?? 1;
+        const touchesSelection =
+          selectedNodeId !== null &&
+          (edge.source === selectedNodeId || edge.target === selectedNodeId);
+        const shouldDim = selectedNodeId !== null && !touchesSelection;
+
+        return {
+          id: `${edge.source}-${edge.target}-${index}`,
+          source: edge.source,
+          target: edge.target,
+          animated: edge.reason === "similarity" && !shouldDim,
+          label: edge.reason,
+          style: {
+            stroke: reasonConfig.color,
+            strokeWidth: reasonConfig.strokeWidth + Math.min(2.5, weight * 2),
+            opacity: shouldDim ? 0.2 : 0.8,
+          },
+          labelStyle: {
+            fill: reasonConfig.color,
+            fontSize: 10,
+            fontWeight: 600,
+          },
+        };
+      });
 
       setLayoutedNodes(nodes);
       setLayoutedEdges(edges);
@@ -142,7 +253,7 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
     return () => {
       cancelled = true;
     };
-  }, [filteredGraph]);
+  }, [filteredGraph, neighborhoodNodeIds, selectedNodeId]);
 
   const selectedNode = useMemo(
     () => graph.nodes.find((node) => node.id === selectedNodeId) ?? null,
@@ -153,6 +264,9 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
     setSelectedNodeId(node.id);
   };
 
+  /**
+   * Exports current graph viewport as PNG; no-ops when SVG/canvas APIs are unavailable.
+   */
   async function exportPng(): Promise<void> {
     const svg = document.querySelector(".react-flow__viewport")?.closest("svg");
     if (!svg) {
@@ -208,7 +322,7 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
         </label>
 
         <label className="text-sm text-gray-700">
-          Min similarity
+          Min edge weight
           <input
             className="ml-2 align-middle"
             type="range"
@@ -221,6 +335,39 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
           <span className="ml-2 text-xs text-gray-500">
             {minEdgeWeight.toFixed(2)}
           </span>
+        </label>
+
+        {Object.entries(REASON_CONFIG).map(([reason, config]) => {
+          const typedReason = reason as EdgeReason;
+          return (
+            <label key={reason} className="text-sm text-gray-700 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={enabledReasons[typedReason]}
+                onChange={(event) => {
+                  setEnabledReasons((current) => ({
+                    ...current,
+                    [typedReason]: event.target.checked,
+                  }));
+                }}
+              />
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: config.color }}
+              />
+              {config.label}
+            </label>
+          );
+        })}
+
+        <label className="text-sm text-gray-700 flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showOnlyNeighbors}
+            disabled={!selectedNodeId}
+            onChange={(event) => setShowOnlyNeighbors(event.target.checked)}
+          />
+          Focus selected node
         </label>
 
         <button
@@ -264,6 +411,35 @@ export function GraphCanvasClient({ graph }: GraphCanvasClientProps) {
         </div>
 
         <aside className="rounded border bg-white p-4 space-y-2">
+          <div className="rounded border border-gray-200 bg-gray-50 p-3 space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Visible graph
+            </h2>
+            <div className="text-sm text-gray-700">
+              <p>Nodes: {filteredGraph.nodes.length}</p>
+              <p>Edges: {filteredGraph.edges.length}</p>
+              <p>
+                Focus: {selectedNodeId ? `${neighborhoodNodeIds.size - 1} connected` : "none"}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded border border-gray-200 p-3 space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Relation legend
+            </h2>
+            {Object.entries(REASON_CONFIG).map(([reason, config]) => (
+              <p key={reason} className="text-sm text-gray-700 flex items-center gap-2">
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: config.color }}
+                />
+                <span className="font-medium">{config.label}</span>
+                <span className="text-xs text-gray-500">({reason})</span>
+              </p>
+            ))}
+          </div>
+
           <h2 className="text-sm font-semibold uppercase text-gray-500">
             Node details
           </h2>
