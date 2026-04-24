@@ -9,7 +9,7 @@ my-brain is a self-hosted memory and orchestration layer for MCP-compatible clie
 ## ✨ Features
 
 - 🧠 **Durable memory** that survives editor sessions — your AI remembers decisions, bugs, conventions, and context across projects.
-- 🔌 **One MCP endpoint** at `/mcp` (spec 2024-11-05+) — point Claude Code, Cursor, or any MCP client at it and you're in.
+- 🔌 **One MCP endpoint** at `/mcp` — point Claude Code, Cursor, or any MCP client at it and you're in.
 - 🖥️ **Web dashboard** — browse memories, run queries, explore the knowledge graph, manage CRUD from a Next.js UI.
 - 🔐 **Secure by default** — localhost bind, bearer token auth, CSRF-protected web sessions, rotatable secrets.
 - 🐳 **Single-command setup** — Docker Compose brings up Postgres, orchestrator, MCP bridge, Ollama, and web.
@@ -33,8 +33,16 @@ The installer generates a bearer token in `.secrets/auth-token`, writes a workin
 
 ### Or, one-line bootstrap from a release
 
+GPU host (default, needs the NVIDIA container runtime):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rafaelcmm/my-brain/v0.1.0/src/scripts/install.sh | bash
+```
+
+CPU-only host (skips the GPU override):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rafaelcmm/my-brain/v0.1.0/src/scripts/install-cpu.sh | bash
 ```
 
 Replace `v0.1.0` with the release tag you want.

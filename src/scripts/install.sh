@@ -18,6 +18,7 @@ MYBRAIN_LLM_MODEL="${MYBRAIN_LLM_MODEL:-qwen3.5:0.8b}"
 MYBRAIN_FORCE_REGEN_TOKEN="${MYBRAIN_FORCE_REGEN_TOKEN:-false}"
 MYBRAIN_VERIFY_SHA256="${MYBRAIN_VERIFY_SHA256:-}"
 MYBRAIN_MIN_TOKEN_LENGTH="${MYBRAIN_MIN_TOKEN_LENGTH:-73}"
+MYBRAIN_CPU_ONLY="${MYBRAIN_CPU_ONLY:-false}"
 
 say() { printf '>> %s\n' "$*"; }
 ok() { printf 'OK %s\n' "$*"; }
@@ -28,7 +29,10 @@ usage() {
   cat <<'EOF'
 Usage:
   ./src/scripts/install.sh [--model MODEL] [--version TAG]
-                       [--install-dir PATH] [--force-token]
+                       [--install-dir PATH] [--force-token] [--cpu]
+
+Flags:
+  --cpu           Skip GPU override; run the stack on CPU only.
 
 Optional integrity check:
   MYBRAIN_VERIFY_SHA256=<expected_hash> ./src/scripts/install.sh
@@ -51,6 +55,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --force-token)
       MYBRAIN_FORCE_REGEN_TOKEN=true
+      shift
+      ;;
+    --cpu)
+      MYBRAIN_CPU_ONLY=true
       shift
       ;;
     --help|-h)
@@ -158,11 +166,20 @@ fi
 token_perms="$(stat -c '%a' "$token_file" 2>/dev/null || stat -f '%A' "$token_file")"
 [[ "$token_perms" == "600" ]] || die "bad token perms: $token_perms"
 
+# CPU-only mode bypasses docker-compose.override.yml (which reserves NVIDIA GPUs)
+# by pinning compose to the base file. Any other mode uses compose defaults.
+if [[ "$MYBRAIN_CPU_ONLY" == "true" ]]; then
+  compose=(docker compose -f docker-compose.yml)
+  ok "CPU-only mode: skipping GPU override"
+else
+  compose=(docker compose)
+fi
+
 say "Pulling images"
-docker compose pull
+"${compose[@]}" pull
 
 say "Starting services"
-docker compose up -d
+"${compose[@]}" up -d
 
 say "Waiting for orchestrator health"
 for i in $(seq 1 60); do
