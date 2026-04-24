@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Memory } from "@/lib/domain";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
+import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
 import type { Metadata } from "next";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
@@ -16,6 +16,17 @@ const SYS_PREFIX = "sys.";
 export const metadata: Metadata = {
   title: "Memory Detail",
 };
+
+/**
+ * Produces compact id labels so breadcrumb and heading remain readable.
+ */
+function toMemoryLabel(id: string): string {
+  if (id.length <= 22) {
+    return id;
+  }
+
+  return `${id.slice(0, 10)}...${id.slice(-8)}`;
+}
 
 /**
  * Memory detail page for a single memory id.
@@ -45,34 +56,39 @@ export default async function MemoryDetailPage({
   const userEntries = Object.entries(memory.metadata ?? {}).filter(
     ([k]) => !k.startsWith(SYS_PREFIX),
   );
+  const memoryLabel = toMemoryLabel(memory.id);
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto space-y-6">
-        <Link href="/memories" className="text-sm underline text-blue-700">
-          Back to memories
-        </Link>
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Memories", href: "/memories" },
+            { label: memoryLabel },
+          ]}
+        />
 
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
+        <div className="ds-card space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-xs uppercase text-gray-500">
+            <span className="text-xs uppercase text-slate-500">
               {memory.type} · {memory.scope}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-slate-500">
               {memory.created_at ?? ""}
             </span>
           </div>
 
-          <h1 className="text-xl font-bold text-gray-900">{memory.id}</h1>
+          <h1 className="text-xl font-bold text-slate-900">{memory.id}</h1>
           <article
-            className="prose prose-slate max-w-none text-gray-900"
+            className="prose prose-slate max-w-none text-slate-900"
             dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
           />
         </div>
 
         {(sysEntries.length > 0 || userEntries.length > 0) && (
-          <div className="bg-white rounded-lg shadow p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Metadata</h2>
+          <div className="ds-card space-y-4">
+            <h2 className="text-lg font-semibold text-slate-900">Metadata</h2>
 
             {userEntries.length > 0 && (
               <MetadataSection title="Properties" entries={userEntries} />

@@ -1,5 +1,6 @@
 import { getAuthenticatedClient } from "@/lib/composition/auth";
 import { MemoriesListClient } from "@/app/(authed)/memories/memories-list-client";
+import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -30,62 +31,73 @@ function buildNextPageUrl(
 
 /**
  * Memories page with server-side filters and pagination cursor.
+ *
+ * In Next.js 15+, searchParams is a Promise and must be awaited before access.
  */
 export default async function MemoriesPage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     scope?: string;
     type?: string;
     language?: string;
     tag?: string;
     search?: string;
     cursor?: string;
-  };
+  }>;
 }) {
   const client = await getAuthenticatedClient();
   if (!client) {
     return <div className="p-6">Unauthorized</div>;
   }
 
+  // Await searchParams — required in Next.js 15+ where it is a Promise.
+  const resolvedParams = await searchParams;
+
   const filters = {
-    ...(searchParams?.scope ? { scope: searchParams.scope } : {}),
-    ...(searchParams?.type ? { type: searchParams.type } : {}),
-    ...(searchParams?.language ? { language: searchParams.language } : {}),
-    ...(searchParams?.tag ? { tag: searchParams.tag } : {}),
-    ...(searchParams?.search ? { search: searchParams.search } : {}),
+    ...(resolvedParams?.scope ? { scope: resolvedParams.scope } : {}),
+    ...(resolvedParams?.type ? { type: resolvedParams.type } : {}),
+    ...(resolvedParams?.language ? { language: resolvedParams.language } : {}),
+    ...(resolvedParams?.tag ? { tag: resolvedParams.tag } : {}),
+    ...(resolvedParams?.search ? { search: resolvedParams.search } : {}),
   };
 
-  const list = await client.listMemories(filters, searchParams?.cursor);
+  const list = await client.listMemories(filters, resolvedParams?.cursor);
 
   return (
     <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Memories" },
+          ]}
+        />
         <h1 className="text-3xl font-extrabold text-slate-900">Memories</h1>
 
         <form className="grid grid-cols-1 md:grid-cols-5 gap-3 ds-card">
           <input
             name="search"
             placeholder="Search"
-            defaultValue={searchParams?.search}
+            defaultValue={resolvedParams?.search}
             className="ds-input"
           />
           <input
             name="scope"
             placeholder="scope"
-            defaultValue={searchParams?.scope}
+            defaultValue={resolvedParams?.scope}
             className="ds-input"
           />
           <input
             name="type"
             placeholder="type"
-            defaultValue={searchParams?.type}
+            defaultValue={resolvedParams?.type}
             className="ds-input"
           />
           <input
             name="language"
             placeholder="language"
-            defaultValue={searchParams?.language}
+            defaultValue={resolvedParams?.language}
             className="ds-input"
           />
           <button
@@ -101,7 +113,7 @@ export default async function MemoriesPage({
         {list.next_cursor && (
           <a
             className="inline-block ds-btn-primary px-4 py-2"
-            href={buildNextPageUrl(list.next_cursor, searchParams)}
+            href={buildNextPageUrl(list.next_cursor, resolvedParams)}
           >
             Next page
           </a>

@@ -1,5 +1,6 @@
 import { GetBrainSummaryUseCase } from "@/lib/application/get-brain-summary.usecase";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
+import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
 import type { TopEntry } from "@/lib/domain";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -126,6 +127,7 @@ export default async function DashboardPage({
   return (
     <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        <Breadcrumbs items={[{ label: "Dashboard" }]} />
         <h1 className="text-3xl font-extrabold text-slate-900">Dashboard</h1>
 
         {degraded ? (
@@ -137,44 +139,57 @@ export default async function DashboardPage({
           </section>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start auto-rows-min">
-          <div className="ds-card">
+        <div className="ds-card-masonry md:columns-2 xl:columns-3">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card">
             <p className={cardLabelClass}>Total memories</p>
             <p className={`${cardMetricClass} text-[#2E3192]`}>
               {summary.total_memories}
             </p>
+            </div>
           </div>
 
-          <div className="ds-card">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card">
             <p className={cardLabelClass}>Scopes tracked</p>
             <p className={`${cardMetricClass} text-[#00ADEF]`}>
               {Object.keys(summary.by_scope).length}
             </p>
+            </div>
           </div>
 
-          <div className="ds-card">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card">
             <p className={cardLabelClass}>Types tracked</p>
             <p className={`${cardMetricClass} text-slate-900`}>
               {Object.keys(summary.by_type).length}
             </p>
+            </div>
           </div>
 
-          <div className="ds-card space-y-2">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card space-y-2">
             <p className={cardLabelClass}>Top tags</p>
             {renderTopEntryList(topTags.slice(0, 5), "No tags yet")}
+            </div>
           </div>
 
-          <div className="ds-card space-y-2">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card space-y-2">
             <p className={cardLabelClass}>Top frameworks</p>
             {renderTopEntryList(topFrameworks.slice(0, 5), "No frameworks yet")}
+            </div>
           </div>
 
-          <div className="ds-card space-y-2">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card space-y-2">
             <p className={cardLabelClass}>Top languages</p>
             {renderTopEntryList(topLanguages.slice(0, 5), "No languages yet")}
+            </div>
           </div>
 
-          <div className="ds-card space-y-2">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card space-y-2">
             <p className={cardLabelClass}>Capabilities</p>
             <p className="text-sm text-slate-700">
               Version: {capabilities.version}
@@ -183,9 +198,11 @@ export default async function DashboardPage({
             <p className="text-sm text-slate-700">
               Distinct scopes: {Object.keys(summary.by_scope).length}
             </p>
+            </div>
           </div>
 
-          <div className="ds-card ds-card-accent space-y-2">
+          <div className="ds-card-masonry-item">
+            <div className="ds-card ds-card-accent space-y-2">
             <p className={cardLabelClass}>Learning stats</p>
             {learningEntries.length === 0 ? (
               <p className="text-sm text-slate-600">No learning signals yet</p>
@@ -199,6 +216,7 @@ export default async function DashboardPage({
                 ))}
               </ul>
             )}
+            </div>
           </div>
         </div>
 

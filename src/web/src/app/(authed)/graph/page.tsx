@@ -1,6 +1,7 @@
 import { GetMemoryGraphUseCase } from "@/lib/application/get-memory-graph.usecase";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
 import { GraphCanvasClient } from "@/app/(authed)/graph/graph-canvas-client";
+import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -22,6 +23,12 @@ export default async function GraphPage() {
   return (
     <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Graph" },
+          ]}
+        />
         <h1 className="text-3xl font-extrabold text-slate-900">Memory Graph</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start auto-rows-min">

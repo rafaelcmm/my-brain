@@ -13,6 +13,7 @@ import remarkRehype from "remark-rehype";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
 import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
+import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
 
 const draftStorageKey = "mybrain.editor.draft.v1";
 
@@ -281,6 +282,13 @@ export default function NewMemoryPage() {
   return (
     <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Memories", href: "/memories" },
+            { label: "New" },
+          ]}
+        />
         <h1 className="text-3xl font-extrabold text-slate-900">New Memory</h1>
 
         <form
