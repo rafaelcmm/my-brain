@@ -1,7 +1,7 @@
 ---
 description: Mandatory MCP tool trigger and ordering policy for my-brain skills and agents.
 paths:
-   - "**"
+  - "**"
 ---
 
 # MCP Tool Enforcement
