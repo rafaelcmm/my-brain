@@ -4,15 +4,32 @@
 
 All successful `mb_*` tool responses plus `/v1/capabilities` and `/v1/context/probe` return:
 
+Success (synthesis completed):
+
 ```json
 {
   "success": true,
-  "summary": "Human-readable synthesis string (empty on fallback)",
+  "summary": "Human-readable synthesis string",
   "data": {},
   "synthesis": {
     "status": "ok",
     "model": "qwen3.5:0.8b",
-    "latency_ms": 120,
+    "latency_ms": 120
+  }
+}
+```
+
+Success (synthesis failed — fallback):
+
+```json
+{
+  "success": true,
+  "summary": "",
+  "data": {},
+  "synthesis": {
+    "status": "fallback",
+    "model": "qwen3.5:0.8b",
+    "latency_ms": 15043,
     "error": "timeout after 15000ms"
   }
 }

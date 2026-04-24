@@ -2,11 +2,26 @@ import type { SynthesisPort } from "../domain/synthesis.js";
 import { buildPrompt } from "../application/synthesis/templates.js";
 import { resolveGenerateEndpoint } from "./query-processing.js";
 
+/**
+ * Shape of a successful Ollama `/api/generate` response body.
+ *
+ * Ollama returns `response` for completion mode and `message.content` for
+ * chat mode. Both paths are probed so the adapter works regardless of which
+ * Ollama version or endpoint variant is configured.
+ */
 interface GeneratePayload {
   response?: unknown;
   message?: { content?: unknown };
 }
 
+/**
+ * Normalises raw LLM output into a single-line string capped at 1 024
+ * characters. Trims and collapses whitespace so synthesised summaries
+ * render consistently across operator UIs that display them inline.
+ *
+ * @returns Empty string when output is absent so callers can treat falsy as
+ *   synthesis failure rather than branching on undefined.
+ */
 function sanitizeOutput(value: string | undefined): string {
   if (!value) {
     return "";
@@ -15,6 +30,17 @@ function sanitizeOutput(value: string | undefined): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 1024);
 }
 
+/**
+ * Detects common prompt-injection artifacts in synthesised output.
+ *
+ * Despite the <<<DATA>>> delimiter guard in the prompt, a capable model may
+ * still regurgitate injected instructions from user-controlled memory content.
+ * This filter rejects known exfiltration patterns so injected summaries never
+ * reach clients. Additional patterns should be added conservatively — false
+ * positives downgrade to fallback mode, which is preferable to leaking.
+ *
+ * @returns `true` when the output contains a recognised injection artefact.
+ */
 function hasInjectionArtifacts(value: string): boolean {
   return (
     /ignore\s+previous\s+instructions/i.test(value) ||
