@@ -21,6 +21,7 @@ This file is API and configuration reference for maintainers.
 - `GET /v1/memory/summary`: dashboard aggregates (totals, scope/type counts, top tags/frameworks/languages, learning stats).
 - `GET /v1/memory/list`: paginated memory list with filters (`scope`, `type`, `repo_name`, `language`, `tag`, `search`, `cursor`, `limit`).
 - `GET /v1/memory/graph`: graph snapshot (`nodes`, `edges`, `total_count`) built from shared repo/tag relations.
+- `GET /v1/memory/{id}`: single memory retrieval by id (sanitized path param).
 - `POST /v1/memory/backfill`: batch-bounded repair for rows missing `content_sha1`, `embedding`, or
   `embedding_vector`. Each call processes at most 1000 rows and returns `{ processed: N }`. Full
   repair of a large corpus requires looping until `processed === 0` — use
@@ -32,7 +33,7 @@ More endpoints are added incrementally and documented here in same change set.
 
 ## Environment variables
 
-Core variables currently consumed by runtime:
+### Orchestrator
 
 - `MYBRAIN_DB_URL`
 - `MYBRAIN_LLM_URL`
@@ -44,12 +45,29 @@ Core variables currently consumed by runtime:
 - `MYBRAIN_MAX_REQUEST_BODY_BYTES`
 - `MYBRAIN_PROMETHEUS_PORT`
 - `MYBRAIN_INTERNAL_API_KEY`
+- `MYBRAIN_AUTH_TOKEN_FILE`
 - `MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH` — set `true` only when the orchestrator container user
   cannot read the token secret file (EACCES, non-root owner) and the Caddy gateway is the sole
   bearer-token enforcement point. Defaults to `false` (fail-closed).
 - `RUVECTOR_HOST`
 - `RUVECTOR_PORT`
 - `RUVLLM_SONA_ENABLED`
+
+### MCP bridge
+
+- `MYBRAIN_REST_URL` — upstream orchestrator base URL.
+- `MYBRAIN_INTERNAL_API_KEY` — shared internal header value.
+- `MYBRAIN_PROMETHEUS_PORT` — bridge metrics port.
+- `MYBRAIN_UPSTREAM_MCP_COMMAND`, `MYBRAIN_UPSTREAM_MCP_ARGS` — optional upstream MCP transport override.
+
+### Web
+
+- `MYBRAIN_WEB_SESSION_SECRET` — ≥16 chars, rotates session cookies on change.
+- `MYBRAIN_WEB_ORCHESTRATOR_URL` — orchestrator base URL used by server routes.
+- `MYBRAIN_INTERNAL_API_KEY` — injected as `x-mybrain-internal-key` on server-to-orchestrator calls.
+- `MYBRAIN_WEB_PUBLIC_BASE_URL` — canonical public URL for redirects and CSRF.
+- `MYBRAIN_WEB_RATE_LIMIT_LOGIN` — login attempts per window (default 5).
+- `MYBRAIN_WEB_LOG_LEVEL` — `trace|debug|info|warn|error`.
 
 ## Context probe hints
 
