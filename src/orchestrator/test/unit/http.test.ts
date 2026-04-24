@@ -114,12 +114,6 @@ function makeCtx(): RouterContext {
       Array(1024).fill(0) as number[],
     getCachedEmbedding: async (_content: string): Promise<number[]> =>
       Array(1024).fill(0) as number[],
-    backfill: async (_batchSize: number) => ({
-      processed: 0,
-      updated: 0,
-      failed: 0,
-      skipped: 0,
-    }),
   };
 }
 

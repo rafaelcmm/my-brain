@@ -15,7 +15,7 @@ import type { RouterContext } from "../router-context.js";
 import { sendJson } from "../response.js";
 import { parseJsonBody } from "../body.js";
 import { allowRequest } from "../../policies/rate-limit.js";
-import { normalizeDigestSince } from "../../application/backfill.js";
+import { normalizeDigestSince } from "../../application/digest-window.js";
 import { getPersistedLearningStats } from "../../application/learning-stats.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */

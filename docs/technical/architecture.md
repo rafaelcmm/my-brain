@@ -53,7 +53,7 @@ Single full runtime profile is supported. Degraded capability signaling is expos
 3. `src/web/` — Next.js operator UI (dashboard, memory CRUD, query, graph).
 4. `src/gateway/` — Caddy ingress, bearer auth, reverse proxy.
 5. `src/db/` — database bootstrap SQL and schema init.
-6. `src/scripts/` — install, rotate, smoke, backfill, security-check automation.
+6. `src/scripts/` — install, rotate, smoke, security-check automation.
 7. `postman/` — minimal sanity collection for MCP and LLM flows.
 8. `.github/workflows/` — CI and release pipelines.
 9. `docs/` — technical docs and runbooks.

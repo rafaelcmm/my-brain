@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS my_brain_memory_metadata (
     -- which corresponds to qwen3-embedding:0.6b's output dimensionality.
     -- If the model changes, run: ALTER TABLE my_brain_memory_metadata
     --   ALTER COLUMN embedding_vector TYPE ruvector(N)
-    -- Existing rows retain NULL until the /v1/memory/backfill endpoint re-embeds them.
+    -- Existing rows may retain NULL when embedding generation fails at write time.
     embedding_vector RUVECTOR(1024),
     type TEXT NOT NULL,
     scope TEXT NOT NULL,

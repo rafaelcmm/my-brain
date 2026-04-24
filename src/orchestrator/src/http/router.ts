@@ -24,17 +24,15 @@
  *   GET  /v1/memory/list              → handlers/memory-list.ts
  *   GET  /v1/memory/graph             → handlers/memory-graph.ts
  *   GET  /v1/memory/{id}              → handlers/memory-get.ts
- *   POST /v1/memory/backfill          — heal legacy rows (inline, simple)
  */
 
 import type http from "node:http";
 import { sendJson } from "./response.js";
 import { parseJsonBody } from "./body.js";
-import { allowRequest } from "../policies/rate-limit.js";
 import { hasValidInternalKey } from "../policies/auth.js";
 import { incrementMetric, renderMetrics } from "../observability/metrics.js";
 import { sanitizeStatusError } from "../observability/log.js";
-import { type loadConfig, parseInteger } from "../config/load-config.js";
+import { type loadConfig } from "../config/load-config.js";
 import type { ProjectContextHints } from "../application/project-context.js";
 import { buildProjectContext } from "../application/project-context.js";
 import {
@@ -61,15 +59,12 @@ export { getCapabilities, getDefaultRecallThreshold };
 /** Inferred config shape from loadConfig return value. */
 type _OrchestratorConfig = ReturnType<typeof loadConfig>;
 
-/** Shape expected by allowRequest's socket parameter. */
-type AllowRequestReq = Parameters<typeof allowRequest>[0];
-
 /**
  * Routes an incoming HTTP request to the appropriate handler and writes the response.
  *
  * Auth: all routes except /health and /ready require the X-Mybrain-Internal-Key header.
  * Rate limits: memory-write, memory-recall, memory-vote, memory-forget, session, and
- * memory-backfill are subject to per-operation rate windows enforced by their handlers.
+ * memory-digest are subject to per-operation rate windows enforced by their handlers.
  *
  * @param req - Incoming HTTP request from the Node.js http server.
  * @param res - HTTP response to write.
@@ -319,50 +314,6 @@ export async function handleRequest(
     !url.startsWith("/v1/memory/summary")
   ) {
     return handleMemoryGet(req, res, ctx);
-  }
-
-  // ── POST /v1/memory/backfill ───────────────────────────────────────────────
-  // Kept inline: this route has no domain logic — it forwards directly to the
-  // bound ctx.backfill function which operates on the current pool.
-  if (method === "POST" && url === "/v1/memory/backfill") {
-    if (!allowRequest(req as unknown as AllowRequestReq, "memory-backfill")) {
-      sendJson(res, 429, {
-        success: false,
-        error: "RATE_LIMITED",
-        message: "memory backfill rate limit exceeded",
-      });
-      return;
-    }
-
-    if (!state.pool) {
-      sendJson(res, 503, {
-        success: false,
-        error: "SERVER_ERROR",
-        message: "metadata storage unavailable",
-      });
-      return;
-    }
-
-    let payload: Record<string, unknown>;
-    try {
-      payload = await parseBody(req);
-    } catch (error) {
-      sendJson(res, 400, {
-        success: false,
-        error: "INVALID_INPUT",
-        message:
-          error instanceof Error ? error.message : "invalid json payload",
-      });
-      return;
-    }
-
-    const batchSize = Math.min(
-      Math.max(parseInteger(String(payload["batch_size"] ?? "200"), 200), 1),
-      1000,
-    );
-    const result = await ctx.backfill(batchSize);
-    sendJson(res, 200, { success: true, batch_size: batchSize, ...result });
-    return;
   }
 
   // ── 404 fallthrough ────────────────────────────────────────────────────────

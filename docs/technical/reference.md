@@ -22,10 +22,6 @@ This file is API and configuration reference for maintainers.
 - `GET /v1/memory/list`: paginated memory list with filters (`scope`, `type`, `repo_name`, `language`, `tag`, `search`, `cursor`, `limit`).
 - `GET /v1/memory/graph`: graph snapshot (`nodes`, `edges`, `total_count`) built from shared repo/tag relations.
 - `GET /v1/memory/{id}`: single memory retrieval by id (sanitized path param).
-- `POST /v1/memory/backfill`: batch-bounded repair for rows missing `content_sha1`, `embedding`, or
-  `embedding_vector`. Each call processes at most 1000 rows and returns `{ processed: N }`. Full
-  repair of a large corpus requires looping until `processed === 0` — use
-  `src/scripts/backfill-memory-metadata.sh` as the operator utility.
 - `POST /v1/session/open`: opens tracked session with context payload.
 - `POST /v1/session/close`: closes tracked session with success/quality labels.
 

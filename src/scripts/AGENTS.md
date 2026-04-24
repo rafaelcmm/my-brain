@@ -12,7 +12,6 @@ Applies to shell automation that wraps install, rotation, health checks, and rep
 | `install-cpu.sh`              | One-line wrapper that invokes `install.sh` with `MYBRAIN_CPU_ONLY=true` for hosts without NVIDIA runtime.                                                                                               |
 | `rotate-token.sh`             | Rotates the bearer token in `.secrets/auth-token`, reloads the gateway.                                                                                                                                 |
 | `smoke-test.sh`               | Health + auth + MCP initialize sanity pass. Used by CI and `local-operations.md`.                                                                                                                       |
-| `backfill-memory-metadata.sh` | Loops `/v1/memory/backfill` until orchestrator reports `processed: 0`. Safe to re-run.                                                                                                                  |
 | `security-check.sh`           | Validates token file existence, permissions, length, gateway auth matchers.                                                                                                                             |
 | `validate-tool-ids.sh`        | Checks that bridge tool ids match the documented contract.                                                                                                                                              |
 
