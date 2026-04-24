@@ -395,7 +395,7 @@ describe("POST /v1/memory/recall validation", () => {
       path: "/v1/memory/recall",
       method: "POST",
       headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
-      body: { query: "hello", mode: "processed", model: "qwen3.5:0.8b" },
+      body: { query: "hello", mode: "legacy", model: "qwen3.5:0.8b" },
     });
 
     assert.equal(status, 400);
