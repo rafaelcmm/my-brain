@@ -76,6 +76,16 @@ export async function handleMemoryRecall(
     return;
   }
 
+  if (payload["mode"] !== undefined || payload["model"] !== undefined) {
+    sendJson(res, 400, {
+      success: false,
+      error: "INVALID_INPUT",
+      message:
+        "mode and model are no longer supported in v2 — synthesis is always on",
+    });
+    return;
+  }
+
   const topK = Math.min(
     Math.max(
       parseInteger(String(payload["top_k"] ?? payload["topK"] ?? "8"), 8),

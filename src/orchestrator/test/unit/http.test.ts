@@ -284,4 +284,21 @@ describe("POST /v1/memory/recall validation", () => {
 
     assert.equal(status, 503);
   });
+
+  it("returns 400 when legacy mode or model params are supplied", async () => {
+    const { status, body } = await request({
+      port,
+      path: "/v1/memory/recall",
+      method: "POST",
+      headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
+      body: { query: "hello", mode: "processed", model: "qwen3.5:0.8b" },
+    });
+
+    assert.equal(status, 400);
+    const b = body as Record<string, unknown>;
+    assert.equal(
+      b["message"],
+      "mode and model are no longer supported in v2 — synthesis is always on",
+    );
+  });
 });
