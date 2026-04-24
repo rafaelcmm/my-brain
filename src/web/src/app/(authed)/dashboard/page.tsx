@@ -1,9 +1,14 @@
 import { GetBrainSummaryUseCase } from "@/lib/application/get-brain-summary.usecase";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
 import type { TopEntry } from "@/lib/domain";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 const ITEMS_PER_PAGE = 10;
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
 
 function paginate<T>(items: T[], page: number): T[] {
   const start = (page - 1) * ITEMS_PER_PAGE;
@@ -29,6 +34,17 @@ function totalPages(items: unknown[]): number {
 
 function hasEngineFailureMode(mode: string): boolean {
   return mode.toLowerCase() !== "engine";
+}
+
+/**
+ * Normalizes machine-formatted metric keys into human-readable card labels.
+ */
+function toTitleLabel(value: string): string {
+  return value
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function renderTopEntryList(
@@ -104,11 +120,13 @@ export default async function DashboardPage({
 
   const learningEntries = Object.entries(summary.learning_stats);
   const degraded = hasEngineFailureMode(capabilities.mode);
+  const cardLabelClass = "ds-card-title";
+  const cardMetricClass = "ds-card-metric";
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-extrabold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900">Dashboard</h1>
 
         {degraded ? (
           <section className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
@@ -119,64 +137,64 @@ export default async function DashboardPage({
           </section>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Total memories</p>
-            <p className="text-3xl font-extrabold text-blue-600">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start auto-rows-min">
+          <div className="ds-card">
+            <p className={cardLabelClass}>Total memories</p>
+            <p className={`${cardMetricClass} text-[#2E3192]`}>
               {summary.total_memories}
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Scopes tracked</p>
-            <p className="text-3xl font-extrabold text-green-600">
+          <div className="ds-card">
+            <p className={cardLabelClass}>Scopes tracked</p>
+            <p className={`${cardMetricClass} text-[#00ADEF]`}>
               {Object.keys(summary.by_scope).length}
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Types tracked</p>
-            <p className="text-3xl font-extrabold text-gray-900">
+          <div className="ds-card">
+            <p className={cardLabelClass}>Types tracked</p>
+            <p className={`${cardMetricClass} text-slate-900`}>
               {Object.keys(summary.by_type).length}
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Top tags</p>
+          <div className="ds-card space-y-2">
+            <p className={cardLabelClass}>Top tags</p>
             {renderTopEntryList(topTags.slice(0, 5), "No tags yet")}
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Top frameworks</p>
+          <div className="ds-card space-y-2">
+            <p className={cardLabelClass}>Top frameworks</p>
             {renderTopEntryList(topFrameworks.slice(0, 5), "No frameworks yet")}
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Top languages</p>
+          <div className="ds-card space-y-2">
+            <p className={cardLabelClass}>Top languages</p>
             {renderTopEntryList(topLanguages.slice(0, 5), "No languages yet")}
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Capabilities</p>
-            <p className="mt-2 text-sm text-gray-700">
+          <div className="ds-card space-y-2">
+            <p className={cardLabelClass}>Capabilities</p>
+            <p className="text-sm text-slate-700">
               Version: {capabilities.version}
             </p>
-            <p className="text-sm text-gray-700">Mode: {capabilities.mode}</p>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-slate-700">Mode: {capabilities.mode}</p>
+            <p className="text-sm text-slate-700">
               Distinct scopes: {Object.keys(summary.by_scope).length}
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <p className="text-xs uppercase text-gray-500">Learning stats</p>
+          <div className="ds-card ds-card-accent space-y-2">
+            <p className={cardLabelClass}>Learning stats</p>
             {learningEntries.length === 0 ? (
-              <p className="text-sm text-gray-500">No learning signals yet</p>
+              <p className="text-sm text-slate-600">No learning signals yet</p>
             ) : (
-              <ul className="space-y-2 text-sm text-gray-800">
+              <ul className="space-y-2 text-sm text-slate-800">
                 {learningEntries.map(([label, count]) => (
                   <li key={label} className="flex justify-between gap-3">
-                    <span className="truncate">{label}</span>
-                    <span className="font-semibold text-gray-900">{count}</span>
+                    <span className="truncate">{toTitleLabel(label)}</span>
+                    <span className="font-semibold text-slate-900">{count}</span>
                   </li>
                 ))}
               </ul>
@@ -184,7 +202,7 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <section className="bg-white rounded-lg shadow p-4 space-y-4">
+        <section className="ds-card space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold uppercase text-gray-500">
               Insight feed

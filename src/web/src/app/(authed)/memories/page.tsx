@@ -1,5 +1,10 @@
 import { getAuthenticatedClient } from "@/lib/composition/auth";
 import { MemoriesListClient } from "@/app/(authed)/memories/memories-list-client";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Memories",
+};
 
 function buildNextPageUrl(
   nextCursor: string,
@@ -54,38 +59,38 @@ export default async function MemoriesPage({
   const list = await client.listMemories(filters, searchParams?.cursor);
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <h1 className="text-3xl font-extrabold text-gray-900">Memories</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900">Memories</h1>
 
-        <form className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-white p-4 rounded-lg shadow">
+        <form className="grid grid-cols-1 md:grid-cols-5 gap-3 ds-card">
           <input
             name="search"
             placeholder="Search"
             defaultValue={searchParams?.search}
-            className="border rounded px-3 py-2"
+            className="ds-input"
           />
           <input
             name="scope"
             placeholder="scope"
             defaultValue={searchParams?.scope}
-            className="border rounded px-3 py-2"
+            className="ds-input"
           />
           <input
             name="type"
             placeholder="type"
             defaultValue={searchParams?.type}
-            className="border rounded px-3 py-2"
+            className="ds-input"
           />
           <input
             name="language"
             placeholder="language"
             defaultValue={searchParams?.language}
-            className="border rounded px-3 py-2"
+            className="ds-input"
           />
           <button
             type="submit"
-            className="bg-blue-600 text-white rounded px-3 py-2"
+            className="ds-btn-primary px-3 py-2"
           >
             Filter
           </button>
@@ -95,7 +100,7 @@ export default async function MemoriesPage({
 
         {list.next_cursor && (
           <a
-            className="inline-block bg-gray-900 text-white rounded px-4 py-2"
+            className="inline-block ds-btn-primary px-4 py-2"
             href={buildNextPageUrl(list.next_cursor, searchParams)}
           >
             Next page

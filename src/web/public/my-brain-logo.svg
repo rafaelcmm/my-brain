@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle (Optional for App Icon) -->
+  <rect width="512" height="512" rx="128" fill="white"/>
+  
+  <!-- The Quadrant Brain -->
+  <!-- Top Left: Notes (Lavender/Indigo) -->
+  <path d="M240 120C170 120 120 170 120 240H240V120Z" fill="#2E3192"/>
+  
+  <!-- Top Right: Tasks (Electric Cyan) -->
+  <path d="M272 120V240H392C392 170 342 120 272 120Z" fill="#00ADEF"/>
+  
+  <!-- Bottom Left: Diary (Soft Lavender) -->
+  <path d="M120 272C120 342 170 392 240 392V272H120Z" fill="#B298DC"/>
+  
+  <!-- Bottom Right: Calendar (Deep Indigo) -->
+  <path d="M272 272V392C342 392 392 342 392 272H272Z" fill="#1B1D57"/>
+  
+  <!-- Central AI Node (Connectivity) -->
+  <circle cx="256" cy="256" r="24" fill="white"/>
+  <circle cx="256" cy="256" r="12" fill="#00ADEF"/>
+</svg>

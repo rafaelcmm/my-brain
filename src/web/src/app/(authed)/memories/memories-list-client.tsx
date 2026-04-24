@@ -110,7 +110,7 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
               <div className="flex items-center gap-3">
                 <a
                   href={`/memories/${encodeURIComponent(memory.id)}`}
-                  className="text-sm underline text-blue-700"
+                  className="text-sm ds-link-primary"
                 >
                   Open
                 </a>

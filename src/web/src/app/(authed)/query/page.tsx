@@ -106,19 +106,19 @@ export default function QueryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto space-y-6">
-        <h1 className="text-3xl font-extrabold text-gray-900">Query Runner</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900">Query Runner</h1>
 
         <form
           onSubmit={run}
-          className="bg-white rounded-lg shadow p-6 space-y-4"
+          className="ds-card p-6 space-y-4"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <select
               value={tool}
               onChange={(event) => setTool(event.target.value as QueryTool)}
-              className="border rounded px-3 py-2"
+              className="ds-input"
             >
               <option value="mb_recall">mb_recall</option>
               <option value="mb_digest">mb_digest</option>
@@ -128,27 +128,27 @@ export default function QueryPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Query"
-              className="border rounded px-3 py-2"
+              className="ds-input"
               disabled={tool === "mb_digest"}
             />
             <input
               value={scope}
               onChange={(event) => setScope(event.target.value)}
               placeholder="Scope (optional)"
-              className="border rounded px-3 py-2"
+              className="ds-input"
             />
             <input
               value={type}
               onChange={(event) => setType(event.target.value)}
               placeholder="Type (digest only)"
-              className="border rounded px-3 py-2"
+              className="ds-input"
               disabled={tool !== "mb_digest"}
             />
           </div>
 
           <button
             type="submit"
-            className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-50"
+            className="ds-btn-primary px-4 py-2 disabled:opacity-50"
             disabled={loading}
           >
             {loading ? "Running..." : "Run"}
