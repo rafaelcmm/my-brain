@@ -61,6 +61,7 @@ export async function handleMemoryGet(
     created_at: string;
     last_seen_at: string;
     use_count: number;
+    metadata: unknown;
   }>(
     `SELECT
       memory_id,
@@ -72,7 +73,8 @@ export async function handleMemoryGet(
       tags,
       created_at,
       last_seen_at,
-      use_count
+      use_count,
+      metadata
      FROM my_brain_memory_metadata
      WHERE memory_id = $1
        AND forgotten_at IS NULL
@@ -99,6 +101,10 @@ export async function handleMemoryGet(
     repo_name: row.repo_name,
     language: row.language,
     tags: Array.isArray(row.tags) ? row.tags : [],
+    metadata:
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? row.metadata
+        : {},
     created_at: row.created_at,
     last_seen_at: row.last_seen_at,
     use_count: row.use_count,

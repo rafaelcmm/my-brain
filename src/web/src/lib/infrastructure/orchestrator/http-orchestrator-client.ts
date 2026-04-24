@@ -182,7 +182,19 @@ export class HttpOrchestratorClient implements OrchestratorClient {
   }
 
   async getMemory(id: string): Promise<Memory | null> {
-    const payload = await this.request(`/v1/memory/${encodeURIComponent(id)}`);
+    let payload: unknown;
+    try {
+      payload = await this.request(`/v1/memory/${encodeURIComponent(id)}`);
+    } catch (error) {
+      if (
+        error instanceof OrchestratorValidationError &&
+        error.message.includes("Request failed: 404")
+      ) {
+        return null;
+      }
+      throw error;
+    }
+
     const data = this.parsePayload(
       memoryByIdResponseSchema,
       payload,

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkRehype from "remark-rehype";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
 import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
@@ -33,6 +34,11 @@ const formSchema = z.object({
 });
 
 type FormState = z.infer<typeof formSchema>;
+
+interface ParsedCustomMetadata {
+  readonly value: Record<string, unknown>;
+  readonly error: string | null;
+}
 
 type MetadataFieldKey =
   | "repo"
@@ -108,6 +114,36 @@ function splitCsv(value?: string): string[] {
 }
 
 /**
+ * Parses custom metadata JSON while preserving user-facing syntax errors.
+ */
+function parseCustomMetadataJson(value?: string): ParsedCustomMetadata {
+  if (!value?.trim()) {
+    return { value: {}, error: null };
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {
+        value: {},
+        error: "Custom metadata must be a JSON object.",
+      };
+    }
+
+    return {
+      value: parsed as Record<string, unknown>,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      value: {},
+      error:
+        error instanceof Error ? error.message : "Invalid custom metadata JSON",
+    };
+  }
+}
+
+/**
  * Full markdown memory editor with metadata panel, preview, and draft persistence.
  */
 export default function NewMemoryPage() {
@@ -117,6 +153,11 @@ export default function NewMemoryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const customMetadata = useMemo(
+    () => parseCustomMetadataJson(form.customMetadataJson),
+    [form.customMetadataJson],
+  );
 
   useEffect(() => {
     sessionStorage.setItem(draftStorageKey, JSON.stringify(form));
@@ -129,6 +170,7 @@ export default function NewMemoryPage() {
       const file = await unified()
         .use(remarkParse)
         .use(remarkGfm)
+        .use(remarkRehype)
         .use(rehypeSanitize)
         .use(rehypeStringify)
         .process(form.content || "");
@@ -150,18 +192,6 @@ export default function NewMemoryPage() {
   }, [form.content]);
 
   const metadata = useMemo(() => {
-    let custom: Record<string, unknown> = {};
-    if (form.customMetadataJson?.trim()) {
-      try {
-        const parsed = JSON.parse(form.customMetadataJson);
-        if (parsed && typeof parsed === "object") {
-          custom = parsed as Record<string, unknown>;
-        }
-      } catch {
-        custom = {};
-      }
-    }
-
     return {
       repo: form.repo || null,
       repo_name: form.repo_name || null,
@@ -173,9 +203,9 @@ export default function NewMemoryPage() {
       source: form.source || null,
       author: form.author || null,
       agent: form.agent || null,
-      ...custom,
+      ...customMetadata.value,
     };
-  }, [form]);
+  }, [customMetadata.value, form]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -187,6 +217,11 @@ export default function NewMemoryPage() {
     const parsed = formSchema.safeParse(form);
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Invalid form");
+      return;
+    }
+
+    if (customMetadata.error) {
+      setError(`Invalid custom metadata JSON: ${customMetadata.error}`);
       return;
     }
 
@@ -244,16 +279,18 @@ export default function NewMemoryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+    <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <h1 className="text-3xl font-extrabold text-gray-900">New Memory</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900">New Memory</h1>
 
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          <section className="lg:col-span-2 bg-white rounded-lg shadow p-4 space-y-4">
-            <p className="text-sm text-gray-600">Markdown editor</p>
+          <section className="lg:col-span-2 ds-card space-y-4">
+            <p className="ds-card-title">
+              Markdown editor
+            </p>
             <CodeMirror
               value={form.content}
               extensions={[markdown()]}
@@ -268,15 +305,17 @@ export default function NewMemoryPage() {
             </div>
           </section>
 
-          <section className="bg-white rounded-lg shadow p-4 space-y-3">
-            <p className="text-sm font-semibold text-gray-900">Metadata</p>
+          <section className="ds-card space-y-3">
+            <p className="ds-card-title">
+              Metadata
+            </p>
 
             <select
               value={form.type}
               onChange={(event) =>
                 setForm((current) => ({ ...current, type: event.target.value }))
               }
-              className="w-full border rounded px-3 py-2"
+              className="w-full ds-input"
             >
               <option value="decision">decision</option>
               <option value="fix">fix</option>
@@ -295,7 +334,7 @@ export default function NewMemoryPage() {
                   scope: event.target.value,
                 }))
               }
-              className="w-full border rounded px-3 py-2"
+              className="w-full ds-input"
             >
               <option value="repo">repo</option>
               <option value="project">project</option>
@@ -312,7 +351,7 @@ export default function NewMemoryPage() {
                     [key]: event.target.value,
                   }))
                 }
-                className="w-full border rounded px-3 py-2"
+                className="w-full ds-input"
                 placeholder={label}
               />
             ))}
@@ -325,14 +364,27 @@ export default function NewMemoryPage() {
                   customMetadataJson: event.target.value,
                 }))
               }
-              className="w-full border rounded px-3 py-2 min-h-28"
+              className="w-full ds-input min-h-28"
               placeholder="Custom metadata JSON"
             />
 
+            {customMetadata.error ? (
+              <p className="text-xs text-red-700">{customMetadata.error}</p>
+            ) : null}
+
+            <div className="rounded border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase text-slate-500 mb-2">
+                Final metadata JSON
+              </p>
+              <pre className="text-xs text-slate-700 overflow-auto max-h-44">
+                {JSON.stringify(metadata, null, 2)}
+              </pre>
+            </div>
+
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-50"
+              disabled={submitting || Boolean(customMetadata.error)}
+              className="w-full ds-btn-primary px-4 py-2 disabled:opacity-50"
             >
               {submitting ? "Saving..." : "Save memory"}
             </button>

@@ -2,9 +2,20 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Memory } from "@/lib/domain";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
+import type { Metadata } from "next";
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkGfm from "remark-gfm";
+import remarkRehype from "remark-rehype";
+import rehypeSanitize from "rehype-sanitize";
+import rehypeStringify from "rehype-stringify";
 
 /** System metadata key prefix — rendered in a dedicated section. */
 const SYS_PREFIX = "sys.";
+
+export const metadata: Metadata = {
+  title: "Memory Detail",
+};
 
 /**
  * Memory detail page for a single memory id.
@@ -13,17 +24,20 @@ const SYS_PREFIX = "sys.";
 export default async function MemoryDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const resolvedParams = await params;
   const client = await getAuthenticatedClient();
   if (!client) {
     notFound();
   }
 
-  const memory: Memory | null = await client.getMemory(params.id);
+  const memory: Memory | null = await client.getMemory(resolvedParams.id);
   if (!memory) {
     notFound();
   }
+
+  const renderedMarkdown = await renderMemoryMarkdown(memory.content);
 
   const sysEntries = Object.entries(memory.metadata ?? {}).filter(([k]) =>
     k.startsWith(SYS_PREFIX),
@@ -50,7 +64,10 @@ export default async function MemoryDetailPage({
           </div>
 
           <h1 className="text-xl font-bold text-gray-900">{memory.id}</h1>
-          <p className="text-gray-900 whitespace-pre-wrap">{memory.content}</p>
+          <article
+            className="prose prose-slate max-w-none text-gray-900"
+            dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
+          />
         </div>
 
         {(sysEntries.length > 0 || userEntries.length > 0) && (
@@ -69,6 +86,21 @@ export default async function MemoryDetailPage({
       </div>
     </main>
   );
+}
+
+/**
+ * Converts stored markdown into sanitized HTML for safe SSR rendering.
+ */
+async function renderMemoryMarkdown(content: string): Promise<string> {
+  const file = await unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkRehype)
+    .use(rehypeSanitize)
+    .use(rehypeStringify)
+    .process(content);
+
+  return String(file);
 }
 
 /** Renders a labeled group of metadata key/value pairs. */
