@@ -1,7 +1,7 @@
 ---
-name: memory-retrieval
 description: Define safe memory retrieval behavior with metadata filters, empty-result honesty, and degraded-mode trust boundaries.
-applyTo: "**"
+paths:
+	- "**"
 ---
 
 # Memory Retrieval
@@ -11,6 +11,7 @@ applyTo: "**"
 1. Prefer metadata filtering over global search.
 2. Pass `repo` and `language` by default.
 3. Use `scope=repo` unless user asks for cross-project recall.
+4. For context enrichment, call tools in order: `hooks_capabilities` -> `mb_context_probe` -> `mb_recall`.
 
 ## Empty-result policy
 
@@ -25,3 +26,4 @@ When `engine=false`:
 1. Treat memory results as advisory, not authoritative.
 2. Apply high threshold (`>=0.85`).
 3. Prefer no-context over noisy context.
+4. Do not skip retrieval automatically when `engine=false`; enforce threshold instead.

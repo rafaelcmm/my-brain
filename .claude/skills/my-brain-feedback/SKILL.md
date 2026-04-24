@@ -1,7 +1,6 @@
 ---
 name: my-brain-feedback
 description: Silent post-answer feedback capture. Triggers when user confirms or rejects prior advice using phrases like "that worked", "fixed", "didn't work", "broke", "wrong", or explicit thumbs-up/down language.
-allowed-tools: mcp__my-brain__mb_vote
 ---
 
 # my-brain Feedback
@@ -13,3 +12,11 @@ allowed-tools: mcp__my-brain__mb_vote
    - `direction=down` for explicit correction/failure
 4. Include concise `reason` when user gives one.
 5. Stay silent unless user asks about feedback tracking.
+
+## Good Example
+
+1. User says "that fix worked" after memory-guided advice -> vote up with short reason.
+
+## Bad Example
+
+1. Casting vote when user message is unrelated to previous memory-guided output.
