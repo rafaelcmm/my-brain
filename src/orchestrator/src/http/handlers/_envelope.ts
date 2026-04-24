@@ -2,6 +2,7 @@ import type {
   SynthesisToolName,
   ToolResponseEnvelope,
 } from "../../domain/synthesis.js";
+import { incrementMetric, observeDurationMs } from "../../observability/metrics.js";
 import type { RouterContext } from "../router-context.js";
 
 /**
@@ -23,6 +24,8 @@ export async function wrapWithSynthesis<T>(
   question: string | null,
   data: T,
 ): Promise<ToolResponseEnvelope<T>> {
+  const startedAt = Date.now();
+
   try {
     const synthesized = await ctx.synthesis.synthesize(
       tool,
@@ -30,6 +33,8 @@ export async function wrapWithSynthesis<T>(
       data,
       ctx.config.synthTimeoutMs,
     );
+    incrementMetric("mb_synthesis_total", { tool, status: "ok" });
+    observeDurationMs("mb_synthesis_latency_ms", synthesized.latencyMs);
 
     return {
       success: true,
@@ -42,6 +47,10 @@ export async function wrapWithSynthesis<T>(
       },
     };
   } catch (error) {
+    const latencyMs = Date.now() - startedAt;
+    incrementMetric("mb_synthesis_total", { tool, status: "fallback" });
+    observeDurationMs("mb_synthesis_latency_ms", latencyMs);
+
     return {
       success: true,
       summary: "",
@@ -49,7 +58,7 @@ export async function wrapWithSynthesis<T>(
       synthesis: {
         status: "fallback",
         model: ctx.config.llmModel,
-        latency_ms: 0,
+        latency_ms: latencyMs,
         error: error instanceof Error ? error.message : "synthesis failed",
       },
     };
