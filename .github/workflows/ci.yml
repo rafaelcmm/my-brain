@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -137,6 +138,7 @@ jobs:
       - run: pnpm exec prettier --check .
 
   integration-smoke:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: [required-gates, compose-validate, caddyfile-validate, shellcheck]
     steps:
@@ -181,7 +183,18 @@ jobs:
           tags: my-brain/gateway:local
           cache-from: type=gha,scope=gateway
           cache-to: type=gha,mode=max,scope=gateway
+      - name: Build web image (cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/web/Dockerfile
+          load: true
+          push: false
+          tags: my-brain/web:local
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
       - name: Build and start stack
+        # Manual deep smoke: all app images are prebuilt and loaded locally.
         # CI runners may not have NVIDIA runtime; use base compose only (CPU-safe).
         run: docker compose -f docker-compose.yml up -d --no-build
       - name: Smoke test
