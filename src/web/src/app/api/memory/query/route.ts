@@ -69,12 +69,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const normalizedRequest = normalizeQueryRequest(payload);
-  if (normalizedRequest.modeModelRejected) {
+  if (normalizedRequest.errorMessage) {
     return applyNoStoreHeaders(
       NextResponse.json(
         {
           success: false,
-          error: "mode/model are no longer supported in v2",
+          error: normalizedRequest.errorMessage,
         },
         { status: 400 },
       ),
@@ -96,12 +96,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 function normalizeQueryRequest(payload: unknown): {
   request: QueryRequest;
-  modeModelRejected: boolean;
+  errorMessage: string | null;
 } {
   if (!payload || typeof payload !== "object") {
     return {
       request: { tool: "mb_recall", params: {} },
-      modeModelRejected: false,
+      errorMessage: null,
     };
   }
 
@@ -114,6 +114,20 @@ function normalizeQueryRequest(payload: unknown): {
       ((record["params"] as Record<string, unknown>)["mode"] !== undefined ||
         (record["params"] as Record<string, unknown>)["model"] !== undefined));
   const tool = record["tool"];
+  const toolText = typeof tool === "string" ? tool.trim() : "";
+
+  if (
+    toolText &&
+    toolText !== "mb_recall" &&
+    toolText !== "mb_digest" &&
+    toolText !== "digest" &&
+    toolText !== "recall"
+  ) {
+    return {
+      request: { tool: "mb_recall", params: {} },
+      errorMessage: "unsupported tool for v2 query route",
+    };
+  }
 
   if (
     (tool === "mb_recall" || tool === "mb_digest") &&
@@ -125,7 +139,9 @@ function normalizeQueryRequest(payload: unknown): {
         tool,
         params: record.params as Record<string, unknown>,
       },
-      modeModelRejected: hasDeprecatedParams,
+      errorMessage: hasDeprecatedParams
+        ? "mode/model are no longer supported in v2"
+        : null,
     };
   }
 
@@ -139,6 +155,8 @@ function normalizeQueryRequest(payload: unknown): {
         type: record.type,
       },
     },
-    modeModelRejected: hasDeprecatedParams,
+    errorMessage: hasDeprecatedParams
+      ? "mode/model are no longer supported in v2"
+      : null,
   };
 }
