@@ -1,0 +1,98 @@
+ 11959 total
+46
+Scope: 3 of 4 workspace projects
+src/mcp-bridge test$ pnpm run build && node --test --test-concurrency=1
+src/orchestrator test$ node --import tsx --test test/**/*.test.ts
+src/web test$ vitest
+src/web test:  DEV  v1.6.1 /home/rafaelmonteiro/Workspace/my-brain/src/web
+src/orchestrator test: [integration] Skipping memory-endpoints suite — TEST_DB_URL not set.
+src/mcp-bridge test: > my-brain-mcp-bridge@0.1.0 build /home/rafaelmonteiro/Workspace/my-brain/src/mcp-bridge
+src/mcp-bridge test: > tsc -p tsconfig.json
+src/orchestrator test: ✔ test/integration/memory-endpoints.integration.test.ts (516.953287ms)
+src/orchestrator test: [integration] Skipping postgres-memory suite — TEST_DB_URL not set.
+src/orchestrator test: ✔ test/integration/postgres-memory.integration.test.ts (458.708543ms)
+src/orchestrator test: ✔ contentFingerprint normalizes equivalent content (2.59741ms)
+src/orchestrator test: ✔ asVector coerces arrays and serialized arrays (0.785291ms)
+src/orchestrator test: ▶ GET /health
+src/orchestrator test:   ✔ returns 200 with status ok and service name (25.682227ms)
+src/orchestrator test:   ✔ includes degraded:true when DB is not connected (2.396139ms)
+src/orchestrator test:   ✔ includes capabilities map in response (2.402961ms)
+src/orchestrator test: ✔ GET /health (38.904825ms)
+src/orchestrator test: ▶ GET /ready
+src/orchestrator test:   ✔ returns 503 when subsystems are not initialized (1.947587ms)
+src/orchestrator test: ✔ GET /ready (2.145563ms)
+src/orchestrator test: ▶ auth gating
+src/orchestrator test:   ✔ returns 401 on /v1/capabilities without API key (1.956724ms)
+src/orchestrator test:   ✔ returns 401 on POST /v1/memory/recall with wrong key (1.485018ms)
+src/orchestrator test:   ✔ returns non-401 on /v1/capabilities with correct API key (1.729052ms)
+src/orchestrator test: ✔ auth gating (5.66377ms)
+src/orchestrator test: ▶ GET /v1/capabilities
+src/orchestrator test:   ✔ returns capabilities object when authenticated (4.094031ms)
+src/orchestrator test: ✔ GET /v1/capabilities (4.686535ms)
+src/orchestrator test: ▶ unknown routes
+src/orchestrator test:   ✔ returns 404 for unknown path with valid key (4.74166ms)
+src/orchestrator test: ✔ unknown routes (4.971716ms)
+src/orchestrator test: ▶ POST /v1/memory/recall validation
+src/orchestrator test:   ✔ returns 400 when query field is missing (2.77117ms)
+src/orchestrator test:   ✔ returns 400 when mode is invalid (0.899478ms)
+src/orchestrator test:   ✔ returns 400 when processed mode uses unsupported model (0.99592ms)
+src/orchestrator test: ✔ POST /v1/memory/recall validation (4.886595ms)
+src/orchestrator test: ▶ initializeIntelligenceEngine
+src/orchestrator test:   ✔ loads engine factory and marks state as loaded (92.20768ms)
+src/orchestrator test: ✔ initializeIntelligenceEngine (93.34611ms)
+src/orchestrator test: ▶ initializeLlmRuntime
+src/orchestrator test:   ✔ creates runtime and marks llm state as loaded (26.829365ms)
+src/orchestrator test: ✔ initializeLlmRuntime (26.966786ms)
+src/orchestrator test: ✔ sanitizeText trims and bounds values (1.00094ms)
+src/orchestrator test: ✔ sanitizeTags keeps unique valid tags only (1.114035ms)
+src/orchestrator test: ✔ validateMemoryEnvelope normalizes valid payloads (0.471034ms)
+src/orchestrator test: ✔ validateMemoryEnvelope reports contract violations (0.22101ms)
+src/orchestrator test: ✔ normalizeRepoSelector expands remote variants (1.646625ms)
+src/orchestrator test: ✔ parseRemoteRepo returns canonical repo identifiers (0.907232ms)
+src/web test:  ✓ src/lib/application/session-cookie-security.test.ts  (8 tests) 6ms
+src/web test:  ✓ src/lib/application/authenticate.usecase.test.ts  (2 tests) 8ms
+src/web test:  ✓ src/lib/application/run-query.usecase.test.ts  (7 tests) 10ms
+src/web test: (node:135679) Warning: `--localstorage-file` was provided without a valid path
+src/web test: (Use `node --trace-warnings ...` to show where the warning was created)
+src/web test:  ✓ src/app/api/route-handlers.test.ts  (10 tests) 151ms
+src/web test:  ✓ src/lib/infrastructure/session/in-memory-session-store.test.ts  (4 tests) 310ms
+src/web test:  ✓ src/lib/infrastructure/orchestrator/http-orchestrator-client.test.ts  (6 tests) 111ms
+src/web test:  ✓ src/lib/application/get-brain-summary.usecase.test.ts  (2 tests) 6ms
+src/web test:  ✓ src/lib/application/get-memory-graph.usecase.test.ts  (2 tests) 5ms
+src/orchestrator test: ▶ processRecallQuery
+src/orchestrator test:   ✔ returns rewritten query when LLM responds with response field (55.6502ms)
+src/orchestrator test:   ✔ times out when LLM is slow (1005.137338ms)
+src/orchestrator test:   ✔ synthesizes grounded answer and sends think:false (13.037867ms)
+src/orchestrator test: ✔ processRecallQuery (1075.118769ms)
+src/web test:  ✓ src/lib/application/create-memory.usecase.test.ts  (2 tests) 6ms
+src/web test:  ✓ src/lib/infrastructure/session/file-session-store.test.ts  (2 tests) 269ms
+src/web test:  Test Files  10 passed (10)
+src/web test:       Tests  45 passed (45)
+src/web test:    Start at  14:13:40
+src/web test:    Duration  1.25s (transform 655ms, setup 0ms, collect 1.17s, tests 882ms, environment 4ms, prepare 1.14s)
+src/web test:  PASS  Waiting for file changes...
+src/web test:        press h to show help, press q to quit
+src/orchestrator test: ✔ voteBias stays bounded and neutral without votes (1.5439ms)
+src/orchestrator test: ✔ lexicalBoost rewards overlapping query tokens (0.334275ms)
+src/orchestrator test: ✔ similarity handles equal, mismatched, and zero vectors (0.182797ms)
+src/orchestrator test: ℹ tests 30
+src/orchestrator test: ℹ suites 9
+src/orchestrator test: ℹ pass 30
+src/orchestrator test: ℹ fail 0
+src/orchestrator test: ℹ cancelled 0
+src/orchestrator test: ℹ skipped 0
+src/orchestrator test: ℹ todo 0
+src/orchestrator test: ℹ duration_ms 1789.144518
+src/orchestrator test: Done
+src/mcp-bridge test: ✔ bridge supports full mb tool surface and metrics auth (2325.229958ms)
+src/mcp-bridge test: ✔ bridge blocks brain_* tools when engine capability disabled (2289.454431ms)
+src/mcp-bridge test: ℹ tests 2
+src/mcp-bridge test: ℹ suites 0
+src/mcp-bridge test: ℹ pass 2
+src/mcp-bridge test: ℹ fail 0
+src/mcp-bridge test: ℹ cancelled 0
+src/mcp-bridge test: ℹ skipped 0
+src/mcp-bridge test: ℹ todo 0
+src/mcp-bridge test: ℹ duration_ms 4833.84668
+src/mcp-bridge test: Done
+32
