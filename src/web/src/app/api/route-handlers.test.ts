@@ -97,8 +97,13 @@ describe("POST /api/memory/query", () => {
     expect(payload.error).toContain("orchestrator unavailable");
   });
 
-  it("passes processed mode and pinned model to orchestrator recall", async () => {
-    const recall = vi.fn(async () => ({ success: true }));
+  it("rejects mode/model params for v2 query route", async () => {
+    const recall = vi.fn(async () => ({
+      success: true,
+      summary: "ok",
+      data: { query: "hello", results: [] },
+      synthesis: { status: "ok", model: "qwen3.5:0.8b", latency_ms: 10 },
+    }));
     authMocks.getSessionIdFromCookies.mockResolvedValue("s1");
     authMocks.verifySessionCsrfToken.mockResolvedValue(true);
     authMocks.getAuthenticatedClient.mockResolvedValue({
@@ -112,23 +117,45 @@ describe("POST /api/memory/query", () => {
         "http://localhost/api/memory/query",
         JSON.stringify({
           tool: "mb_recall",
-          params: {
-            query: "hello",
-            mode: "processed",
-            model: "qwen3.5:0.8b",
-          },
+          params: { query: "hello", mode: "legacy", model: "qwen3.5:0.8b" },
         }),
         "csrf",
       ),
     );
 
-    expect(response.status).toBe(200);
-    expect(recall).toHaveBeenCalledWith(
-      "hello",
-      undefined,
-      "processed",
-      "qwen3.5:0.8b",
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: "mode/model are no longer supported in v2",
+    });
+    expect(recall).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported query tool", async () => {
+    authMocks.getSessionIdFromCookies.mockResolvedValue("s1");
+    authMocks.verifySessionCsrfToken.mockResolvedValue(true);
+    authMocks.getAuthenticatedClient.mockResolvedValue({
+      recall: vi.fn(),
+      digest: vi.fn(),
+    });
+
+    const { POST } = await import("@/app/api/memory/query/route");
+    const response = await POST(
+      createPostRequest(
+        "http://localhost/api/memory/query",
+        JSON.stringify({
+          tool: ["mb", "search"].join("_"),
+          params: { query: "hello" },
+        }),
+        "csrf",
+      ),
     );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: "unsupported tool for v2 query route",
+    });
   });
 });
 

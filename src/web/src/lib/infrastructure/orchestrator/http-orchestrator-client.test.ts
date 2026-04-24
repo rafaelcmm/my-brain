@@ -4,6 +4,7 @@ import { setupServer } from "msw/node";
 import { HttpOrchestratorClient } from "@/lib/infrastructure/orchestrator/http-orchestrator-client";
 import {
   OrchestratorAuthError,
+  OrchestratorError,
   OrchestratorUnavailableError,
   OrchestratorValidationError,
 } from "@/lib/ports/orchestrator-client.port";
@@ -28,6 +29,19 @@ function createClient(): HttpOrchestratorClient {
   return new HttpOrchestratorClient(baseUrl, "bearer-token", "internal-key");
 }
 
+function envelope(data: unknown) {
+  return {
+    success: true,
+    summary: "summary",
+    data,
+    synthesis: {
+      status: "ok",
+      model: "qwen3.5:0.8b",
+      latency_ms: 10,
+    },
+  };
+}
+
 describe("HttpOrchestratorClient contract", () => {
   it("injects auth and internal key headers", async () => {
     let authHeader = "";
@@ -37,7 +51,9 @@ describe("HttpOrchestratorClient contract", () => {
       http.post(`${baseUrl}/v1/memory/recall`, ({ request }) => {
         authHeader = request.headers.get("authorization") ?? "";
         internalHeader = request.headers.get("x-mybrain-internal-key") ?? "";
-        return HttpResponse.json({ hits: [] });
+        return HttpResponse.json(
+          envelope({ query: "x", top_k: 8, min_score: 0.6, results: [] }),
+        );
       }),
     );
 
@@ -51,10 +67,30 @@ describe("HttpOrchestratorClient contract", () => {
   it("handles happy path for all adapter methods", async () => {
     server.use(
       http.get(`${baseUrl}/v1/capabilities`, () =>
-        HttpResponse.json({
-          capabilities: { engine: true },
-          db: { extensionVersion: "1.2.3" },
-        }),
+        HttpResponse.json(
+          envelope({
+            capabilities: {
+              engine: true,
+              vectorDb: true,
+              sona: true,
+              attention: true,
+              embeddingDim: 1024,
+            },
+            features: {
+              vectorDb: true,
+              sona: true,
+              attention: true,
+              embeddingDim: 1024,
+            },
+            degradedReasons: [],
+            db: {
+              extensionVersion: "1.2.3",
+              adrSchemasReady: true,
+              embeddingProvider: "ollama",
+              embeddingReady: true,
+            },
+          }),
+        ),
       ),
       http.get(`${baseUrl}/ready`, () => HttpResponse.json({ ok: true })),
       http.get(`${baseUrl}/v1/memory/summary`, () =>
@@ -104,9 +140,18 @@ describe("HttpOrchestratorClient contract", () => {
           tags: ["a"],
         }),
       ),
-      http.post(`${baseUrl}/v1/memory`, () => HttpResponse.json({ id: "m-2" })),
+      http.post(`${baseUrl}/v1/memory`, () =>
+        HttpResponse.json(
+          envelope({
+            memory_id: "m-2",
+            scope: "repo",
+            type: "decision",
+            deduped: false,
+          }),
+        ),
+      ),
       http.post(`${baseUrl}/v1/memory/forget`, () =>
-        HttpResponse.json({ ok: true }),
+        HttpResponse.json(envelope({ memory_id: "m-1", mode: "soft" })),
       ),
       http.get(`${baseUrl}/v1/memory/graph`, ({ request }) => {
         const query = new URL(request.url).searchParams;
@@ -114,18 +159,19 @@ describe("HttpOrchestratorClient contract", () => {
         return HttpResponse.json({ nodes: [], edges: [], total_count: 0 });
       }),
       http.post(`${baseUrl}/v1/memory/recall`, () =>
-        HttpResponse.json({ hits: [] }),
+        HttpResponse.json(
+          envelope({ query: "hello", top_k: 8, min_score: 0.6, results: [] }),
+        ),
       ),
       http.post(`${baseUrl}/v1/memory/digest`, () =>
-        HttpResponse.json({ digest: [] }),
+        HttpResponse.json(envelope({ since: "7d", rows: [], learning: {} })),
       ),
     );
 
     const client = createClient();
 
-    await expect(client.getCapabilities()).resolves.toEqual({
-      version: "1.2.3",
-      mode: "engine",
+    await expect(client.getCapabilities()).resolves.toMatchObject({
+      data: { db: { extensionVersion: "1.2.3" } },
     });
     await expect(client.health()).resolves.toBe(true);
     await expect(client.getBrainSummary()).resolves.toMatchObject({
@@ -137,16 +183,20 @@ describe("HttpOrchestratorClient contract", () => {
     await expect(client.getMemory("m-1")).resolves.toMatchObject({ id: "m-1" });
     await expect(
       client.createMemory("body", "decision", "repo", {}),
-    ).resolves.toEqual({ id: "m-2" });
-    await expect(client.forgetMemory("m-1")).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ data: { memory_id: "m-2" } });
+    await expect(client.forgetMemory("m-1")).resolves.toMatchObject({
+      data: { memory_id: "m-1" },
+    });
     await expect(client.getMemoryGraph(50, 0)).resolves.toEqual({
       nodes: [],
       edges: [],
       total_count: 0,
     });
-    await expect(client.recall("hello", "repo")).resolves.toEqual({ hits: [] });
-    await expect(client.digest("repo", "decision")).resolves.toEqual({
-      digest: [],
+    await expect(client.recall("hello", "repo")).resolves.toMatchObject({
+      data: { query: "hello" },
+    });
+    await expect(client.digest("repo", "decision")).resolves.toMatchObject({
+      data: { since: "7d" },
     });
   });
 
@@ -194,6 +244,19 @@ describe("HttpOrchestratorClient contract", () => {
     await expect(client.recall("hello")).rejects.toBeInstanceOf(
       OrchestratorValidationError,
     );
+  });
+
+  it("throws ENVELOPE_SHAPE_ERROR when tool endpoint returns legacy shape", async () => {
+    server.use(
+      http.post(`${baseUrl}/v1/memory/recall`, () =>
+        HttpResponse.json({ hits: [] }),
+      ),
+    );
+
+    const client = createClient();
+    await expect(client.recall("hello")).rejects.toMatchObject({
+      code: "ENVELOPE_SHAPE_ERROR",
+    } satisfies Partial<OrchestratorError>);
   });
 
   it("rejects malformed summary/list/graph payloads with validation error", async () => {

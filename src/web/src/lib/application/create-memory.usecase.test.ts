@@ -3,7 +3,21 @@ import { CreateMemoryUseCase } from "@/lib/application/create-memory.usecase";
 
 describe("CreateMemoryUseCase", () => {
   it("creates memory with validated input", async () => {
-    const createMemory = vi.fn(async () => ({ id: "m-1" }));
+    const createMemory = vi.fn(async () => ({
+      success: true as const,
+      summary: "Memory stored",
+      data: {
+        memory_id: "m-1",
+        scope: "repo",
+        type: "decision",
+        deduped: false,
+      },
+      synthesis: {
+        status: "ok" as const,
+        model: "qwen3.5:0.8b",
+        latency_ms: 100,
+      },
+    }));
     const useCase = new CreateMemoryUseCase({
       getCapabilities: vi.fn(),
       health: vi.fn(),
@@ -25,7 +39,12 @@ describe("CreateMemoryUseCase", () => {
     });
 
     expect(createMemory).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({ id: "m-1" });
+    expect(result).toEqual({
+      memory_id: "m-1",
+      scope: "repo",
+      type: "decision",
+      deduped: false,
+    });
   });
 
   it("rejects invalid payload", async () => {

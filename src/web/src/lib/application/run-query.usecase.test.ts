@@ -1,7 +1,43 @@
 import { describe, expect, it, vi } from "vitest";
 import { RunQueryUseCase } from "@/lib/application/run-query.usecase";
+import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
 
-function createClient() {
+function makeRecallEnvelope() {
+  return {
+    success: true as const,
+    summary: "Two memories match the query.",
+    data: {
+      query: "q",
+      top_k: 8,
+      min_score: 0.6,
+      results: [],
+    },
+    synthesis: {
+      status: "ok" as const,
+      model: "qwen3.5:0.8b",
+      latency_ms: 120,
+    },
+  };
+}
+
+function makeDigestEnvelope() {
+  return {
+    success: true as const,
+    summary: "Two memories match the query.",
+    data: {
+      since: "7d",
+      rows: [],
+      learning: {},
+    },
+    synthesis: {
+      status: "ok" as const,
+      model: "qwen3.5:0.8b",
+      latency_ms: 120,
+    },
+  };
+}
+
+function createClient(): OrchestratorClient {
   return {
     getCapabilities: vi.fn(),
     health: vi.fn(),
@@ -11,13 +47,13 @@ function createClient() {
     createMemory: vi.fn(),
     forgetMemory: vi.fn(),
     getMemoryGraph: vi.fn(),
-    recall: vi.fn(async () => ({ hits: [] })),
-    digest: vi.fn(async () => ({ digest: [] })),
+    recall: vi.fn(async () => makeRecallEnvelope()),
+    digest: vi.fn(async () => makeDigestEnvelope()),
   };
 }
 
 describe("RunQueryUseCase", () => {
-  it("runs recall raw mode by default", async () => {
+  it("maps recall envelope summary into QueryResponse", async () => {
     const client = createClient();
     const useCase = new RunQueryUseCase(client);
 
@@ -26,50 +62,10 @@ describe("RunQueryUseCase", () => {
       params: { query: "hello" },
     });
 
-    expect(client.recall).toHaveBeenCalledWith(
-      "hello",
-      undefined,
-      "raw",
-      undefined,
-    );
+    expect(client.recall).toHaveBeenCalledWith("hello", undefined);
     expect(result.status).toBe(200);
-    expect(result.error).toBeUndefined();
-  });
-
-  it("runs recall processed mode with pinned model", async () => {
-    const client = createClient();
-    const useCase = new RunQueryUseCase(client);
-
-    const result = await useCase.execute({
-      tool: "mb_recall",
-      params: { query: "hello", mode: "processed" },
-    });
-
-    expect(client.recall).toHaveBeenCalledWith(
-      "hello",
-      undefined,
-      "processed",
-      "qwen3.5:0.8b",
-    );
-    expect(result.status).toBe(200);
-  });
-
-  it("keeps legacy mb_search default on processed mode", async () => {
-    const client = createClient();
-    const useCase = new RunQueryUseCase(client);
-
-    const result = await useCase.execute({
-      tool: "mb_search",
-      params: { query: "hello" },
-    });
-
-    expect(client.recall).toHaveBeenCalledWith(
-      "hello",
-      undefined,
-      "processed",
-      "qwen3.5:0.8b",
-    );
-    expect(result.status).toBe(200);
+    expect(result.summary).toBe("Two memories match the query.");
+    expect(result.synthesis?.status).toBe("ok");
   });
 
   it("runs digest path", async () => {
@@ -85,12 +81,12 @@ describe("RunQueryUseCase", () => {
     expect(result.status).toBe(200);
   });
 
-  it("rejects missing query for recall-like tools", async () => {
+  it("rejects missing query for recall", async () => {
     const client = createClient();
     const useCase = new RunQueryUseCase(client);
 
     const result = await useCase.execute({
-      tool: "mb_search",
+      tool: "mb_recall",
       params: {},
     });
 
@@ -98,29 +94,21 @@ describe("RunQueryUseCase", () => {
     expect(result.error).toBe("query is required");
   });
 
-  it("rejects invalid mode", async () => {
+  it("returns synthesis null on error path", async () => {
     const client = createClient();
-    const useCase = new RunQueryUseCase(client);
+    const failingRecall: OrchestratorClient["recall"] = async () => {
+      throw new Error("orchestrator down");
+    };
+    client.recall = vi.fn(failingRecall);
 
+    const useCase = new RunQueryUseCase(client);
     const result = await useCase.execute({
       tool: "mb_recall",
-      params: { query: "hello", mode: "bad" },
+      params: { query: "hello" },
     });
 
-    expect(result.status).toBe(400);
-    expect(result.error).toBe("mode must be raw or processed");
-  });
-
-  it("rejects non-pinned processed model", async () => {
-    const client = createClient();
-    const useCase = new RunQueryUseCase(client);
-
-    const result = await useCase.execute({
-      tool: "mb_recall",
-      params: { query: "hello", mode: "processed", model: "llama3" },
-    });
-
-    expect(result.status).toBe(400);
-    expect(result.error).toContain("qwen3.5:0.8b");
+    expect(result.status).toBe(500);
+    expect(result.synthesis).toBeNull();
+    expect(result.summary).toBe("");
   });
 });
