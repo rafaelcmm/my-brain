@@ -1,7 +1,26 @@
 import type { SynthesisToolName } from "../../domain/synthesis.js";
 
+function sanitizeSnippet(value: unknown): unknown {
+  if (typeof value === "string") {
+    return value.replace(/[\r\n]+/g, " ");
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeSnippet(entry));
+  }
+  if (value !== null && typeof value === "object") {
+    const source = value as Record<string, unknown>;
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(source)) {
+      sanitized[key] = sanitizeSnippet(entry);
+    }
+    return sanitized;
+  }
+  return value;
+}
+
 function compact(value: unknown): string {
-  return JSON.stringify(value)
+  const safeValue = sanitizeSnippet(value);
+  return JSON.stringify(safeValue)
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")
     .slice(0, 1200);
