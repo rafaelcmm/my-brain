@@ -7,10 +7,12 @@ export type {
   MemoryType,
 } from "@/lib/domain/memory";
 export type {
-  ProcessedQueryModel,
-  QueryMode,
   QueryRequest,
   QueryResponse,
   QueryTool,
 } from "@/lib/domain/query";
+export type {
+  SynthesisOutcome,
+  ToolResponseEnvelope,
+} from "@/lib/domain/synthesis";
 export type { BrainSummary, TopEntry } from "@/lib/domain/summary";
