@@ -2,9 +2,72 @@ import type {
   BrainSummary,
   GraphSnapshot,
   Memory,
-  ProcessedQueryModel,
-  QueryMode,
+  ToolResponseEnvelope,
 } from "@/lib/domain";
+
+/**
+ * Raw recall payload carried inside the v2 synthesis envelope.
+ */
+export interface RecallData {
+  query: string;
+  top_k: number;
+  min_score: number;
+  results: unknown[];
+}
+
+/**
+ * Raw digest payload carried inside the v2 synthesis envelope.
+ */
+export interface DigestData {
+  since?: string;
+  rows: unknown[];
+  learning: Record<string, unknown>;
+}
+
+/**
+ * Raw remember payload carried inside the v2 synthesis envelope.
+ */
+export interface RememberData {
+  memory_id: string;
+  scope: string;
+  type: string;
+  deduped: boolean;
+  score?: number;
+}
+
+/**
+ * Raw forget payload carried inside the v2 synthesis envelope.
+ */
+export interface ForgetData {
+  memory_id: string;
+  mode: "soft" | "hard";
+}
+
+/**
+ * Capabilities payload returned by orchestrator v2.
+ */
+export interface CapabilitiesData {
+  capabilities: {
+    engine: boolean;
+    vectorDb: boolean;
+    sona: boolean;
+    attention: boolean;
+    embeddingDim: number;
+  };
+  features: {
+    vectorDb: boolean;
+    sona: boolean;
+    attention: boolean;
+    embeddingDim: number;
+  };
+  degradedReasons: string[];
+  db: {
+    extensionVersion: string | null;
+    adrSchemasReady: boolean;
+    embeddingProvider: string;
+    embeddingReady: boolean;
+  };
+}
 
 /**
  * Port: HTTP client for communicating with the orchestrator REST API.
@@ -13,11 +76,11 @@ import type {
 export interface OrchestratorClient {
   /**
    * Get orchestrator capabilities (auth check).
-   * @returns { version: string, mode: string } on success.
+    * @returns v2 capabilities envelope on success.
    * @throws OrchestratorAuthError on 401.
    * @throws OrchestratorUnavailableError on connection failure.
    */
-  getCapabilities(): Promise<{ version: string; mode: string }>;
+    getCapabilities(): Promise<ToolResponseEnvelope<CapabilitiesData>>;
 
   /**
    * Check health of the orchestrator.
@@ -68,12 +131,12 @@ export interface OrchestratorClient {
     type: string,
     scope: string,
     metadata: Record<string, unknown>,
-  ): Promise<unknown>;
+  ): Promise<ToolResponseEnvelope<RememberData>>;
 
   /**
    * Forget (delete) a memory.
    */
-  forgetMemory(id: string): Promise<void>;
+  forgetMemory(id: string): Promise<ToolResponseEnvelope<ForgetData>>;
 
   /**
    * Get knowledge graph snapshot.
@@ -87,21 +150,13 @@ export interface OrchestratorClient {
 
   /**
    * Run a recall query.
-   *
-   * Processed mode rewrites the query server-side with a pinned LLM model
-   * before embedding and ranking.
    */
-  recall(
-    query: string,
-    scope?: string,
-    mode?: QueryMode,
-    model?: ProcessedQueryModel,
-  ): Promise<unknown>;
+  recall(query: string, scope?: string): Promise<ToolResponseEnvelope<RecallData>>;
 
   /**
    * Run a digest query.
    */
-  digest(scope?: string, type?: string): Promise<unknown>;
+  digest(scope?: string, type?: string): Promise<ToolResponseEnvelope<DigestData>>;
 }
 
 /**
