@@ -35,6 +35,7 @@ More endpoints are added incrementally and documented here in same change set.
 - `MYBRAIN_LLM_URL`
 - `MYBRAIN_LLM_MODEL`
 - `MYBRAIN_RECALL_PROCESS_TIMEOUT_MS`
+- `MYBRAIN_SYNTH_TIMEOUT_MS`
 - `MYBRAIN_EMBEDDING_MODEL`
 - `MYBRAIN_EMBEDDING_DIM`
 - `MYBRAIN_MIN_TOKEN_LENGTH`
@@ -55,7 +56,6 @@ More endpoints are added incrementally and documented here in same change set.
 - `MYBRAIN_REST_URL` — upstream orchestrator base URL.
 - `MYBRAIN_INTERNAL_API_KEY` — shared internal header value.
 - `MYBRAIN_PROMETHEUS_PORT` — bridge metrics port.
-- `MYBRAIN_UPSTREAM_MCP_COMMAND`, `MYBRAIN_UPSTREAM_MCP_ARGS` — optional upstream MCP transport override.
 
 ### Web
 

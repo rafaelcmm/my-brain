@@ -18,6 +18,7 @@ Main settings live in `.env`. Copy `.env.example` as a starting point.
 12. `MYBRAIN_WEB_PORT` — gateway-exposed web UI port (default 3000).
 13. `MYBRAIN_LLM_GPU_COUNT` — number of GPUs requested by default startup (default 1).
 14. `MYBRAIN_RECALL_PROCESS_TIMEOUT_MS` — timeout for processed `mb_recall` query rewriting (default `180000` ms). Increase for cold model starts.
+15. `MYBRAIN_SYNTH_TIMEOUT_MS` — timeout for LLM summary synthesis fallback handling (default `15000` ms).
 
 For the full variable list see [reference.md](reference.md).
 
