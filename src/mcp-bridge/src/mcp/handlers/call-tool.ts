@@ -1,8 +1,6 @@
-import { LEGACY_PASSTHROUGH_ALLOWLIST } from "../../domain/tool-catalog.js";
 import type { BridgeMetrics } from "../../domain/metrics.js";
 import type { CapabilitiesClient } from "../../infrastructure/capabilities-client.js";
 import type { OrchestratorClient } from "../../infrastructure/orchestrator-client.js";
-import type { UpstreamClient } from "../../infrastructure/upstream-client.js";
 import { asTextResult } from "../result.js";
 
 /**
@@ -15,8 +13,6 @@ export interface CallToolDependencies {
   readonly capabilitiesClient: CapabilitiesClient;
   /** REST orchestrator client for mb_* tool execution. */
   readonly orchestratorClient: OrchestratorClient;
-  /** Optional upstream client for allowlisted passthrough tools. */
-  readonly upstreamClient: UpstreamClient;
 }
 
 /**
@@ -179,17 +175,6 @@ export function createCallToolHandler(deps: CallToolDependencies) {
         );
       }
       default: {
-        if (
-          deps.upstreamClient.isConnected() &&
-          LEGACY_PASSTHROUGH_ALLOWLIST.has(name)
-        ) {
-          deps.metrics.increment("mb_bridge_tool_calls_total", {
-            tool: name,
-            status: "passthrough",
-          });
-          return deps.upstreamClient.callTool(name, sanitizedArgs);
-        }
-
         deps.metrics.increment("mb_bridge_tool_calls_total", {
           tool: name,
           status: "error",

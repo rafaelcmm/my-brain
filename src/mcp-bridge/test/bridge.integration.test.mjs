@@ -138,9 +138,6 @@ async function connectBridgeClient(options) {
       MYBRAIN_REST_URL: options.restBaseUrl,
       MYBRAIN_PROMETHEUS_PORT: String(options.metricsPort),
       MYBRAIN_INTERNAL_API_KEY: options.internalKey,
-      // Force quick upstream failure path to keep tests deterministic.
-      MYBRAIN_UPSTREAM_MCP_COMMAND: "node",
-      MYBRAIN_UPSTREAM_MCP_ARGS: "-e process.exit(0)",
     },
     stderr: "pipe",
   });

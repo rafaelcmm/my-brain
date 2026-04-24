@@ -5,8 +5,6 @@ This document captures the existing runtime behavior of the bridge in `src/index
 ## Runtime Defaults
 
 - `MYBRAIN_REST_URL`: defaults to `http://127.0.0.1:8080`
-- `MYBRAIN_UPSTREAM_MCP_COMMAND`: defaults to `npx`
-- `MYBRAIN_UPSTREAM_MCP_ARGS`: defaults to `-y ruvector mcp start`
 - `MYBRAIN_INTERNAL_API_KEY`: defaults to empty string
 - `MYBRAIN_PROMETHEUS_PORT`: defaults to `9090`
 
@@ -24,20 +22,12 @@ Bridge always exposes:
 8. `mb_session_close`
 9. `mb_digest`
 
-Legacy passthrough allowlist:
-
-- `hooks_stats`
-
 ## `listTools` Behavior
 
 1. Start with all bridge tools.
 2. Fetch capabilities.
-3. If upstream connected, merge upstream tools only when:
-   - tool name is in allowlist; and
-   - if `engine=false`, reject upstream tools with `brain_` prefix.
-4. Skip duplicates by name.
-5. Increment `mb_bridge_tools_list_total`.
-6. Increment `mb_bridge_tools_filtered_total{tool=...}` for each filtered upstream tool.
+3. Return bridge-owned tool catalog.
+4. Increment `mb_bridge_tools_list_total`.
 
 ## `callTool` Behavior Matrix
 
@@ -66,8 +56,7 @@ Legacy passthrough allowlist:
 
 ### Unknown tool
 
-1. If upstream connected and name in allowlist, passthrough using upstream `callTool`.
-2. Otherwise return `{success:false,error:"unsupported_tool",...}` and increment error metric.
+Return `{success:false,error:"unsupported_tool",...}` and increment error metric.
 
 ## Capabilities Caching
 
@@ -97,6 +86,5 @@ Legacy passthrough allowlist:
 ## Startup Sequence
 
 1. Optionally start metrics HTTP server.
-2. Attempt upstream stdio connect; continue even if failure.
-3. Connect MCP stdio server.
-4. Emit ready log: `[my-brain] bridge stdio server ready`.
+2. Connect MCP stdio server.
+3. Emit ready log: `[my-brain] bridge stdio server ready`.

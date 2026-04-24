@@ -4,7 +4,6 @@ import { BridgeMetrics, seedMetrics } from "../domain/metrics.js";
 import { CapabilitiesClient } from "../infrastructure/capabilities-client.js";
 import { startMetricsServer } from "../infrastructure/metrics-http.js";
 import { OrchestratorClient } from "../infrastructure/orchestrator-client.js";
-import { UpstreamClient } from "../infrastructure/upstream-client.js";
 import { createBridgeServer } from "../mcp/server.js";
 
 /**
@@ -17,22 +16,18 @@ export async function startBridge(): Promise<void> {
 
   const capabilitiesClient = new CapabilitiesClient(config);
   const orchestratorClient = new OrchestratorClient(config);
-  const upstreamClient = new UpstreamClient(config);
 
   startMetricsServer(config, metrics);
-  await upstreamClient.connect();
 
   const server = createBridgeServer(
     {
       metrics,
       capabilitiesClient,
-      upstreamClient,
     },
     {
       metrics,
       capabilitiesClient,
       orchestratorClient,
-      upstreamClient,
     },
   );
 
