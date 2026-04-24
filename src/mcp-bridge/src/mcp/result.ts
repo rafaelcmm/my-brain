@@ -32,7 +32,7 @@ export function isEnvelope(value: unknown): value is EnvelopeLike {
 }
 
 /**
- * Wraps plain JSON payload into MCP text content result format.
+ * Wraps payload into MCP result format with text content plus structured object.
  *
  * @param value Serializable payload returned by bridge handlers.
  * @returns MCP-compatible content envelope.
@@ -45,11 +45,10 @@ export function asTextResult(value: unknown) {
           type: "text",
           text: value.summary || JSON.stringify(value.data),
         },
-        {
-          type: "json",
-          json: value,
-        },
       ],
+      // Use structuredContent for machine-readable payload; custom content
+      // types are rejected by strict MCP validators.
+      structuredContent: value,
     };
   }
 
@@ -60,5 +59,6 @@ export function asTextResult(value: unknown) {
         text: JSON.stringify(value, null, 2),
       },
     ],
+    structuredContent: value,
   };
 }

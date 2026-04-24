@@ -11,7 +11,7 @@ paths:
 1. Prefer metadata filtering over global search.
 2. Pass `repo` and `language` by default.
 3. Use `scope=repo` unless user asks for cross-project recall.
-4. For context enrichment, call tools in order: `mcp_my-brain_hooks_capabilities` -> `mb_context_probe` -> `mb_recall`.
+4. For context enrichment, call tools in order: `mcp_my-brain_mb_capabilities` -> `mb_context_probe` -> `mb_recall`.
 
 ## Empty-result policy
 

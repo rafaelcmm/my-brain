@@ -15,7 +15,7 @@ test("isEnvelope detects v2 envelope shape", () => {
   assert.equal(isEnvelope({ success: false }), false);
 });
 
-test("asTextResult emits text+json parts for envelope payload", () => {
+test("asTextResult emits text + structuredContent for envelope payload", () => {
   const envelope = {
     success: true,
     summary: "two memories found",
@@ -28,15 +28,12 @@ test("asTextResult emits text+json parts for envelope payload", () => {
   };
 
   const result = asTextResult(envelope);
-  assert.equal(result.content.length, 2);
+  assert.equal(result.content.length, 1);
   assert.deepEqual(result.content[0], {
     type: "text",
     text: "two memories found",
   });
-  assert.deepEqual(result.content[1], {
-    type: "json",
-    json: envelope,
-  });
+  assert.deepEqual(result.structuredContent, envelope);
 });
 
 test("asTextResult falls back to JSON data text when envelope summary is empty", () => {
@@ -55,7 +52,7 @@ test("asTextResult falls back to JSON data text when envelope summary is empty",
   const result = asTextResult(envelope);
   assert.equal(result.content[0].type, "text");
   assert.equal(result.content[0].text, JSON.stringify(envelope.data));
-  assert.equal(result.content[1].type, "json");
+  assert.deepEqual(result.structuredContent, envelope);
 });
 
 test("asTextResult preserves legacy single text output for non-envelope payload", () => {
@@ -64,4 +61,5 @@ test("asTextResult preserves legacy single text output for non-envelope payload"
   assert.equal(result.content.length, 1);
   assert.equal(result.content[0].type, "text");
   assert.match(result.content[0].text, /unsupported_tool/);
+  assert.deepEqual(result.structuredContent, payload);
 });

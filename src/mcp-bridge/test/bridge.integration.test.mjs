@@ -159,10 +159,14 @@ async function connectBridgeClient(options) {
 /**
  * Parses JSON payload from bridge text content response.
  *
- * @param {{content?: Array<{type: string, text?: string}>}} result MCP tool result.
+ * @param {{structuredContent?: Record<string, unknown>, content?: Array<{type: string, text?: string}>}} result MCP tool result.
  * @returns {Record<string, unknown>} Parsed payload object.
  */
 function parseToolResult(result) {
+  if (result.structuredContent && typeof result.structuredContent === "object") {
+    return result.structuredContent;
+  }
+
   const textEntry = result.content?.find((entry) => entry.type === "text");
   assert.ok(textEntry?.text, "expected text content from bridge tool result");
   return JSON.parse(textEntry.text);
@@ -184,7 +188,7 @@ test("bridge supports full mb tool surface and metrics auth", async () => {
     const tools = await client.listTools();
     const names = new Set((tools.tools ?? []).map((tool) => tool.name));
 
-    assert.ok(names.has("hooks_capabilities"));
+    assert.ok(names.has("mb_capabilities"));
     assert.ok(names.has("mb_context_probe"));
     assert.ok(names.has("mb_remember"));
     assert.ok(names.has("mb_recall"));
@@ -194,11 +198,11 @@ test("bridge supports full mb tool surface and metrics auth", async () => {
     assert.ok(names.has("mb_session_close"));
     assert.ok(names.has("mb_digest"));
 
-    const capabilities = parseToolResult(
-      await client.callTool({ name: "hooks_capabilities", arguments: {} }),
+    const canonicalCapabilities = parseToolResult(
+      await client.callTool({ name: "mb_capabilities", arguments: {} }),
     );
-    assert.equal(capabilities.success, true);
-    assert.equal(capabilities.capabilities?.engine, true);
+    assert.equal(canonicalCapabilities.success, true);
+    assert.equal(canonicalCapabilities.capabilities?.engine, true);
 
     const contextProbe = parseToolResult(
       await client.callTool({

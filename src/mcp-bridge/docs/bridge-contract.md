@@ -12,7 +12,7 @@ This document captures the existing runtime behavior of the bridge in `src/index
 
 Bridge always exposes:
 
-1. `hooks_capabilities`
+1. `mb_capabilities`
 2. `mb_context_probe`
 3. `mb_remember`
 4. `mb_recall`
@@ -39,7 +39,7 @@ Bridge always exposes:
 
 ### Bridge tools
 
-- `hooks_capabilities` -> `GET /v1/capabilities` compatibility envelope
+- `mb_capabilities` -> `GET /v1/capabilities` compatibility envelope
 - `mb_context_probe` -> `POST /v1/context/probe`
 - `mb_remember` -> `POST /v1/memory`
   - increments `mb_remember_total` when `success===true`
@@ -82,6 +82,12 @@ Return `{success:false,error:"unsupported_tool",...}` and increment error metric
 - Adds `x-mybrain-internal-key` when configured.
 - `callOrchestrator` always returns object with `http_status` and parsed JSON body fields.
 - If response body invalid JSON, returns `{http_status,success:false,error:"invalid_response"}`.
+
+## MCP result formatting
+
+- Tool responses include exactly one `text` content item.
+- Machine-readable payload is provided in `structuredContent`.
+- Bridge does not emit custom content item types (for example `type: "json"`) because strict MCP validators reject unknown variants.
 
 ## Startup Sequence
 

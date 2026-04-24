@@ -1,6 +1,7 @@
 import { GetBrainSummaryUseCase } from "@/lib/application/get-brain-summary.usecase";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
 import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
+import Link from "next/link";
 import type { TopEntry } from "@/lib/domain";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -262,18 +263,18 @@ export default async function DashboardPage({
           )}
 
           <div className="flex items-center justify-between gap-2 text-sm">
-            <a
+            <Link
               className={`px-3 py-1 rounded ${clampedPage > 1 ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-400 pointer-events-none"}`}
               href={`?page=${clampedPage - 1}`}
             >
               Previous
-            </a>
-            <a
+            </Link>
+            <Link
               className={`px-3 py-1 rounded ${clampedPage < insightPages ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-400 pointer-events-none"}`}
               href={`?page=${clampedPage + 1}`}
             >
               Next
-            </a>
+            </Link>
           </div>
         </section>
       </div>

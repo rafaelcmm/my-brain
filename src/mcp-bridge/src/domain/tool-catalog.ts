@@ -5,9 +5,9 @@ import type { BridgeTool } from "./types.js";
  */
 export const BRIDGE_TOOLS: readonly BridgeTool[] = [
   {
-    name: "hooks_capabilities",
+    name: "mb_capabilities",
     description:
-      "Legacy compatibility endpoint returning orchestrator runtime capabilities",
+      "Canonical runtime capabilities endpoint for my-brain tooling",
     inputSchema: {
       type: "object",
       properties: {},

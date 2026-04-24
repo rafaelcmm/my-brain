@@ -20,7 +20,7 @@ This rule is mandatory for all my-brain memory workflows. It defines when MCP to
 
 1. Context enrichment for non-trivial requests
    - Trigger skill: `my-brain-context`
-   - Required order: `mcp_my-brain_hooks_capabilities` -> `mb_context_probe` -> `mb_recall`
+   - Required order: `mcp_my-brain_mb_capabilities` -> `mb_context_probe` -> `mb_recall`
 2. Explicit historical lookup (decision history, prior fixes)
    - Trigger skill: `my-brain-recall`
    - Required order: `mb_context_probe` -> `mb_recall`
@@ -35,11 +35,11 @@ This rule is mandatory for all my-brain memory workflows. It defines when MCP to
    - Required order: `mb_context_probe` -> `mb_session_open` and `mb_session_close` on completion cues
 6. Periodic quality maintenance
    - Trigger agent: `my-brain-curator`
-   - Required order: `mcp_my-brain_hooks_capabilities` -> `mb_digest` -> `mb_recall`
+   - Required order: `mcp_my-brain_mb_capabilities` -> `mb_digest` -> `mb_recall`
 
 ## Degraded-Mode Enforcement
 
-When `mcp_my-brain_hooks_capabilities` reports `engine=false`:
+When `mcp_my-brain_mb_capabilities` reports `engine=false`:
 
 1. Retrieval is allowed as advisory only.
 2. Minimum threshold must be `>=0.85`.
@@ -68,7 +68,7 @@ Before finalizing customization changes:
 
 ## Good Examples
 
-1. Good: Non-trivial request triggers `my-brain-context`, calls `mcp_my-brain_hooks_capabilities` first, then probes context, then scoped recall.
+1. Good: Non-trivial request triggers `my-brain-context`, calls `mcp_my-brain_mb_capabilities` first, then probes context, then scoped recall.
 2. Good: Capture flow runs dedup recall before remember and skips duplicate save at similarity `>0.85`.
 3. Good: Session opens once, keeps `session_id` internal, closes on "done" cue.
 

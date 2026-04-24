@@ -57,7 +57,7 @@ export function createCallToolHandler(deps: CallToolDependencies) {
     }
 
     switch (name) {
-      case "hooks_capabilities": {
+      case "mb_capabilities": {
         deps.metrics.increment("mb_bridge_tool_calls_total", {
           tool: name,
           status: "ok",
