@@ -110,4 +110,12 @@ dashboard_code="$(curl --max-time 8 -s -o /dev/null -w '%{http_code}' \
   exit 1
 }
 
+if command -v newman >/dev/null 2>&1; then
+  echo "running newman smoke collection"
+  newman run postman/my-brain.postman_collection.json \
+    -e postman/my-brain.postman_environment.json
+else
+  echo "newman not found on PATH; skipping postman smoke run"
+fi
+
 echo "smoke test passed"
