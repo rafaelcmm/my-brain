@@ -8,13 +8,13 @@ This file governs the whole repository unless a subdirectory `AGENTS.md` overrid
 
 my-brain is a self-hosted memory and orchestration stack for MCP-capable clients (Claude Code, Cursor, VS Code Copilot Chat). It ships five services via Docker Compose:
 
-| Service | Path | Role |
-| --- | --- | --- |
-| `my-brain-db` | `src/db/` | Postgres with ruvector extension |
+| Service                 | Path                | Role                                |
+| ----------------------- | ------------------- | ----------------------------------- |
+| `my-brain-db`           | `src/db/`           | Postgres with ruvector extension    |
 | `my-brain-orchestrator` | `src/orchestrator/` | REST API, memory + learning runtime |
-| `my-brain-mcp` | `src/mcp-bridge/` | Streamable HTTP MCP facade |
-| `my-brain-web` | `src/web/` | Next.js operator UI |
-| `my-brain-gateway` | `src/gateway/` | Caddy ingress, bearer auth |
+| `my-brain-mcp`          | `src/mcp-bridge/`   | Streamable HTTP MCP facade          |
+| `my-brain-web`          | `src/web/`          | Next.js operator UI                 |
+| `my-brain-gateway`      | `src/gateway/`      | Caddy ingress, bearer auth          |
 
 All services are private except the gateway, which is the only surface bound to the host.
 
@@ -52,15 +52,15 @@ The `smoke-test.sh` and `security-check.sh` scripts are mandatory when the chang
 
 Update the right file for the change class:
 
-| Change class | Target |
-| --- | --- |
-| Feature or UX-visible behavior | `README.md` |
-| New or modified REST endpoint | `docs/technical/reference.md` |
-| Env var addition or rename | `.env.example` **and** `docs/technical/configuration.md` |
-| Architecture, component, or data-flow shift | `docs/technical/architecture.md` |
-| Auth, CSRF, token, or rate-limit change | `docs/technical/security.md` |
-| Operator workflow, troubleshooting, smoke steps | `docs/runbooks/local-operations.md` |
-| Public API contract (request/response shape) | Inline JSDoc/TSDoc on the handler **and** `reference.md` |
+| Change class                                    | Target                                                   |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| Feature or UX-visible behavior                  | `README.md`                                              |
+| New or modified REST endpoint                   | `docs/technical/reference.md`                            |
+| Env var addition or rename                      | `.env.example` **and** `docs/technical/configuration.md` |
+| Architecture, component, or data-flow shift     | `docs/technical/architecture.md`                         |
+| Auth, CSRF, token, or rate-limit change         | `docs/technical/security.md`                             |
+| Operator workflow, troubleshooting, smoke steps | `docs/runbooks/local-operations.md`                      |
+| Public API contract (request/response shape)    | Inline JSDoc/TSDoc on the handler **and** `reference.md` |
 
 Never let code and docs drift within the same commit. Update both or neither.
 

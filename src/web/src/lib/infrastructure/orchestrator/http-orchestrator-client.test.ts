@@ -51,7 +51,10 @@ describe("HttpOrchestratorClient contract", () => {
   it("handles happy path for all adapter methods", async () => {
     server.use(
       http.get(`${baseUrl}/v1/capabilities`, () =>
-        HttpResponse.json({ capabilities: { engine: true }, db: { extensionVersion: "1.2.3" } }),
+        HttpResponse.json({
+          capabilities: { engine: true },
+          db: { extensionVersion: "1.2.3" },
+        }),
       ),
       http.get(`${baseUrl}/ready`, () => HttpResponse.json({ ok: true })),
       http.get(`${baseUrl}/v1/memory/summary`, () =>

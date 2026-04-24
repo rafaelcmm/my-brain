@@ -19,7 +19,11 @@ function createClient() {
 describe("GetMemoryGraphUseCase", () => {
   it("uses default limit and degraded-mode similarity threshold", async () => {
     const client = createClient();
-    client.getMemoryGraph.mockResolvedValue({ nodes: [], edges: [], total_count: 0 });
+    client.getMemoryGraph.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      total_count: 0,
+    });
 
     const useCase = new GetMemoryGraphUseCase(client);
     const result = await useCase.execute();
@@ -31,7 +35,9 @@ describe("GetMemoryGraphUseCase", () => {
   it("accepts explicit limit and zero similarity", async () => {
     const client = createClient();
     client.getMemoryGraph.mockResolvedValue({
-      nodes: [{ id: "m-1", label: "x", type: "decision", size: 1, scope: "repo" }],
+      nodes: [
+        { id: "m-1", label: "x", type: "decision", size: 1, scope: "repo" },
+      ],
       edges: [],
       total_count: 1,
     });

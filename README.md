@@ -116,12 +116,12 @@ export MYBRAIN_TOKEN="$(cat ~/.my-brain/.secrets/auth-token)"
 
 ## 📚 Documentation
 
-| Topic | Location |
-| --- | --- |
-| 🏗️ Architecture and components | [docs/technical/architecture.md](docs/technical/architecture.md) |
-| 📖 API reference and env vars | [docs/technical/reference.md](docs/technical/reference.md) |
-| ⚙️ Configuration guide | [docs/technical/configuration.md](docs/technical/configuration.md) |
-| 🔐 Security model | [docs/technical/security.md](docs/technical/security.md) |
+| Topic                                | Location                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| 🏗️ Architecture and components       | [docs/technical/architecture.md](docs/technical/architecture.md)       |
+| 📖 API reference and env vars        | [docs/technical/reference.md](docs/technical/reference.md)             |
+| ⚙️ Configuration guide               | [docs/technical/configuration.md](docs/technical/configuration.md)     |
+| 🔐 Security model                    | [docs/technical/security.md](docs/technical/security.md)               |
 | 🛠️ Runbook, troubleshooting, Postman | [docs/runbooks/local-operations.md](docs/runbooks/local-operations.md) |
 
 ---

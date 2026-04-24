@@ -32,7 +32,10 @@ export async function handleMemoryGet(
     return;
   }
 
-  const requestUrl = new URL(req.url ?? "/v1/memory/unknown", "http://localhost");
+  const requestUrl = new URL(
+    req.url ?? "/v1/memory/unknown",
+    "http://localhost",
+  );
   const id = sanitizeText(
     decodeURIComponent(requestUrl.pathname.replace("/v1/memory/", "")),
     256,

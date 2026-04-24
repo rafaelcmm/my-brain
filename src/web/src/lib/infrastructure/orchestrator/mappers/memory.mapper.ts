@@ -1,4 +1,9 @@
-import type { Memory, MemoryMetadata, MemoryScope, MemoryType } from "@/lib/domain";
+import type {
+  Memory,
+  MemoryMetadata,
+  MemoryScope,
+  MemoryType,
+} from "@/lib/domain";
 import type { MemoryListItemDto } from "@/lib/infrastructure/orchestrator/dtos/orchestrator-response.dto";
 
 const allowedTypes: MemoryType[] = [
@@ -32,18 +37,24 @@ export function mapMemoryDtoToDomain(dto: MemoryListItemDto): Memory {
 }
 
 function normalizeType(value: string): MemoryType {
-  return (allowedTypes as string[]).includes(value) ? (value as MemoryType) : "reference";
+  return (allowedTypes as string[]).includes(value)
+    ? (value as MemoryType)
+    : "reference";
 }
 
 function normalizeScope(value: string): MemoryScope {
-  return (allowedScopes as string[]).includes(value) ? (value as MemoryScope) : "repo";
+  return (allowedScopes as string[]).includes(value)
+    ? (value as MemoryScope)
+    : "repo";
 }
 
 function normalizeMetadata(dto: MemoryListItemDto): MemoryMetadata {
   const raw = dto.metadata ?? {};
 
   const frameworks = Array.isArray(raw.frameworks)
-    ? raw.frameworks.filter((entry): entry is string => typeof entry === "string")
+    ? raw.frameworks.filter(
+        (entry): entry is string => typeof entry === "string",
+      )
     : [];
   const tagsFromRaw = Array.isArray(raw.tags)
     ? raw.tags.filter((entry): entry is string => typeof entry === "string")

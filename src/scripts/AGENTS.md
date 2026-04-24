@@ -6,15 +6,15 @@ Applies to shell automation that wraps install, rotation, health checks, and rep
 
 ## Script inventory
 
-| Script | Purpose |
-| --- | --- |
-| `install.sh` | End-to-end bootstrap: checks prerequisites, writes `.env` from example, generates bearer token, validates compose, starts stack. Accepts `--cpu` (or `MYBRAIN_CPU_ONLY=true`) to skip the GPU override. |
-| `install-cpu.sh` | One-line wrapper that invokes `install.sh` with `MYBRAIN_CPU_ONLY=true` for hosts without NVIDIA runtime. |
-| `rotate-token.sh` | Rotates the bearer token in `.secrets/auth-token`, reloads the gateway. |
-| `smoke-test.sh` | Health + auth + MCP initialize sanity pass. Used by CI and `local-operations.md`. |
-| `backfill-memory-metadata.sh` | Loops `/v1/memory/backfill` until orchestrator reports `processed: 0`. Safe to re-run. |
-| `security-check.sh` | Validates token file existence, permissions, length, gateway auth matchers. |
-| `validate-tool-ids.sh` | Checks that bridge tool ids match the documented contract. |
+| Script                        | Purpose                                                                                                                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install.sh`                  | End-to-end bootstrap: checks prerequisites, writes `.env` from example, generates bearer token, validates compose, starts stack. Accepts `--cpu` (or `MYBRAIN_CPU_ONLY=true`) to skip the GPU override. |
+| `install-cpu.sh`              | One-line wrapper that invokes `install.sh` with `MYBRAIN_CPU_ONLY=true` for hosts without NVIDIA runtime.                                                                                               |
+| `rotate-token.sh`             | Rotates the bearer token in `.secrets/auth-token`, reloads the gateway.                                                                                                                                 |
+| `smoke-test.sh`               | Health + auth + MCP initialize sanity pass. Used by CI and `local-operations.md`.                                                                                                                       |
+| `backfill-memory-metadata.sh` | Loops `/v1/memory/backfill` until orchestrator reports `processed: 0`. Safe to re-run.                                                                                                                  |
+| `security-check.sh`           | Validates token file existence, permissions, length, gateway auth matchers.                                                                                                                             |
+| `validate-tool-ids.sh`        | Checks that bridge tool ids match the documented contract.                                                                                                                                              |
 
 ## Responsibilities
 
