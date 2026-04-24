@@ -16,7 +16,7 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 3. Full runtime by default: Postgres + orchestrator + MCP bridge + local Ollama model.
 4. Next.js web app for dashboard, memory CRUD, query runner, and graph view.
 5. Install and operations scripts:
-   install.sh, rotate-token.sh, smoke-test.sh.
+   install.sh, rotate-token.sh, smoke-test.sh, backfill-memory-metadata.sh, security-check.sh.
 6. CI and release automation templates:
    lint/test/compose validation, tag-driven release workflow, GHCR publish.
 7. Model-invoked Claude skills and curator agent templates under .claude/.
@@ -49,9 +49,8 @@ my-brain is self-hosted memory and orchestration layer for MCP-compatible client
 1. Start stack:
    docker compose up -d
 2. If GPU startup fails (missing NVIDIA runtime), start with CPU fallback:
-   docker compose -f docker-compose.yml up -d
-   npm run docker:up:cpu
-   # alias: npm run docker:init:cpu
+   pnpm run docker:up:cpu
+   # equivalent: docker compose -f docker-compose.yml up -d --build
 3. Check services:
    docker compose ps
 4. Open web UI:
@@ -160,12 +159,15 @@ override and provides CPU fallback mode.
 ## Repository Map
 
 1. src/orchestrator/: runtime process and container build.
-2. src/gateway/: Caddy auth and reverse-proxy config.
-3. src/db/: database bootstrap SQL.
-4. src/scripts/: install, rotate, smoke automation.
-5. .github/workflows/: CI and release pipelines.
-6. docs/: technical implementation docs and runbooks.
-7. .claude/: model-invoked skills and curator agent templates.
+2. src/mcp-bridge/: Streamable HTTP MCP facade over orchestrator tools.
+3. src/web/: Next.js operator UI (dashboard, memory CRUD, query, graph).
+4. src/gateway/: Caddy auth and reverse-proxy config.
+5. src/db/: database bootstrap SQL.
+6. src/scripts/: install, rotate, smoke, backfill, security-check automation.
+7. postman/: minimal sanity collection for MCP + LLM flow.
+8. .github/workflows/: CI and release pipelines.
+9. docs/: technical implementation docs and runbooks.
+10. .claude/: model-invoked skills and curator agent templates.
 
 ## Troubleshooting
 
