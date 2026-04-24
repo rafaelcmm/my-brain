@@ -16,6 +16,7 @@ import { sendJson } from "../response.js";
 import { parseJsonBody } from "../body.js";
 import { allowRequest } from "../../policies/rate-limit.js";
 import { normalizeDigestSince } from "../../application/backfill.js";
+import { getPersistedLearningStats } from "../../application/learning-stats.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */
 type AllowRequestReq = Parameters<typeof allowRequest>[0];
@@ -97,17 +98,19 @@ export async function handleMemoryDigest(
     [since],
   );
 
+  const learningStats = await getPersistedLearningStats(pool);
+
   sendJson(res, 200, {
     success: true,
     since,
     rows: summary.rows,
     learning: {
-      sessions_opened: state.learning.sessionsOpened,
-      sessions_closed: state.learning.sessionsClosed,
-      successful_sessions: state.learning.successfulSessions,
-      failed_sessions: state.learning.failedSessions,
-      route: state.learning.currentRoute,
-      route_confidence: Number(state.learning.routeConfidence.toFixed(3)),
+      sessions_opened: learningStats.sessions_opened,
+      sessions_closed: learningStats.sessions_closed,
+      successful_sessions: learningStats.successful_sessions,
+      failed_sessions: learningStats.failed_sessions,
+      route: learningStats.route,
+      route_confidence: learningStats.route_confidence,
     },
   });
 }

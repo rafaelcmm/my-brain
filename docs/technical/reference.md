@@ -8,17 +8,17 @@ This file is API and configuration reference for maintainers.
 - `GET /ready`: orchestrator readiness (engine + db connection + ADR schemas + LLM runtime).
 - `GET /v1/status`: orchestrator status snapshot.
 - `GET /v1/capabilities`: engine/vector/sona/attention capability flags and degraded-mode reasons.
-- `GET /v1/learning/stats`: session trajectory counters and current route confidence.
+- `GET /v1/learning/stats`: persisted session trajectory counters and reconstructed route confidence from `my_brain_sessions`.
 - `GET /metrics`: Prometheus-style counters for memory lifecycle and recall quality.
 - `POST /v1/context/probe`: derives repo/project/language/framework context from the workspace.
   Accepts an optional JSON body with client-supplied hints that take precedence over server-side
   discovery (see [Context probe hints](#context-probe-hints) below).
 - `POST /v1/memory`: writes validated memory envelope and metadata sidecar row.
-- `POST /v1/memory/recall`: scoped metadata-filtered recall with minimum-score cutoff.
+- `POST /v1/memory/recall`: scoped metadata-filtered recall with minimum-score cutoff. Supports `mode: "raw" | "processed"`; processed mode only accepts model `qwen3.5:0.8b` and returns `original_query`, `processed_query`, and `processing_latency_ms`. It also returns `synthesized_answer` (`synthesis_model`, `synthesis_latency_ms`) grounded on ranked results. If rewrite fails, recall falls back to the original query and includes `processing_fallback: true` plus `processing_error`.
 - `POST /v1/memory/vote`: stores up/down feedback for memory id.
 - `POST /v1/memory/forget`: soft or hard forget by memory id.
 - `POST /v1/memory/digest`: grouped summary across type/language/repo windows.
-- `GET /v1/memory/summary`: dashboard aggregates (totals, scope/type counts, top tags/frameworks/languages, learning stats).
+- `GET /v1/memory/summary`: dashboard aggregates (totals, scope/type counts, top tags/frameworks/languages, persisted learning stats).
 - `GET /v1/memory/list`: paginated memory list with filters (`scope`, `type`, `repo_name`, `language`, `tag`, `search`, `cursor`, `limit`).
 - `GET /v1/memory/graph`: graph snapshot (`nodes`, `edges`, `total_count`) built from shared repo/tag relations.
 - `GET /v1/memory/{id}`: single memory retrieval by id (sanitized path param).
@@ -38,6 +38,7 @@ More endpoints are added incrementally and documented here in same change set.
 - `MYBRAIN_DB_URL`
 - `MYBRAIN_LLM_URL`
 - `MYBRAIN_LLM_MODEL`
+- `MYBRAIN_RECALL_PROCESS_TIMEOUT_MS`
 - `MYBRAIN_EMBEDDING_MODEL`
 - `MYBRAIN_EMBEDDING_DIM`
 - `MYBRAIN_MIN_TOKEN_LENGTH`

@@ -41,6 +41,7 @@ import {
   getCapabilities,
   getDefaultRecallThreshold,
 } from "./router-context.js";
+import { getPersistedLearningStats } from "../application/learning-stats.js";
 import type { Capabilities, RouterContext } from "./router-context.js";
 import { handleMemoryWrite } from "./handlers/memory-write.js";
 import { handleMemoryRecall } from "./handlers/memory-recall.js";
@@ -209,18 +210,26 @@ export async function handleRequest(
 
   // ── GET /v1/learning/stats ─────────────────────────────────────────────────
   if (method === "GET" && url === "/v1/learning/stats") {
-    const sessionsClosed = Math.max(state.learning.sessionsClosed, 1);
-    const avgQuality = state.learning.totalQuality / sessionsClosed;
+    if (!state.pool) {
+      sendJson(res, 503, {
+        success: false,
+        error: "SERVER_ERROR",
+        message: "learning stats storage unavailable",
+      });
+      return;
+    }
+
+    const learningStats = await getPersistedLearningStats(state.pool);
     sendJson(res, 200, {
       success: true,
       learning: {
-        sessions_opened: state.learning.sessionsOpened,
-        sessions_closed: state.learning.sessionsClosed,
-        successful_sessions: state.learning.successfulSessions,
-        failed_sessions: state.learning.failedSessions,
-        average_quality: Number(avgQuality.toFixed(3)),
-        route: state.learning.currentRoute,
-        route_confidence: Number(state.learning.routeConfidence.toFixed(3)),
+        sessions_opened: learningStats.sessions_opened,
+        sessions_closed: learningStats.sessions_closed,
+        successful_sessions: learningStats.successful_sessions,
+        failed_sessions: learningStats.failed_sessions,
+        average_quality: learningStats.average_quality,
+        route: learningStats.route,
+        route_confidence: learningStats.route_confidence,
       },
     });
     return;

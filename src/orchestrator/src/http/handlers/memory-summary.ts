@@ -8,6 +8,7 @@
 import type http from "node:http";
 import type { RouterContext } from "../router-context.js";
 import { sendJson } from "../response.js";
+import { getPersistedLearningStats } from "../../application/learning-stats.js";
 
 /**
  * Handles GET /v1/memory/summary.
@@ -80,6 +81,8 @@ export async function handleMemorySummary(
       ),
     ]);
 
+  const learningStats = await getPersistedLearningStats(pool);
+
   sendJson(res, 200, {
     success: true,
     total_memories: total.rows[0]?.total_memories ?? 0,
@@ -93,10 +96,10 @@ export async function handleMemorySummary(
     top_frameworks: frameworks.rows,
     top_languages: languages.rows,
     learning_stats: {
-      sessions_opened: state.learning.sessionsOpened,
-      sessions_closed: state.learning.sessionsClosed,
-      successful_sessions: state.learning.successfulSessions,
-      failed_sessions: state.learning.failedSessions,
+      sessions_opened: learningStats.sessions_opened,
+      sessions_closed: learningStats.sessions_closed,
+      successful_sessions: learningStats.successful_sessions,
+      failed_sessions: learningStats.failed_sessions,
     },
   });
 }

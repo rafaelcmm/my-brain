@@ -106,6 +106,7 @@ let pool: Pool;
 let server: http.Server;
 let port = 0;
 let insertedIds: string[] = [];
+let insertedSessionIds: string[] = [];
 
 before(async () => {
   pool = createPool(TEST_DB_URL!);
@@ -129,6 +130,21 @@ before(async () => {
     insertedIds.push(id);
     await persistMemoryMetadata(pool, id, makeEnvelope(i));
   }
+
+  insertedSessionIds = [
+    `session-open-${Date.now()}-1`,
+    `session-success-${Date.now()}-2`,
+    `session-fail-${Date.now()}-3`,
+  ];
+
+  await pool.query(
+    `INSERT INTO my_brain_sessions (session_id, agent, context, opened_at, closed_at, success, quality, reason)
+     VALUES
+       ($1, 'test-agent', '{}'::jsonb, NOW() - INTERVAL '3 minutes', NULL, NULL, NULL, NULL),
+       ($2, 'test-agent', '{}'::jsonb, NOW() - INTERVAL '2 minutes', NOW() - INTERVAL '1 minute', TRUE, 0.9, 'ok'),
+       ($3, 'test-agent', '{}'::jsonb, NOW() - INTERVAL '1 minute', NOW(), FALSE, 0.2, 'failed')`,
+    insertedSessionIds,
+  );
 
   const state = createInitialRuntimeState(1024);
   state.pool = pool;
@@ -172,6 +188,13 @@ before(async () => {
 });
 
 after(async () => {
+  if (insertedSessionIds.length > 0) {
+    await pool.query(
+      "DELETE FROM my_brain_sessions WHERE session_id = ANY($1::text[])",
+      [insertedSessionIds],
+    );
+  }
+
   if (insertedIds.length > 0) {
     await pool.query(
       "DELETE FROM my_brain_memory_metadata WHERE memory_id = ANY($1::text[])",
@@ -203,6 +226,14 @@ describe("GET /v1/memory/summary", () => {
     assert.ok(Array.isArray(payload.top_tags));
     assert.ok(Array.isArray(payload.top_frameworks));
     assert.ok(Array.isArray(payload.top_languages));
+
+    const learningStats = payload.learning_stats as Record<string, unknown>;
+    assert.deepEqual(learningStats, {
+      sessions_opened: 3,
+      sessions_closed: 2,
+      successful_sessions: 1,
+      failed_sessions: 1,
+    });
   });
 });
 

@@ -26,7 +26,12 @@ describe("GetBrainSummaryUseCase", () => {
       top_tags: [{ tag: "x", count: 2 }],
       top_frameworks: [{ framework: "next", count: 1 }],
       top_languages: [{ language: "typescript", count: 2 }],
-      learning_stats: { successful_sessions: 1 },
+      learning_stats: {
+        sessions_opened: 1,
+        sessions_closed: 1,
+        successful_sessions: 1,
+        failed_sessions: 0,
+      },
     });
 
     const useCase = new GetBrainSummaryUseCase(client);
@@ -45,13 +50,23 @@ describe("GetBrainSummaryUseCase", () => {
       top_tags: [],
       top_frameworks: [],
       top_languages: [],
-      learning_stats: {},
+      learning_stats: {
+        sessions_opened: 0,
+        sessions_closed: 0,
+        successful_sessions: 0,
+        failed_sessions: 0,
+      },
     });
 
     const useCase = new GetBrainSummaryUseCase(client);
     const result = await useCase.execute();
 
     expect(result.top_tags).toEqual([]);
-    expect(result.learning_stats).toEqual({});
+    expect(result.learning_stats).toEqual({
+      sessions_opened: 0,
+      sessions_closed: 0,
+      successful_sessions: 0,
+      failed_sessions: 0,
+    });
   });
 });

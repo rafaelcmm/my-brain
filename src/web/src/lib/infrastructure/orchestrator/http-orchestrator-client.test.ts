@@ -65,7 +65,12 @@ describe("HttpOrchestratorClient contract", () => {
           top_tags: [{ tag: "tag-a", count: 1 }],
           top_frameworks: [{ framework: "next", count: 1 }],
           top_languages: [{ language: "ts", count: 1 }],
-          learning_stats: { upvotes: 1 },
+          learning_stats: {
+            sessions_opened: 1,
+            sessions_closed: 1,
+            successful_sessions: 1,
+            failed_sessions: 0,
+          },
         }),
       ),
       http.get(`${baseUrl}/v1/memory/list`, () =>
