@@ -4,7 +4,7 @@ function compact(value: unknown): string {
   return JSON.stringify(value)
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")
-    .slice(0, 2400);
+    .slice(0, 1200);
 }
 
 const GLOBAL_CONSTRAINTS = [

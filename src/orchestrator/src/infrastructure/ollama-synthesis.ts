@@ -15,6 +15,14 @@ function sanitizeOutput(value: string | undefined): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 1024);
 }
 
+function hasInjectionArtifacts(value: string): boolean {
+  return (
+    /ignore\s+previous\s+instructions/i.test(value) ||
+    /return\s+attacker/i.test(value) ||
+    /^attacker\b/i.test(value)
+  );
+}
+
 /**
  * Creates an Ollama-backed synthesis adapter implementing the synthesis port.
  *
@@ -66,6 +74,9 @@ export function createOllamaSynthesis(opts: {
 
         if (!summary) {
           throw new Error("synthesis returned empty response");
+        }
+        if (hasInjectionArtifacts(summary)) {
+          throw new Error("synthesis output rejected by injection safety filter");
         }
 
         return {
