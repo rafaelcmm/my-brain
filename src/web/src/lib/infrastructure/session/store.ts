@@ -1,17 +1,18 @@
 import { env } from "@/lib/config/env";
-import { InMemorySessionStore } from "@/lib/infrastructure/session/in-memory-session-store";
+import { FileSessionStore } from "@/lib/infrastructure/session/file-session-store";
 
 /**
  * Returns singleton in-process session store.
  *
- * Why singleton: login and protected requests must share same in-memory map;
- * creating a new store per request would make every session unreadable.
+ * Why singleton: caller code expects a single adapter instance and shared
+ * storage path. The underlying file storage keeps session state visible across
+ * Next.js runtime boundaries.
  */
-let singletonStore: InMemorySessionStore | null = null;
+let singletonStore: FileSessionStore | null = null;
 
-export function getSessionStore(): InMemorySessionStore {
+export function getSessionStore(): FileSessionStore {
   if (!singletonStore) {
-    singletonStore = new InMemorySessionStore(env().MYBRAIN_WEB_SESSION_SECRET);
+    singletonStore = new FileSessionStore(env().MYBRAIN_WEB_SESSION_SECRET);
   }
 
   return singletonStore;

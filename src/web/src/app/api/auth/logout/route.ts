@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyNoStoreHeaders } from "@/lib/application/api-security";
+import { shouldUseSecureSessionCookie } from "@/lib/application/session-cookie-security";
 import {
   destroySession,
   getSessionIdFromCookies,
@@ -35,11 +36,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   await destroySession(sessionId);
 
   const response = applyNoStoreHeaders(NextResponse.json({ success: true }));
+  const secureCookie = shouldUseSecureSessionCookie({
+    forwardedProtoHeader: request.headers.get("x-forwarded-proto"),
+    requestProtocol: request.nextUrl.protocol.replace(":", ""),
+    requestHost: request.nextUrl.hostname,
+    publicBaseUrl:
+      process.env.MYBRAIN_WEB_PUBLIC_BASE_URL ?? request.nextUrl.origin,
+    nodeEnv:
+      process.env.NODE_ENV === "development" ||
+      process.env.NODE_ENV === "test"
+        ? process.env.NODE_ENV
+        : "production",
+  });
 
   // Clear session cookie
   response.cookies.set("session", "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookie,
     sameSite: "strict",
     maxAge: 0,
     path: "/",

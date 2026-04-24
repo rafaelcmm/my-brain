@@ -3,6 +3,7 @@ import {
   applyNoStoreHeaders,
   isLoginRateLimited,
 } from "@/lib/application/api-security";
+import { shouldUseSecureSessionCookie } from "@/lib/application/session-cookie-security";
 import { authenticateToken } from "@/lib/composition/auth";
 import { env } from "@/lib/config/env";
 
@@ -50,10 +51,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const sessionId = await authenticateToken(token);
     const response = applyNoStoreHeaders(NextResponse.json({ success: true }));
+    const secureCookie = shouldUseSecureSessionCookie({
+      forwardedProtoHeader: request.headers.get("x-forwarded-proto"),
+      requestProtocol: request.nextUrl.protocol.replace(":", ""),
+      requestHost: request.nextUrl.hostname,
+      publicBaseUrl: config.MYBRAIN_WEB_PUBLIC_BASE_URL,
+      nodeEnv: config.NODE_ENV,
+    });
 
     response.cookies.set("session", sessionId, {
       httpOnly: true,
-      secure: config.NODE_ENV === "production",
+      secure: secureCookie,
       sameSite: "strict",
       maxAge: 2 * 60 * 60,
       path: "/",
