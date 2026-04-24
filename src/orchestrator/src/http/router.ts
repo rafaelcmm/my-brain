@@ -181,15 +181,9 @@ export async function handleRequest(
       success: true,
       capabilities,
       features: {
-        vectorDb: capabilities.vectorDb
-          ? "HNSW indexing enabled"
-          : "Brute-force fallback",
-        sona: capabilities.sona
-          ? "SONA adaptive learning"
-          : "Q-learning fallback",
-        attention: capabilities.attention
-          ? "Self-attention embeddings"
-          : "Hash embeddings",
+        vectorDb: capabilities.vectorDb,
+        sona: capabilities.sona,
+        attention: capabilities.attention,
         embeddingDim: capabilities.embeddingDim,
       },
       degradedReasons: state.degradedReasons,
