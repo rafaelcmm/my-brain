@@ -2,8 +2,7 @@
 
 FROM node:20-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm" \
-    PATH="/pnpm:$PATH" \
-    NODE_ENV=production
+    PATH="/pnpm:$PATH"
 WORKDIR /app
 
 RUN npm install -g corepack@0.31.0 \
@@ -16,6 +15,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 FROM base AS prod-deps
+ENV NODE_ENV=production
 COPY src/orchestrator/package.json src/orchestrator/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
@@ -28,6 +28,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 RUN pnpm run build
 
 FROM base AS runner
+ENV NODE_ENV=production
 RUN groupadd -g 1001 mybrain \
  && useradd -u 1001 -g mybrain -m -d /app -s /usr/sbin/nologin mybrain
 
