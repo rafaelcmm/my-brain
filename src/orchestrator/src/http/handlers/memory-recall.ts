@@ -26,10 +26,7 @@ import { queryRecallCandidates } from "../../infrastructure/postgres-memory.js";
 import { getDefaultRecallThreshold } from "../router-context.js";
 import { normalizeRecallFilters } from "./memory-recall.filters.js";
 import { scoreAndRankCandidates } from "./memory-recall.scoring.js";
-import {
-  processRecallQuery,
-  synthesizeRecallAnswer,
-} from "../../infrastructure/query-processing.js";
+import { processRecallQuery } from "../../infrastructure/query-processing.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */
 type AllowRequestReq = Parameters<typeof allowRequest>[0];
@@ -235,21 +232,21 @@ export async function handleMemoryRecall(
     if (mode === "processed" && filtered.length > 0) {
       const synthesisModel = requestedModel || config.llmModel;
       try {
-        const synthesized = await synthesizeRecallAnswer({
-          llmUrl: config.llmUrl,
-          model: synthesisModel,
-          question: originalQuery,
-          results: filtered.map((item) => ({
-            id: String(item.id),
-            content: String(item.content),
-            score: item.score,
-          })),
-          timeoutMs: config.recallProcessTimeoutMs,
-        });
+        const synthesized = await ctx.synthesis.synthesize(
+          "mb_recall",
+          originalQuery,
+          {
+            query: queryForRecall,
+            top_k: topK,
+            min_score: minScore,
+            results: filtered,
+          },
+          config.synthTimeoutMs,
+        );
 
         synthesizedAnswerMeta = {
-          synthesized_answer: synthesized.answer,
-          synthesis_model: synthesized.model,
+          synthesized_answer: synthesized.summary,
+          synthesis_model: synthesized.model || synthesisModel,
           synthesis_latency_ms: synthesized.latencyMs,
         };
       } catch (synthesisError) {

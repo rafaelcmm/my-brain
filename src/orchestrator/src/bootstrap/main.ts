@@ -33,6 +33,7 @@ import {
   getCachedEmbedding as rawGetCachedEmbedding,
   initializeEmbeddingProvider,
 } from "../infrastructure/embedding.js";
+import { createOllamaSynthesis } from "../infrastructure/ollama-synthesis.js";
 import { createInitialRuntimeState } from "./runtime.js";
 import { handleRequest } from "../http/router.js";
 
@@ -55,6 +56,13 @@ const MAX_EMBEDDING_CACHE_SIZE = 400;
 
 /** Mutable runtime state assembled by initializeRuntime and read by all routes. */
 const state = createInitialRuntimeState(config.embeddingDim);
+
+/** Shared synthesis adapter used by HTTP handlers. */
+const synthesis = createOllamaSynthesis({
+  llmUrl: config.llmUrl,
+  model: config.llmModel,
+  defaultTimeoutMs: config.synthTimeoutMs,
+});
 
 /**
  * Records a degradation reason once — delegates to the shared log helper so
@@ -187,6 +195,7 @@ const routerCtx = {
   maxRequestBodyBytes: MAX_REQUEST_BODY_BYTES,
   embedText,
   getCachedEmbedding,
+  synthesis,
 };
 
 const server = http.createServer((req, res) => {
