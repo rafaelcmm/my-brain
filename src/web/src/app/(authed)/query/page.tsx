@@ -4,13 +4,15 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
 import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
-import type { ProcessedQueryModel, QueryMode, QueryTool } from "@/lib/domain";
+import type { QueryTool, SynthesisOutcome } from "@/lib/domain";
 
 interface QueryApiResponse {
   success: boolean;
   status: number;
   latency_ms: number;
+  summary: string;
   data: unknown;
+  synthesis: SynthesisOutcome | null;
   raw: Record<string, unknown>;
   error?: string;
 }
@@ -63,16 +65,12 @@ function JsonTree({ value, label }: { value: unknown; label?: string }) {
  */
 export default function QueryPage() {
   const [tool, setTool] = useState<QueryTool>("mb_recall");
-  const [queryMode, setQueryMode] = useState<QueryMode>("raw");
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState("");
   const [type, setType] = useState("");
   const [viewMode, setViewMode] = useState<"parsed" | "raw">("parsed");
   const [result, setResult] = useState<QueryApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const processedModel: ProcessedQueryModel = "qwen3.5:0.8b";
-  const isRecallLikeTool = tool === "mb_recall" || tool === "mb_search";
 
   async function run(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -91,11 +89,6 @@ export default function QueryPage() {
             query,
             scope,
             type,
-            mode: isRecallLikeTool ? queryMode : undefined,
-            model:
-              isRecallLikeTool && queryMode === "processed"
-                ? processedModel
-                : undefined,
           },
         }),
       });
@@ -106,7 +99,9 @@ export default function QueryPage() {
         success: false,
         status: 500,
         latency_ms: 0,
+        summary: "",
         data: null,
+        synthesis: null,
         raw: {},
         error: error instanceof Error ? error.message : "Query failed",
       });
@@ -133,19 +128,11 @@ export default function QueryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <select
               value={tool}
-              onChange={(event) => {
-                const nextTool = event.target.value as QueryTool;
-                setTool(nextTool);
-                if (nextTool === "mb_search") {
-                  // Preserve legacy mb_search behavior as processed recall.
-                  setQueryMode("processed");
-                }
-              }}
+              onChange={(event) => setTool(event.target.value as QueryTool)}
               className="ds-input"
             >
               <option value="mb_recall">mb_recall</option>
               <option value="mb_digest">mb_digest</option>
-              <option value="mb_search">mb_search</option>
             </select>
             <input
               value={query}
@@ -154,15 +141,6 @@ export default function QueryPage() {
               className="ds-input"
               disabled={tool === "mb_digest"}
             />
-            <select
-              value={queryMode}
-              onChange={(event) => setQueryMode(event.target.value as QueryMode)}
-              className="ds-input"
-              disabled={!isRecallLikeTool || tool === "mb_search"}
-            >
-              <option value="raw">raw query</option>
-              <option value="processed">processed query</option>
-            </select>
             <input
               value={scope}
               onChange={(event) => setScope(event.target.value)}
@@ -178,12 +156,6 @@ export default function QueryPage() {
             />
           </div>
 
-          {isRecallLikeTool && queryMode === "processed" ? (
-            <p className="text-xs text-slate-500">
-              processed model: {processedModel}
-            </p>
-          ) : null}
-
           <button
             type="submit"
             className="ds-btn-primary px-4 py-2 disabled:opacity-50"
@@ -197,6 +169,35 @@ export default function QueryPage() {
           {!result ? <p>No result yet.</p> : null}
           {result ? (
             <>
+              {result.summary ? (
+                <section className="ds-card p-4 border-l-4 border-emerald-500 bg-white text-slate-900">
+                  <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+                    LLM summary
+                  </h2>
+                  <p className="mt-2 text-base leading-relaxed text-slate-900">
+                    {result.summary}
+                  </p>
+                  {result.synthesis ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      {result.synthesis.status === "ok"
+                        ? "synthesized"
+                        : "fallback (raw data only)"}{" "}
+                      · model {result.synthesis.model} ·{" "}
+                      {result.synthesis.latency_ms}ms
+                      {result.synthesis.error
+                        ? ` · ${result.synthesis.error}`
+                        : ""}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+
+              {result.synthesis?.status === "fallback" ? (
+                <p className="rounded border border-yellow-500 bg-yellow-100 px-3 py-2 text-sm text-yellow-900">
+                  synthesis fallback: {result.synthesis.error ?? "unknown error"}
+                </p>
+              ) : null}
+
               <div className="flex flex-wrap items-center gap-3 text-xs">
                 <span className="rounded bg-gray-700 px-2 py-1">
                   status {result.status}
