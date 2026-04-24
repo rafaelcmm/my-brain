@@ -51,6 +51,7 @@ import { handleMemorySummary } from "./handlers/memory-summary.js";
 import { handleMemoryList } from "./handlers/memory-list.js";
 import { handleMemoryGraph } from "./handlers/memory-graph.js";
 import { handleMemoryGet } from "./handlers/memory-get.js";
+import { wrapWithSynthesis } from "./handlers/_envelope.js";
 
 // Re-export shared types so callers that already import from router.ts continue to work.
 export type { Capabilities, RouterContext };
@@ -177,8 +178,7 @@ export async function handleRequest(
   // ── GET /v1/capabilities ───────────────────────────────────────────────────
   if (method === "GET" && url === "/v1/capabilities") {
     const capabilities = getCapabilities(state);
-    sendJson(res, 200, {
-      success: true,
+    const envelope = await wrapWithSynthesis(ctx, "mb_capabilities", null, {
       capabilities,
       features: {
         vectorDb: capabilities.vectorDb,
@@ -194,6 +194,7 @@ export async function handleRequest(
         embeddingReady: state.embedding.ready,
       },
     });
+    sendJson(res, 200, envelope);
     return;
   }
 
@@ -241,11 +242,16 @@ export async function handleRequest(
     } catch {
       payload = {};
     }
-    sendJson(res, 200, {
-      success: true,
+    const envelope = await wrapWithSynthesis(
+      ctx,
+      "mb_context_probe",
+      typeof payload["cwd"] === "string" ? payload["cwd"] : null,
+      {
       context: buildProjectContext(payload as unknown as ProjectContextHints),
       degraded: state.degradedReasons.length > 0,
-    });
+      },
+    );
+    sendJson(res, 200, envelope);
     return;
   }
 

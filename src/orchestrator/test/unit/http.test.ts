@@ -229,7 +229,8 @@ describe("GET /v1/capabilities", () => {
     });
     assert.equal(status, 200);
     const b = body as Record<string, unknown>;
-    const caps = b["capabilities"] as Record<string, unknown> | undefined;
+    const data = b["data"] as Record<string, unknown> | undefined;
+    const caps = data?.["capabilities"] as Record<string, unknown> | undefined;
     assert.ok(caps !== undefined, "capabilities must be present");
     assert.equal(typeof caps["engine"], "boolean");
     assert.equal(typeof caps["vectorDb"], "boolean");
