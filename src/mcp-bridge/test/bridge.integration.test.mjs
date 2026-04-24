@@ -163,7 +163,10 @@ async function connectBridgeClient(options) {
  * @returns {Record<string, unknown>} Parsed payload object.
  */
 function parseToolResult(result) {
-  if (result.structuredContent && typeof result.structuredContent === "object") {
+  if (
+    result.structuredContent &&
+    typeof result.structuredContent === "object"
+  ) {
     return result.structuredContent;
   }
 

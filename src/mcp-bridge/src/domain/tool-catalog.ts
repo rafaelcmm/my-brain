@@ -6,8 +6,7 @@ import type { BridgeTool } from "./types.js";
 export const BRIDGE_TOOLS: readonly BridgeTool[] = [
   {
     name: "mb_capabilities",
-    description:
-      "Canonical runtime capabilities endpoint for my-brain tooling",
+    description: "Canonical runtime capabilities endpoint for my-brain tooling",
     inputSchema: {
       type: "object",
       properties: {},
