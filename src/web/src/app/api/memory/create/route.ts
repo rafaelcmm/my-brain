@@ -3,7 +3,6 @@ import {
   applyNoStoreHeaders,
   isMemoryRateLimited,
 } from "@/lib/application/api-security";
-import { CreateMemoryUseCase } from "@/lib/application/create-memory.usecase";
 import {
   getAuthenticatedClient,
   getSessionIdFromCookies,
@@ -88,16 +87,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const useCase = new CreateMemoryUseCase(client);
-    const response = await useCase.execute({
-      content: payload.content,
-      type: payload.type,
-      scope: payload.scope,
-      metadata: payload.metadata ?? {},
-    });
+    const envelope = await client.createMemory(
+      payload.content,
+      payload.type,
+      payload.scope,
+      payload.metadata ?? {},
+    );
 
     return applyNoStoreHeaders(
-      NextResponse.json({ success: true, data: response }),
+      NextResponse.json({
+        success: true,
+        summary: envelope.summary,
+        data: envelope.data,
+      }),
     );
   } catch (error) {
     return applyNoStoreHeaders(

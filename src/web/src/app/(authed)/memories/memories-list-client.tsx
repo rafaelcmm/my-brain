@@ -87,10 +87,15 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
           },
           body: JSON.stringify({ id }),
         }).then(async (res) => {
+          const payload = (await res.json()) as {
+            error?: string;
+            summary?: string;
+          };
           if (!res.ok) {
-            const payload = (await res.json()) as { error?: string };
             throw new Error(payload.error ?? "Failed to forget memory");
           }
+
+          return payload.summary ?? "";
         }),
       ),
     );
@@ -105,7 +110,16 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
       );
       setStatus(`${failures.length} failed: ${messages.join("; ")}`);
     } else {
-      setStatus(`${selectedIds.length} memories forgotten.`);
+      const summaries = results
+        .filter(
+          (result): result is PromiseFulfilledResult<string> =>
+            result.status === "fulfilled",
+        )
+        .map((result) => result.value)
+        .filter(Boolean);
+      setStatus(
+        summaries[0] || `${selectedIds.length} memories forgotten.`,
+      );
     }
 
     setBusy(false);

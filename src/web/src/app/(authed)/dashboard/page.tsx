@@ -33,10 +33,6 @@ function totalPages(items: unknown[]): number {
   return Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
 }
 
-function hasEngineFailureMode(mode: string): boolean {
-  return mode.toLowerCase() !== "engine";
-}
-
 /**
  * Normalizes machine-formatted metric keys into human-readable card labels.
  */
@@ -120,7 +116,7 @@ export default async function DashboardPage({
   const insightSlice = paginate(combinedInsights, clampedPage);
 
   const learningEntries = Object.entries(summary.learning_stats);
-  const degraded = hasEngineFailureMode(capabilities.mode);
+  const degraded = !capabilities.data.capabilities.engine;
   const cardLabelClass = "ds-card-title";
   const cardMetricClass = "ds-card-metric";
 
@@ -192,11 +188,16 @@ export default async function DashboardPage({
             <div className="ds-card space-y-2">
             <p className={cardLabelClass}>Capabilities</p>
             <p className="text-sm text-slate-700">
-              Version: {capabilities.version}
+              Engine: {capabilities.data.capabilities.engine ? "on" : "off"}
             </p>
-            <p className="text-sm text-slate-700">Mode: {capabilities.mode}</p>
             <p className="text-sm text-slate-700">
-              Distinct scopes: {Object.keys(summary.by_scope).length}
+              Vector DB: {capabilities.data.features.vectorDb ? "on" : "off"}
+            </p>
+            <p className="text-sm text-slate-700">
+              SONA: {capabilities.data.features.sona ? "on" : "off"}
+            </p>
+            <p className="text-sm text-slate-700">
+              Attention: {capabilities.data.features.attention ? "on" : "off"}
             </p>
             </div>
           </div>

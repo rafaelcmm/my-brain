@@ -21,11 +21,12 @@ export class CreateMemoryUseCase {
    */
   async execute(input: CreateMemoryInput): Promise<unknown> {
     const validated = createMemorySchema.parse(input);
-    return this.client.createMemory(
+    const envelope = await this.client.createMemory(
       validated.content,
       validated.type,
       validated.scope,
       validated.metadata,
     );
+    return envelope.data;
   }
 }

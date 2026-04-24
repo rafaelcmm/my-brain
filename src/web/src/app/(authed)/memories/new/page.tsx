@@ -245,6 +245,7 @@ export default function NewMemoryPage() {
 
       const payload = (await response.json()) as {
         success?: boolean;
+        summary?: string;
         error?: string;
         data?: Record<string, unknown>;
       };
@@ -255,7 +256,7 @@ export default function NewMemoryPage() {
         return;
       }
 
-      setSuccess("Memory saved");
+      setSuccess(payload.summary || "Memory saved");
       sessionStorage.removeItem(draftStorageKey);
       const createdId = String(
         payload.data?.id ??
