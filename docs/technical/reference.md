@@ -1,143 +1,122 @@
-# my-brain Technical Reference
+# my-brain Technical Reference (v2)
 
-This file is API and configuration reference for maintainers.
+## Response Envelope (tool endpoints)
 
-## REST endpoints
+All successful `mb_*` tool responses plus `/v1/capabilities` and `/v1/context/probe` return:
 
-- `GET /health`: orchestrator liveness.
-- `GET /ready`: orchestrator readiness (engine + db connection + ADR schemas + LLM runtime).
-- `GET /v1/status`: orchestrator status snapshot.
-- `GET /v1/capabilities`: engine/vector/sona/attention capability flags and degraded-mode reasons.
-- `GET /v1/learning/stats`: persisted session trajectory counters and reconstructed route confidence from `my_brain_sessions`.
-- `GET /metrics`: Prometheus-style counters for memory lifecycle and recall quality.
-- `POST /v1/context/probe`: derives repo/project/language/framework context from the workspace.
-  Accepts an optional JSON body with client-supplied hints that take precedence over server-side
-  discovery (see [Context probe hints](#context-probe-hints) below).
-- `POST /v1/memory`: writes validated memory envelope and metadata sidecar row.
-- `POST /v1/memory/recall`: scoped metadata-filtered recall with minimum-score cutoff. Supports `mode: "raw" | "processed"`; processed mode only accepts model `qwen3.5:0.8b` and returns `original_query`, `processed_query`, and `processing_latency_ms`. It also returns `synthesized_answer` (`synthesis_model`, `synthesis_latency_ms`) grounded on ranked results. If rewrite fails, recall falls back to the original query and includes `processing_fallback: true` plus `processing_error`.
-- `POST /v1/memory/vote`: stores up/down feedback for memory id.
-- `POST /v1/memory/forget`: soft or hard forget by memory id.
-- `POST /v1/memory/digest`: grouped summary across type/language/repo windows.
-- `GET /v1/memory/summary`: dashboard aggregates (totals, scope/type counts, top tags/frameworks/languages, persisted learning stats).
-- `GET /v1/memory/list`: paginated memory list with filters (`scope`, `type`, `repo_name`, `language`, `tag`, `search`, `cursor`, `limit`).
-- `GET /v1/memory/graph`: graph snapshot (`nodes`, `edges`, `total_count`) built from shared repo/tag relations.
-- `GET /v1/memory/{id}`: single memory retrieval by id (sanitized path param).
-- `POST /v1/memory/backfill`: batch-bounded repair for rows missing `content_sha1`, `embedding`, or
-  `embedding_vector`. Each call processes at most 1000 rows and returns `{ processed: N }`. Full
-  repair of a large corpus requires looping until `processed === 0` — use
-  `src/scripts/backfill-memory-metadata.sh` as the operator utility.
-- `POST /v1/session/open`: opens tracked session with context payload.
-- `POST /v1/session/close`: closes tracked session with success/quality labels.
+Success (synthesis completed):
 
-More endpoints are added incrementally and documented here in same change set.
+```json
+{
+  "success": true,
+  "summary": "Human-readable synthesis string",
+  "data": {},
+  "synthesis": {
+    "status": "ok",
+    "model": "qwen3.5:0.8b",
+    "latency_ms": 120
+  }
+}
+```
 
-## Environment variables
+Success (synthesis failed — fallback):
+
+```json
+{
+  "success": true,
+  "summary": "",
+  "data": {},
+  "synthesis": {
+    "status": "fallback",
+    "model": "qwen3.5:0.8b",
+    "latency_ms": 15043,
+    "error": "timeout after 15000ms"
+  }
+}
+```
+
+Rules:
+
+- Error responses keep legacy shape: `{ success: false, error, message }`.
+- `data` is source-of-truth payload for automation.
+- `summary` is LLM guidance text.
+- No per-call `mode` or `model`.
+
+## REST Endpoints
+
+| Path                 | Method | Auth            | Rate Limit Bucket | Success Shape        | Error Shape  |
+| -------------------- | ------ | --------------- | ----------------- | -------------------- | ------------ |
+| `/health`            | GET    | bearer/internal | none              | raw health object    | legacy error |
+| `/ready`             | GET    | bearer/internal | none              | raw readiness object | legacy error |
+| `/v1/status`         | GET    | internal key    | none              | raw status object    | legacy error |
+| `/v1/capabilities`   | GET    | internal key    | none              | envelope             | legacy error |
+| `/v1/context/probe`  | POST   | internal key    | none              | envelope             | legacy error |
+| `/v1/memory`         | POST   | internal key    | `memory-write`    | envelope             | legacy error |
+| `/v1/memory/recall`  | POST   | internal key    | `memory-recall`   | envelope             | legacy error |
+| `/v1/memory/vote`    | POST   | internal key    | `memory-vote`     | envelope             | legacy error |
+| `/v1/memory/forget`  | POST   | internal key    | `memory-forget`   | envelope             | legacy error |
+| `/v1/memory/digest`  | POST   | internal key    | `memory-digest`   | envelope             | legacy error |
+| `/v1/session/open`   | POST   | internal key    | `session-open`    | envelope             | legacy error |
+| `/v1/session/close`  | POST   | internal key    | `session-close`   | envelope             | legacy error |
+| `/v1/memory/summary` | GET    | internal key    | none              | raw summary object   | legacy error |
+| `/v1/memory/list`    | GET    | internal key    | none              | raw list object      | legacy error |
+| `/v1/memory/graph`   | GET    | internal key    | none              | raw graph object     | legacy error |
+| `/v1/memory/{id}`    | GET    | internal key    | none              | raw memory object    | legacy error |
+| `/v1/learning/stats` | GET    | internal key    | none              | raw stats object     | legacy error |
+| `/metrics`           | GET    | internal key    | none              | Prometheus text      | plain error  |
+
+## Request Body Notes
+
+- `POST /v1/memory/recall`: rejects `mode` and `model` with `400 INVALID_INPUT`.
+- `POST /v1/memory`: expects validated memory envelope fields (`content`, `type`, `scope`, `metadata`).
+- `POST /v1/memory/forget`: `mode` accepts `soft` or `hard`.
+
+## Environment Variables
 
 ### Orchestrator
 
-- `MYBRAIN_DB_URL`
-- `MYBRAIN_LLM_URL`
-- `MYBRAIN_LLM_MODEL`
-- `MYBRAIN_RECALL_PROCESS_TIMEOUT_MS`
-- `MYBRAIN_EMBEDDING_MODEL`
-- `MYBRAIN_EMBEDDING_DIM`
-- `MYBRAIN_MIN_TOKEN_LENGTH`
-- `MYBRAIN_RATE_LIMIT_PER_MIN`
-- `MYBRAIN_MAX_REQUEST_BODY_BYTES`
-- `MYBRAIN_PROMETHEUS_PORT`
-- `MYBRAIN_INTERNAL_API_KEY`
-- `MYBRAIN_AUTH_TOKEN_FILE`
-- `MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH` — set `true` only when the orchestrator container user
-  cannot read the token secret file (EACCES, non-root owner) and the Caddy gateway is the sole
-  bearer-token enforcement point. Defaults to `false` (fail-closed).
-- `RUVECTOR_HOST`
-- `RUVECTOR_PORT`
-- `RUVLLM_SONA_ENABLED`
+| Name                                | Type   | Default                   | Reader                                        |
+| ----------------------------------- | ------ | ------------------------- | --------------------------------------------- |
+| `MYBRAIN_DB_URL`                    | string | none                      | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_LLM_URL`                   | string | `""`                      | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_LLM_MODEL`                 | string | `qwen3.5:0.8b`            | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_RECALL_PROCESS_TIMEOUT_MS` | int    | `180000`                  | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_SYNTH_TIMEOUT_MS`          | int    | `15000`                   | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_EMBEDDING_MODEL`           | string | `qwen3-embedding:0.6b`    | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_EMBEDDING_DIM`             | int    | `1024`                    | `src/orchestrator/src/config/load-config.ts`  |
+| `RUVECTOR_PORT`                     | int    | `8080`                    | `src/orchestrator/src/config/load-config.ts`  |
+| `RUVLLM_SONA_ENABLED`               | bool   | `true`                    | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_AUTH_TOKEN_FILE`           | string | `/run/secrets/auth-token` | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_INTERNAL_API_KEY`          | string | `""`                      | `src/orchestrator/src/config/load-config.ts`  |
+| `MYBRAIN_ALLOW_GATEWAY_ONLY_AUTH`   | bool   | `false`                   | `src/orchestrator/src/bootstrap/main.ts`      |
+| `MYBRAIN_RATE_LIMIT_PER_MIN`        | int    | `60`                      | `src/orchestrator/src/policies/rate-limit.ts` |
+| `MYBRAIN_MAX_REQUEST_BODY_BYTES`    | int    | `1048576`                 | `src/orchestrator/src/bootstrap/main.ts`      |
 
-### MCP bridge
+### MCP Bridge
 
-- `MYBRAIN_REST_URL` — upstream orchestrator base URL.
-- `MYBRAIN_INTERNAL_API_KEY` — shared internal header value.
-- `MYBRAIN_PROMETHEUS_PORT` — bridge metrics port.
-- `MYBRAIN_UPSTREAM_MCP_COMMAND`, `MYBRAIN_UPSTREAM_MCP_ARGS` — optional upstream MCP transport override.
+| Name                       | Type   | Default | Reader                                     |
+| -------------------------- | ------ | ------- | ------------------------------------------ |
+| `MYBRAIN_REST_URL`         | string | none    | `src/mcp-bridge/src/config/load-config.ts` |
+| `MYBRAIN_INTERNAL_API_KEY` | string | none    | `src/mcp-bridge/src/config/load-config.ts` |
+| `MYBRAIN_PROMETHEUS_PORT`  | int    | `9090`  | `src/mcp-bridge/src/config/load-config.ts` |
 
 ### Web
 
-- `MYBRAIN_WEB_SESSION_SECRET` — ≥16 chars, rotates session cookies on change.
-- `MYBRAIN_WEB_ORCHESTRATOR_URL` — orchestrator base URL used by server routes.
-- `MYBRAIN_INTERNAL_API_KEY` — injected as `x-mybrain-internal-key` on server-to-orchestrator calls.
-- `MYBRAIN_WEB_PUBLIC_BASE_URL` — canonical public URL for redirects and CSRF.
-- `MYBRAIN_WEB_RATE_LIMIT_LOGIN` — login attempts per window (default 5).
-- `MYBRAIN_WEB_LOG_LEVEL` — `trace|debug|info|warn|error`.
+| Name                           | Type   | Default | Reader                          |
+| ------------------------------ | ------ | ------- | ------------------------------- |
+| `MYBRAIN_WEB_SESSION_SECRET`   | string | none    | `src/web/src/lib/config/env.ts` |
+| `MYBRAIN_WEB_ORCHESTRATOR_URL` | string | none    | `src/web/src/lib/config/env.ts` |
+| `MYBRAIN_INTERNAL_API_KEY`     | string | none    | `src/web/src/lib/config/env.ts` |
+| `MYBRAIN_WEB_PUBLIC_BASE_URL`  | string | none    | `src/web/src/lib/config/env.ts` |
+| `MYBRAIN_WEB_RATE_LIMIT_LOGIN` | int    | `5`     | `src/web/src/lib/config/env.ts` |
+| `MYBRAIN_WEB_LOG_LEVEL`        | string | `info`  | `src/web/src/lib/config/env.ts` |
 
-## Context probe hints
+## Migration From v0/v1
 
-`POST /v1/context/probe` accepts an optional JSON body. All fields are optional; omitting the body
-causes the server to rely entirely on its own filesystem discovery.
+Breaking changes:
 
-| Field             | Type     | Purpose                                                                                  |
-| ----------------- | -------- | ---------------------------------------------------------------------------------------- |
-| `cwd`             | string   | Absolute path to the workspace root. Must exist on the server filesystem when supplied.  |
-| `git_remote`      | string   | Git remote URL (e.g. `https://github.com/org/repo`). Used as the canonical `repo` value. |
-| `repo_hint`       | string   | Fallback repo identifier when `git_remote` is absent.                                    |
-| `repo_name`       | string   | Short repo name override (e.g. `my-brain`).                                              |
-| `project_hint`    | string   | Project name override.                                                                   |
-| `language_hint`   | string   | Primary language hint when auto-detection is insufficient.                               |
-| `framework_hints` | string[] | Additional frameworks to merge with detected ones.                                       |
-| `author`          | string   | Committer identity; falls back to local `git config user.name`.                          |
-
-### `source` field in response
-
-The `source` field on the returned context object describes how the context was derived:
-
-| Value             | Meaning                                                         |
-| ----------------- | --------------------------------------------------------------- |
-| `client-hint`     | All primary fields came from the request body hints.            |
-| `git`             | Derived from `git remote get-url origin` in the resolved `cwd`. |
-| `package-json`    | Derived from `package.json` (name, dependencies).               |
-| `cargo-toml`      | Derived from `Cargo.toml`.                                      |
-| `pyproject`       | Derived from `pyproject.toml`.                                  |
-| `server-fallback` | No hints and no detectable project files; defaults applied.     |
-
-## Bridge contract
-
-Bridge supports streamable HTTP MCP transport and acts as tool facade over upstream runtime tools.
-
-## Recall semantics
-
-- `include_expired`: controls entries hidden by `expires_at`.
-- `include_forgotten`: controls entries hidden by soft forget (`forgotten_at`).
-- `include_redacted`: controls entries hidden by redaction (`redacted_at`).
-- Repo matching normalizes URL and repo short name (`repo_name`) selectors.
-
-## Dedup and voting
-
-- `POST /v1/memory` performs server-side dedup using scoped fingerprint + embedding similarity.
-- Duplicate writes return existing `memory_id` and set `deduped: true`.
-- Duplicate responses expose `dedup_reason` (`fingerprint` or `semantic`) so operators can separate exact-match vs near-duplicate collapse.
-- `POST /v1/memory/vote` updates ranking bias; recall returns `semantic_score`, `vote_bias`, and final `score`.
-
-## Metrics
-
-Orchestrator `/metrics` includes:
-
-Orchestrator non-public routes, including `/metrics`, require header
-`x-mybrain-internal-key` matching `MYBRAIN_INTERNAL_API_KEY`.
-
-- `mb_remember_total`
-- `mb_recall_total{result="hit|miss"}`
-- `mb_recall_latency_ms` (histogram — fixed buckets 5–5000 ms)
-- `mb_dedup_hits_total`
-- `mb_forget_total{mode="soft|hard"}`
-- `mb_vote_total{direction="up|down"}`
-- `mb_recall_latency_ms_bucket` / `mb_recall_latency_ms_sum` / `mb_recall_latency_ms_count`
-
-Bridge metrics (default `:9090/metrics`) include:
-
-- `mb_bridge_tool_calls_total{tool,status}`
-- `mb_bridge_tools_list_total`
-- `mb_bridge_tools_filtered_total{tool}`
-- mirrored counters for `mb_remember_total`, `mb_recall_total`, `mb_dedup_hits_total`, `mb_forget_total`.
-- `mb_bridge_recall_latency_ms` (histogram — fixed buckets 5–5000 ms)
-
-Bridge metrics require header `x-mybrain-internal-key` with `MYBRAIN_INTERNAL_API_KEY` value.
+- Removed legacy `mode: raw|processed` and `model` from recall.
+- Removed `/v1/memory/backfill` endpoint and script.
+- Removed upstream MCP passthrough and `hooks_stats` bridge path.
+- Removed legacy env variables that had no TypeScript reader.
+- All successful tool responses now use synthesis envelope.

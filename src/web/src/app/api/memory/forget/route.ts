@@ -75,8 +75,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    await client.forgetMemory(payload.id);
-    return applyNoStoreHeaders(NextResponse.json({ success: true }));
+    const envelope = await client.forgetMemory(payload.id);
+    return applyNoStoreHeaders(
+      NextResponse.json({
+        success: true,
+        summary: envelope.summary,
+        data: envelope.data,
+      }),
+    );
   } catch (error) {
     return applyNoStoreHeaders(
       NextResponse.json(

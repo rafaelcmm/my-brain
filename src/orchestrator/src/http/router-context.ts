@@ -8,7 +8,7 @@
 
 import { type loadConfig } from "../config/load-config.js";
 import type { RuntimeState } from "../bootstrap/runtime.js";
-import type { BackfillResult } from "../application/backfill.js";
+import type { SynthesisPort } from "../domain/synthesis.js";
 
 /** Inferred config shape from loadConfig return value. */
 type OrchestratorConfig = ReturnType<typeof loadConfig>;
@@ -73,6 +73,6 @@ export interface RouterContext {
   embedText: (content: string) => Promise<number[]>;
   /** Bound cached-embed function for recall scoring. */
   getCachedEmbedding: (content: string) => Promise<number[]>;
-  /** Bound backfill function that writes to the current runtime pool. */
-  backfill: (batchSize: number) => Promise<BackfillResult>;
+  /** Bound synthesis port used by handlers for LLM summary generation. */
+  synthesis: SynthesisPort;
 }

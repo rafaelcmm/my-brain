@@ -1,14 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Memory } from "@/lib/domain";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
+import { renderMarkdownToHtml } from "@/lib/application/render-markdown";
 import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
+import { MemoryContentToggle } from "@/app/(authed)/memories/[id]/memory-content-toggle";
 import type { Metadata } from "next";
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import remarkGfm from "remark-gfm";
-import remarkRehype from "remark-rehype";
-import rehypeSanitize from "rehype-sanitize";
-import rehypeStringify from "rehype-stringify";
 
 /** System metadata key prefix — rendered in a dedicated section. */
 const SYS_PREFIX = "sys.";
@@ -26,6 +22,57 @@ function toMemoryLabel(id: string): string {
   }
 
   return `${id.slice(0, 10)}...${id.slice(-8)}`;
+}
+
+/** Converts metadata keys into human-readable labels. */
+function toMetadataLabel(key: string): string {
+  return key
+    .replace(/^sys\./, "")
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+/**
+ * Returns compact and expanded metadata strings to keep very large payloads readable.
+ */
+function toMetadataDisplay(
+  key: string,
+  value: unknown,
+): { compact: string; expanded?: string } {
+  if (key === "embedding") {
+    if (Array.isArray(value)) {
+      const preview = value.slice(0, 8).map((item) => Number(item).toFixed(4));
+      return {
+        compact: `${value.length} dimensions`,
+        expanded: `[${preview.join(", ")}${value.length > 8 ? ", ..." : ""}]`,
+      };
+    }
+
+    if (typeof value === "string") {
+      return {
+        compact: `Embedding payload (${value.length} chars)`,
+        expanded: value,
+      };
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      compact: `${value.length} items`,
+      expanded: JSON.stringify(value, null, 2),
+    };
+  }
+
+  if (value && typeof value === "object") {
+    return {
+      compact: "Object",
+      expanded: JSON.stringify(value, null, 2),
+    };
+  }
+
+  return { compact: String(value ?? "") };
 }
 
 /**
@@ -48,7 +95,7 @@ export default async function MemoryDetailPage({
     notFound();
   }
 
-  const renderedMarkdown = await renderMemoryMarkdown(memory.content);
+  const renderedMarkdown = await renderMarkdownToHtml(memory.content);
 
   const sysEntries = Object.entries(memory.metadata ?? {}).filter(([k]) =>
     k.startsWith(SYS_PREFIX),
@@ -79,10 +126,12 @@ export default async function MemoryDetailPage({
             </span>
           </div>
 
-          <h1 className="text-xl font-bold text-slate-900">{memory.id}</h1>
-          <article
-            className="prose prose-slate max-w-none text-slate-900"
-            dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
+          <h1 className="text-xl font-bold text-slate-900 break-all">
+            {memory.id}
+          </h1>
+          <MemoryContentToggle
+            renderedMarkdown={renderedMarkdown}
+            rawContent={memory.content}
           />
         </div>
 
@@ -104,21 +153,6 @@ export default async function MemoryDetailPage({
   );
 }
 
-/**
- * Converts stored markdown into sanitized HTML for safe SSR rendering.
- */
-async function renderMemoryMarkdown(content: string): Promise<string> {
-  const file = await unified()
-    .use(remarkParse)
-    .use(remarkGfm)
-    .use(remarkRehype)
-    .use(rehypeSanitize)
-    .use(rehypeStringify)
-    .process(content);
-
-  return String(file);
-}
-
 /** Renders a labeled group of metadata key/value pairs. */
 function MetadataSection({
   title,
@@ -136,21 +170,52 @@ function MetadataSection({
       >
         {title}
       </h3>
-      <dl className="divide-y divide-gray-100 border border-gray-100 rounded">
-        {entries.map(([key, value]) => (
-          <div key={key} className="grid grid-cols-5 gap-2 px-3 py-2">
-            <dt
-              className={`col-span-2 text-xs font-mono truncate ${muted ? "text-gray-400" : "text-gray-500"}`}
+      <dl className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden bg-white">
+        {entries.map(([key, value]) => {
+          const display = toMetadataDisplay(key, value);
+
+          return (
+            <div
+              key={key}
+              className="grid grid-cols-1 md:grid-cols-12 gap-2 px-3 py-3"
             >
-              {key}
-            </dt>
-            <dd className="col-span-3 text-xs text-gray-900 break-words">
-              {typeof value === "object"
-                ? JSON.stringify(value)
-                : String(value ?? "")}
-            </dd>
-          </div>
-        ))}
+              <dt className="md:col-span-4 min-w-0">
+                <p
+                  className={`text-[11px] font-semibold uppercase tracking-wide ${muted ? "text-gray-400" : "text-gray-500"}`}
+                >
+                  {toMetadataLabel(key)}
+                </p>
+                <p
+                  className={`text-[11px] font-mono mt-1 break-all ${muted ? "text-gray-400" : "text-gray-500"}`}
+                >
+                  {key}
+                </p>
+              </dt>
+              <dd className="md:col-span-8 min-w-0 text-xs text-gray-900 break-words">
+                {display.expanded ? (
+                  <details className="group">
+                    <summary className="cursor-pointer list-none inline-flex items-center gap-2 text-xs font-semibold text-slate-700">
+                      <span>{display.compact}</span>
+                      <span className="text-[11px] text-slate-500 group-open:hidden">
+                        Show details
+                      </span>
+                      <span className="text-[11px] text-slate-500 hidden group-open:inline">
+                        Hide details
+                      </span>
+                    </summary>
+                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all rounded border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-800">
+                      {display.expanded}
+                    </pre>
+                  </details>
+                ) : (
+                  <span className="whitespace-pre-wrap break-all">
+                    {display.compact}
+                  </span>
+                )}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
     </section>
   );

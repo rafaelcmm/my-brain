@@ -33,10 +33,7 @@ import {
   getCachedEmbedding as rawGetCachedEmbedding,
   initializeEmbeddingProvider,
 } from "../infrastructure/embedding.js";
-import {
-  backfillMemoryMetadata,
-  type BackfillResult,
-} from "../application/backfill.js";
+import { createOllamaSynthesis } from "../infrastructure/ollama-synthesis.js";
 import { createInitialRuntimeState } from "./runtime.js";
 import { handleRequest } from "../http/router.js";
 
@@ -59,6 +56,13 @@ const MAX_EMBEDDING_CACHE_SIZE = 400;
 
 /** Mutable runtime state assembled by initializeRuntime and read by all routes. */
 const state = createInitialRuntimeState(config.embeddingDim);
+
+/** Shared synthesis adapter used by HTTP handlers. */
+const synthesis = createOllamaSynthesis({
+  llmUrl: config.llmUrl,
+  model: config.llmModel,
+  defaultTimeoutMs: config.synthTimeoutMs,
+});
 
 /**
  * Records a degradation reason once — delegates to the shared log helper so
@@ -109,20 +113,6 @@ function getCachedEmbedding(content: string): Promise<number[]> {
     MAX_EMBEDDING_CACHE_SIZE,
     embedText,
   );
-}
-
-/**
- * Backfill function bound to the current pool and getCachedEmbedding.
- * Returns early with zero counts when the pool is not available.
- *
- * @param batchSize - Maximum rows to process in this run.
- * @returns Backfill result counters.
- */
-async function backfill(batchSize: number): Promise<BackfillResult> {
-  if (!state.pool) {
-    return { processed: 0, updated: 0 };
-  }
-  return backfillMemoryMetadata(state.pool, batchSize, getCachedEmbedding);
 }
 
 /**
@@ -205,7 +195,7 @@ const routerCtx = {
   maxRequestBodyBytes: MAX_REQUEST_BODY_BYTES,
   embedText,
   getCachedEmbedding,
-  backfill,
+  synthesis,
 };
 
 const server = http.createServer((req, res) => {

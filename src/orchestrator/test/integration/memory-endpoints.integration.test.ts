@@ -168,7 +168,6 @@ before(async () => {
     maxRequestBodyBytes: 1024 * 1024,
     embedText: async () => Array(1024).fill(0) as number[],
     getCachedEmbedding: async () => Array(1024).fill(0) as number[],
-    backfill: async () => ({ processed: 0, updated: 0, failed: 0, skipped: 0 }),
   };
 
   server = http.createServer((req, res) => {

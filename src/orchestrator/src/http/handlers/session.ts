@@ -18,6 +18,7 @@ import { allowRequest } from "../../policies/rate-limit.js";
 import { sanitizeText } from "../../domain/memory-validation.js";
 import { buildProjectContext } from "../../application/project-context.js";
 import { randomUUID } from "node:crypto";
+import { wrapWithSynthesis } from "./_envelope.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */
 type AllowRequestReq = Parameters<typeof allowRequest>[0];
@@ -91,12 +92,12 @@ export async function handleSessionOpen(
   state.learning.sessionsOpened += 1;
   state.learning.currentRoute = agent;
 
-  sendJson(res, 200, {
-    success: true,
+  const envelope = await wrapWithSynthesis(ctx, "mb_session_open", null, {
     session_id: sessionId,
     agent,
     route_confidence: state.learning.routeConfidence,
   });
+  sendJson(res, 200, envelope);
 }
 
 /**
@@ -191,10 +192,10 @@ export async function handleSessionClose(
     state.learning.totalQuality += quality;
   }
 
-  sendJson(res, 200, {
-    success: true,
+  const envelope = await wrapWithSynthesis(ctx, "mb_session_close", null, {
     session_id: sessionId,
     closed: true,
     route_confidence: Number(state.learning.routeConfidence.toFixed(3)),
   });
+  sendJson(res, 200, envelope);
 }

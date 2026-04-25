@@ -2,19 +2,23 @@ import type {
   BrainSummary,
   GraphSnapshot,
   Memory,
-  ProcessedQueryModel,
-  QueryMode,
+  ToolResponseEnvelope,
 } from "@/lib/domain";
 import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
 import {
+  type CapabilitiesData,
+  type DigestData,
+  type ForgetData,
+  type RecallData,
+  type RememberData,
   OrchestratorAuthError,
+  OrchestratorError,
   OrchestratorUnavailableError,
   OrchestratorValidationError,
 } from "@/lib/ports/orchestrator-client.port";
 import { makeRequest } from "@/lib/infrastructure/http-request";
 import {
   brainSummaryResponseSchema,
-  capabilitiesResponseSchema,
   graphSnapshotResponseSchema,
   memoryByIdResponseSchema,
   memoryListResponseSchema,
@@ -127,18 +131,42 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     }
   }
 
-  async getCapabilities(): Promise<{ version: string; mode: string }> {
-    const payload = await this.request("/v1/capabilities");
-    const data = this.parsePayload(
-      capabilitiesResponseSchema,
-      payload,
-      "/v1/capabilities",
-    );
+  async getCapabilities(): Promise<ToolResponseEnvelope<CapabilitiesData>> {
+    return this.requestEnvelope<CapabilitiesData>("/v1/capabilities", "GET");
+  }
 
-    return {
-      version: data.db?.extensionVersion ?? "unavailable",
-      mode: data.capabilities?.engine ? "engine" : "fallback",
-    };
+  /**
+   * Requests an endpoint that must return the v2 tool response envelope.
+   *
+   * @param path - Endpoint path.
+   * @param method - HTTP method.
+   * @param body - Optional request payload.
+   * @returns Parsed envelope payload.
+   */
+  private async requestEnvelope<T>(
+    path: string,
+    method: "GET" | "POST",
+    body?: unknown,
+  ): Promise<ToolResponseEnvelope<T>> {
+    const payload = (await this.request(path, method, body)) as Record<
+      string,
+      unknown
+    >;
+
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "data" in payload &&
+      "synthesis" in payload &&
+      "summary" in payload
+    ) {
+      return payload as unknown as ToolResponseEnvelope<T>;
+    }
+
+    throw new OrchestratorError(
+      `orchestrator response missing v2 envelope for ${path}`,
+      "ENVELOPE_SHAPE_ERROR",
+    );
   }
 
   async health(): Promise<boolean> {
@@ -214,8 +242,8 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     type: string,
     scope: string,
     metadata: Record<string, unknown>,
-  ): Promise<unknown> {
-    return this.request("/v1/memory", "POST", {
+  ): Promise<ToolResponseEnvelope<RememberData>> {
+    return this.requestEnvelope<RememberData>("/v1/memory", "POST", {
       content,
       type,
       scope,
@@ -223,8 +251,10 @@ export class HttpOrchestratorClient implements OrchestratorClient {
     });
   }
 
-  async forgetMemory(id: string): Promise<void> {
-    await this.request("/v1/memory/forget", "POST", { memory_id: id });
+  async forgetMemory(id: string): Promise<ToolResponseEnvelope<ForgetData>> {
+    return this.requestEnvelope<ForgetData>("/v1/memory/forget", "POST", {
+      memory_id: id,
+    });
   }
 
   async getMemoryGraph(
@@ -250,19 +280,18 @@ export class HttpOrchestratorClient implements OrchestratorClient {
   async recall(
     query: string,
     scope?: string,
-    mode?: QueryMode,
-    model?: ProcessedQueryModel,
-  ): Promise<unknown> {
-    return this.request("/v1/memory/recall", "POST", {
+  ): Promise<ToolResponseEnvelope<RecallData>> {
+    return this.requestEnvelope<RecallData>("/v1/memory/recall", "POST", {
       query,
       scope,
-      mode,
-      model,
     });
   }
 
-  async digest(scope?: string, type?: string): Promise<unknown> {
-    return this.request("/v1/memory/digest", "POST", {
+  async digest(
+    scope?: string,
+    type?: string,
+  ): Promise<ToolResponseEnvelope<DigestData>> {
+    return this.requestEnvelope<DigestData>("/v1/memory/digest", "POST", {
       scope,
       type,
     });

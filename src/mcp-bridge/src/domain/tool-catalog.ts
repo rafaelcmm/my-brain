@@ -1,18 +1,12 @@
 import type { BridgeTool } from "./types.js";
 
 /**
- * Legacy passthrough tools allowed by bridge policy.
- */
-export const LEGACY_PASSTHROUGH_ALLOWLIST = new Set<string>(["hooks_stats"]);
-
-/**
  * First-party tools exposed by bridge regardless of upstream availability.
  */
 export const BRIDGE_TOOLS: readonly BridgeTool[] = [
   {
-    name: "hooks_capabilities",
-    description:
-      "Legacy compatibility endpoint returning orchestrator runtime capabilities",
+    name: "mb_capabilities",
+    description: "Canonical runtime capabilities endpoint for my-brain tooling",
     inputSchema: {
       type: "object",
       properties: {},

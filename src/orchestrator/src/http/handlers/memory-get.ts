@@ -102,7 +102,9 @@ export async function handleMemoryGet(
     language: row.language,
     tags: Array.isArray(row.tags) ? row.tags : [],
     metadata:
-      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+      row.metadata &&
+      typeof row.metadata === "object" &&
+      !Array.isArray(row.metadata)
         ? row.metadata
         : {},
     created_at: row.created_at,

@@ -15,8 +15,9 @@ import type { RouterContext } from "../router-context.js";
 import { sendJson } from "../response.js";
 import { parseJsonBody } from "../body.js";
 import { allowRequest } from "../../policies/rate-limit.js";
-import { normalizeDigestSince } from "../../application/backfill.js";
+import { normalizeDigestSince } from "../../application/digest-window.js";
 import { getPersistedLearningStats } from "../../application/learning-stats.js";
+import { wrapWithSynthesis } from "./_envelope.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */
 type AllowRequestReq = Parameters<typeof allowRequest>[0];
@@ -100,8 +101,7 @@ export async function handleMemoryDigest(
 
   const learningStats = await getPersistedLearningStats(pool);
 
-  sendJson(res, 200, {
-    success: true,
+  const envelope = await wrapWithSynthesis(ctx, "mb_digest", null, {
     since,
     rows: summary.rows,
     learning: {
@@ -113,4 +113,5 @@ export async function handleMemoryDigest(
       route_confidence: learningStats.route_confidence,
     },
   });
+  sendJson(res, 200, envelope);
 }

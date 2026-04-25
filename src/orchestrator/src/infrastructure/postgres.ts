@@ -115,7 +115,7 @@ export async function ensureAdrSchemas(
     )
   `);
 
-  // Idempotent backfill migrations — apply any columns added after the initial
+  // Idempotent compatibility migrations — apply any columns added after the initial
   // table creation so the service can deploy onto an older database.
   await pool.query(
     "ALTER TABLE my_brain_memory_metadata ADD COLUMN IF NOT EXISTS content_sha1 TEXT",

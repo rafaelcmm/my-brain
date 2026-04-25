@@ -65,9 +65,9 @@ export class CapabilitiesClient {
   }
 
   /**
-   * Returns full compatibility payload for `hooks_capabilities`.
+   * Returns full payload for `mb_capabilities`.
    *
-   * @returns Capabilities payload matching legacy bridge response contract.
+   * @returns Capabilities payload matching bridge response contract.
    */
   async getCapabilitiesPayload(): Promise<CapabilitiesPayload> {
     try {

@@ -60,6 +60,7 @@ export function loadConfig() {
       process.env.MYBRAIN_RECALL_PROCESS_TIMEOUT_MS,
       180_000,
     ),
+    synthTimeoutMs: parseInteger(process.env.MYBRAIN_SYNTH_TIMEOUT_MS, 15_000),
     dbUrl: process.env.MYBRAIN_DB_URL ?? "",
     llmUrl: process.env.MYBRAIN_LLM_URL ?? "",
     embeddingModel:

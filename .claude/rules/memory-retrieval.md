@@ -1,7 +1,7 @@
 ---
 description: Define safe memory retrieval behavior with metadata filters, empty-result honesty, and degraded-mode trust boundaries.
 paths:
-	- "**"
+  - "**"
 ---
 
 # Memory Retrieval
@@ -11,7 +11,8 @@ paths:
 1. Prefer metadata filtering over global search.
 2. Pass `repo` and `language` by default.
 3. Use `scope=repo` unless user asks for cross-project recall.
-4. For context enrichment, call tools in order: `hooks_capabilities` -> `mb_context_probe` -> `mb_recall`.
+4. For context enrichment, call tools in order: `mcp_my-brain_mb_capabilities` -> `mb_context_probe` -> `mb_recall`.
+5. Normalize blank probe values before building filters; use fallback `repo=unknown-repo` and `language=unknown` when needed.
 
 ## Empty-result policy
 
@@ -27,3 +28,4 @@ When `engine=false`:
 2. Apply high threshold (`>=0.85`).
 3. Prefer no-context over noisy context.
 4. Do not skip retrieval automatically when `engine=false`; enforce threshold instead.
+5. If capability state is unavailable, treat runtime as degraded and use the same `>=0.85` threshold.

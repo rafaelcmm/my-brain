@@ -16,10 +16,6 @@ export interface BridgeTool {
 export interface BridgeConfig {
   /** Base URL for orchestrator REST API. */
   readonly restBaseUrl: string;
-  /** Executable used to spawn legacy upstream MCP server. */
-  readonly upstreamCommand: string;
-  /** Arguments for upstream MCP command. */
-  readonly upstreamArgs: readonly string[];
   /** Shared internal key for authenticated side-channel endpoints. */
   readonly internalApiKey: string;
   /** Port used for metrics HTTP endpoint; values <= 0 disable endpoint. */

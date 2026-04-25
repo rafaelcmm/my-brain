@@ -93,7 +93,7 @@ export async function queryRecallCandidates(
       : null;
 
   // ANN-friendly ordering: vector rows first by cosine distance, then recency
-  // fallback for rows awaiting embedding backfill.
+  // fallback for rows that still have null embedding vectors.
   let orderBy = "created_at DESC";
   if (embeddingLiteral) {
     orderBy = `

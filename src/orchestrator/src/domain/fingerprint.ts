@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 /**
  * Generates a stable fingerprint for semantically equivalent memory content so dedup logic can bucket candidates deterministically.
  *
- * @param content - Memory content before persistence or backfill normalization.
+ * @param content - Memory content before persistence-time normalization.
  * @returns SHA1 fingerprint over trimmed, lowercased, whitespace-collapsed content.
  */
 export function contentFingerprint(content: string): string {

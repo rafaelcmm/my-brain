@@ -60,25 +60,25 @@ forward when done.
 
 Deletion targets. Every row is mandatory unless marked `KEEP`.
 
-| ID  | Artifact                                            | Location                                                                                                                      | Action                                                             |
-| --- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| D1  | `legacy-index.mjs` (1588 lines)                     | `src/orchestrator/dist/legacy-index.mjs`                                                                                      | DELETE. Superseded by modular TS handlers.                         |
-| D2  | `LEGACY_PASSTHROUGH_ALLOWLIST` + `hooks_stats` wire | `src/mcp-bridge/src/domain/tool-catalog.ts:6`, `src/mcp-bridge/src/mcp/handlers/call-tool.ts:181-190`                         | DELETE. No upstream MCP server exists.                             |
-| D3  | `UpstreamClient` + file                             | `src/mcp-bridge/src/infrastructure/upstream-client.ts` and all imports                                                        | DELETE.                                                            |
-| D4  | `MYBRAIN_UPSTREAM_MCP_COMMAND`, `MYBRAIN_UPSTREAM_MCP_ARGS` | bootstrap + `docs/technical/reference.md`                                                                             | DELETE.                                                            |
-| D5  | Tool name `hooks_capabilities`                      | `src/mcp-bridge/src/domain/tool-catalog.ts:13-15`; every `.claude` ref                                                        | RENAME → `mb_capabilities`.                                        |
-| D6  | Recall `mode: raw \| processed` + `model` param + `PROCESSED_QUERY_MODEL` | `src/orchestrator/src/http/handlers/memory-recall.ts:37,84-121,170-212`                                  | DELETE. Synth is always-on in v2.                                  |
-| D7  | `processing_fallback` / `processing_error` fields   | `src/orchestrator/src/http/handlers/memory-recall.ts:157-158`                                                                 | REPLACE with unified `synthesis` envelope (see §3).                |
-| D8  | Dead env vars never read by TypeScript code         | `.env.example:35-48`; `docker-compose.yml:114-123`                                                                            | DELETE (`MYBRAIN_FLASH_ATTENTION`, `MYBRAIN_MAX_TOKENS`, `MYBRAIN_TEMPERATURE`, `MYBRAIN_TOP_P`, `MYBRAIN_HNSW_M`, `MYBRAIN_HNSW_EF_CONSTRUCTION`, `MYBRAIN_HNSW_EF_SEARCH`, `MYBRAIN_AUTO_TUNE_ENABLED`, `MYBRAIN_LEARNING_ENABLED`). |
-| D9  | `RUVECTOR_*` / `RUVLLM_*` remnants                  | `docker-compose.yml:109-117`; `src/orchestrator/src/config/load-config.ts:69-70`                                              | KEEP `RUVLLM_SONA_ENABLED` (live). Rename its `.env` key surface to `MYBRAIN_SONA_ENABLED`, drop internal `RUVLLM_*`/`RUVECTOR_*` that have no reader. |
-| D10 | `POST /v1/memory/backfill` + app + script           | `src/orchestrator/src/http/router.ts:327-366`; `src/orchestrator/src/application/backfill.ts`; `src/scripts/backfill-memory-metadata.sh`; `ctx.backfill` wiring in `router-context.ts` and `bootstrap/main.ts` | DELETE. No legacy rows. |
-| D11 | Unreachable feature-flag strings                    | `src/orchestrator/src/http/router.ts:189-198`                                                                                 | SIMPLIFY (drop degraded fallback narratives that never trigger in current code). |
-| D12 | `// not in v1 scope` note                           | `src/web/src/lib/infrastructure/session/in-memory-session-store.ts:20`                                                        | REWORD to "session store is process-local; replace for multi-replica deployments" — remove v1 language. |
-| D13 | Postman collection (4 requests)                     | `postman/my-brain.postman_collection.json`                                                                                    | REBUILD for v2 (see §7).                                           |
-| D14 | `.claude` references to `hooks_stats` + `hooks_capabilities` | `.claude/rules/mcp-tool-enforcement.md`; `.claude/agents/my-brain-curator.md`; `.claude/skills/my-brain-context/SKILL.md`; `.claude/rules/memory-retrieval.md` | UPDATE (see §6). |
-| D15 | `docs/technical/reference.md` recall/backfill copy  | `docs/technical/reference.md:17, 25-28`                                                                                       | REWRITE for v2.                                                    |
-| D16 | README install pin `v0.1.0`                         | `README.md`                                                                                                                   | BUMP to `v2.0.0` only after tag exists.                            |
-| D17 | `CHANGELOG.md` `[Unreleased]`                       | `CHANGELOG.md:7`                                                                                                              | SEAL as `[2.0.0] — YYYY-MM-DD` with `BREAKING CHANGES` section.    |
+| ID  | Artifact                                                                  | Location                                                                                                                                                                                                       | Action                                                                                                                                                                                                                                 |
+| --- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | `legacy-index.mjs` (1588 lines)                                           | `src/orchestrator/dist/legacy-index.mjs`                                                                                                                                                                       | DELETE. Superseded by modular TS handlers.                                                                                                                                                                                             |
+| D2  | `LEGACY_PASSTHROUGH_ALLOWLIST` + `hooks_stats` wire                       | `src/mcp-bridge/src/domain/tool-catalog.ts:6`, `src/mcp-bridge/src/mcp/handlers/call-tool.ts:181-190`                                                                                                          | DELETE. No upstream MCP server exists.                                                                                                                                                                                                 |
+| D3  | `UpstreamClient` + file                                                   | `src/mcp-bridge/src/infrastructure/upstream-client.ts` and all imports                                                                                                                                         | DELETE.                                                                                                                                                                                                                                |
+| D4  | `MYBRAIN_UPSTREAM_MCP_COMMAND`, `MYBRAIN_UPSTREAM_MCP_ARGS`               | bootstrap + `docs/technical/reference.md`                                                                                                                                                                      | DELETE.                                                                                                                                                                                                                                |
+| D5  | Tool name `hooks_capabilities`                                            | `src/mcp-bridge/src/domain/tool-catalog.ts:13-15`; every `.claude` ref                                                                                                                                         | RENAME → `mb_capabilities`.                                                                                                                                                                                                            |
+| D6  | Recall `mode: raw \| processed` + `model` param + `PROCESSED_QUERY_MODEL` | `src/orchestrator/src/http/handlers/memory-recall.ts:37,84-121,170-212`                                                                                                                                        | DELETE. Synth is always-on in v2.                                                                                                                                                                                                      |
+| D7  | `processing_fallback` / `processing_error` fields                         | `src/orchestrator/src/http/handlers/memory-recall.ts:157-158`                                                                                                                                                  | REPLACE with unified `synthesis` envelope (see §3).                                                                                                                                                                                    |
+| D8  | Dead env vars never read by TypeScript code                               | `.env.example:35-48`; `docker-compose.yml:114-123`                                                                                                                                                             | DELETE (`MYBRAIN_FLASH_ATTENTION`, `MYBRAIN_MAX_TOKENS`, `MYBRAIN_TEMPERATURE`, `MYBRAIN_TOP_P`, `MYBRAIN_HNSW_M`, `MYBRAIN_HNSW_EF_CONSTRUCTION`, `MYBRAIN_HNSW_EF_SEARCH`, `MYBRAIN_AUTO_TUNE_ENABLED`, `MYBRAIN_LEARNING_ENABLED`). |
+| D9  | `RUVECTOR_*` / `RUVLLM_*` remnants                                        | `docker-compose.yml:109-117`; `src/orchestrator/src/config/load-config.ts:69-70`                                                                                                                               | KEEP `RUVLLM_SONA_ENABLED` (live). Rename its `.env` key surface to `MYBRAIN_SONA_ENABLED`, drop internal `RUVLLM_*`/`RUVECTOR_*` that have no reader.                                                                                 |
+| D10 | `POST /v1/memory/backfill` + app + script                                 | `src/orchestrator/src/http/router.ts:327-366`; `src/orchestrator/src/application/backfill.ts`; `src/scripts/backfill-memory-metadata.sh`; `ctx.backfill` wiring in `router-context.ts` and `bootstrap/main.ts` | DELETE. No legacy rows.                                                                                                                                                                                                                |
+| D11 | Unreachable feature-flag strings                                          | `src/orchestrator/src/http/router.ts:189-198`                                                                                                                                                                  | SIMPLIFY (drop degraded fallback narratives that never trigger in current code).                                                                                                                                                       |
+| D12 | `// not in v1 scope` note                                                 | `src/web/src/lib/infrastructure/session/in-memory-session-store.ts:20`                                                                                                                                         | REWORD to "session store is process-local; replace for multi-replica deployments" — remove v1 language.                                                                                                                                |
+| D13 | Postman collection (4 requests)                                           | `postman/my-brain.postman_collection.json`                                                                                                                                                                     | REBUILD for v2 (see §7).                                                                                                                                                                                                               |
+| D14 | `.claude` references to `hooks_stats` + `hooks_capabilities`              | `.claude/rules/mcp-tool-enforcement.md`; `.claude/agents/my-brain-curator.md`; `.claude/skills/my-brain-context/SKILL.md`; `.claude/rules/memory-retrieval.md`                                                 | UPDATE (see §6).                                                                                                                                                                                                                       |
+| D15 | `docs/technical/reference.md` recall/backfill copy                        | `docs/technical/reference.md:17, 25-28`                                                                                                                                                                        | REWRITE for v2.                                                                                                                                                                                                                        |
+| D16 | README install pin `v0.1.0`                                               | `README.md`                                                                                                                                                                                                    | BUMP to `v2.0.0` only after tag exists.                                                                                                                                                                                                |
+| D17 | `CHANGELOG.md` `[Unreleased]`                                             | `CHANGELOG.md:7`                                                                                                                                                                                               | SEAL as `[2.0.0] — YYYY-MM-DD` with `BREAKING CHANGES` section.                                                                                                                                                                        |
 
 **Reader note:** every env var kept in `.env.example` after Phase 1 must have
 at least one reader in TS code. Use
@@ -138,18 +138,18 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
 
 **Specialist routing**
 
-| Phase | Primary specialist              | Secondary                                     |
-| ----- | ------------------------------- | --------------------------------------------- |
-| 0     | `repository-maintainer`         | —                                             |
-| 1     | `typescript-specialist`         | `database-specialist`, `docker-specialist`    |
-| 2     | `typescript-specialist`         | `design-architect`                            |
-| 3     | `security-reviewer`             | `typescript-specialist`                       |
-| 4     | `typescript-specialist`         | `devops-specialist` (Newman)                  |
-| 4.5   | `frontend-specialist`           | `typescript-specialist`                       |
-| 5     | `documentation-specialist`      | —                                             |
-| 6     | `documentation-specialist`      | —                                             |
-| 7     | `documentation-specialist`      | `devops-specialist`                           |
-| 8     | `workflow-orchestrator`         | all reviewer specialists                      |
+| Phase | Primary specialist         | Secondary                                  |
+| ----- | -------------------------- | ------------------------------------------ |
+| 0     | `repository-maintainer`    | —                                          |
+| 1     | `typescript-specialist`    | `database-specialist`, `docker-specialist` |
+| 2     | `typescript-specialist`    | `design-architect`                         |
+| 3     | `security-reviewer`        | `typescript-specialist`                    |
+| 4     | `typescript-specialist`    | `devops-specialist` (Newman)               |
+| 4.5   | `frontend-specialist`      | `typescript-specialist`                    |
+| 5     | `documentation-specialist` | —                                          |
+| 6     | `documentation-specialist` | —                                          |
+| 7     | `documentation-specialist` | `devops-specialist`                        |
+| 8     | `workflow-orchestrator`    | all reviewer specialists                   |
 
 **Skills to load (per phase)**
 
@@ -384,6 +384,7 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
   - `src/orchestrator/src/domain/synthesis.ts`
 - **Steps:**
   1. Create the file with:
+
      ```ts
      /** Canonical v2 tool response envelope. */
      export interface ToolResponseEnvelope<TData> {
@@ -422,7 +423,9 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
        ): Promise<{ summary: string; model: string; latencyMs: number }>;
      }
      ```
+
   2. Export from `src/orchestrator/src/domain/index.ts` (if present).
+
 - **Verification:** `pnpm -r build`.
 - **Commit:** `feat(orchestrator): add synthesis domain types`.
 
@@ -743,17 +746,17 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
 
 **Inventory of web-side legacy code** (all paths under `src/web/src/`):
 
-| Ref | File | Problem |
-| --- | ---- | ------- |
-| W1 | `lib/domain/query.ts` | Declares `QueryTool = "mb_recall" \| "mb_digest" \| "mb_search"`, `QueryMode`, `ProcessedQueryModel`. |
-| W2 | `lib/ports/orchestrator-client.port.ts:90-99` | `recall()` signature includes `mode?` and `model?`. |
-| W3 | `lib/infrastructure/orchestrator/http-orchestrator-client.ts:250-260` | Sends `mode` and `model` in request body. |
-| W4 | `lib/infrastructure/orchestrator/http-orchestrator-client.ts:130-140` | Maps `/v1/capabilities` to `{version, mode}` based on legacy `features` strings. |
-| W5 | `lib/application/run-query.usecase.ts` | Entire mode/model resolution pipeline; `resolveQueryMode`, `resolveProcessedModel`, `mb_search` special-case. |
-| W6 | `app/api/memory/query/route.ts` | Accepts `mb_search`; normalizer forwards `mode`, `model`. |
-| W7 | `app/(authed)/query/page.tsx` | Mode dropdown, model pill, `mb_search` option, no summary surface. |
-| W8 | Any component reading legacy `/v1/memory/recall` shape (`synthesized_answer`, `processing_fallback`, `original_query`, `processed_query`). | Must be rewritten to envelope. |
-| W9 | Test files: `run-query.usecase.test.ts`, `http-orchestrator-client.test.ts`, `route-handlers.test.ts` | Assert legacy shape. |
+| Ref | File                                                                                                                                       | Problem                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| W1  | `lib/domain/query.ts`                                                                                                                      | Declares `QueryTool = "mb_recall" \| "mb_digest" \| "mb_search"`, `QueryMode`, `ProcessedQueryModel`.         |
+| W2  | `lib/ports/orchestrator-client.port.ts:90-99`                                                                                              | `recall()` signature includes `mode?` and `model?`.                                                           |
+| W3  | `lib/infrastructure/orchestrator/http-orchestrator-client.ts:250-260`                                                                      | Sends `mode` and `model` in request body.                                                                     |
+| W4  | `lib/infrastructure/orchestrator/http-orchestrator-client.ts:130-140`                                                                      | Maps `/v1/capabilities` to `{version, mode}` based on legacy `features` strings.                              |
+| W5  | `lib/application/run-query.usecase.ts`                                                                                                     | Entire mode/model resolution pipeline; `resolveQueryMode`, `resolveProcessedModel`, `mb_search` special-case. |
+| W6  | `app/api/memory/query/route.ts`                                                                                                            | Accepts `mb_search`; normalizer forwards `mode`, `model`.                                                     |
+| W7  | `app/(authed)/query/page.tsx`                                                                                                              | Mode dropdown, model pill, `mb_search` option, no summary surface.                                            |
+| W8  | Any component reading legacy `/v1/memory/recall` shape (`synthesized_answer`, `processing_fallback`, `original_query`, `processed_query`). | Must be rewritten to envelope.                                                                                |
+| W9  | Test files: `run-query.usecase.test.ts`, `http-orchestrator-client.test.ts`, `route-handlers.test.ts`                                      | Assert legacy shape.                                                                                          |
 
 ---
 
@@ -767,6 +770,7 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
   - `src/web/src/lib/domain/synthesis.ts` (new)
 - **Steps:**
   1. Create `src/web/src/lib/domain/synthesis.ts`:
+
      ```ts
      /** Mirrors orchestrator v2 envelope. Keep in sync with src/orchestrator/src/domain/synthesis.ts. */
      export interface SynthesisOutcome {
@@ -783,7 +787,9 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
        readonly synthesis: SynthesisOutcome;
      }
      ```
+
   2. Rewrite `src/web/src/lib/domain/query.ts`:
+
      ```ts
      import type { SynthesisOutcome } from "./synthesis";
 
@@ -807,8 +813,10 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
        error?: string;
      }
      ```
+
   3. In `lib/domain/index.ts`, remove exports of `QueryMode`,
      `ProcessedQueryModel`; add `SynthesisOutcome`, `ToolResponseEnvelope`.
+
 - **Verification:** `pnpm --filter ./src/web typecheck` fails only in the
   files listed in T4.5.2–T4.5.7. No unrelated type errors.
 - **Commit:** `feat(web/domain)!: drop mode/model, introduce v2 envelope types`.
@@ -845,6 +853,7 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
   5. Replace `forgetMemory()` return type with
      `Promise<ToolResponseEnvelope<ForgetData>>`.
   6. Update `getCapabilities()`:
+
      ```ts
      getCapabilities(): Promise<ToolResponseEnvelope<CapabilitiesData>>;
 
@@ -866,9 +875,11 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
        db: { extensionVersion: string | null; adrSchemasReady: boolean; embeddingProvider: string; embeddingReady: boolean };
      }
      ```
+
   7. Leave `listMemories`, `getMemory`, `getMemoryGraph`, `getBrainSummary`,
      `health()` unchanged — their orchestrator endpoints are **not** `mb_*`
      tools and keep the raw shape per Phase 2 scope.
+
 - **Verification:** `pnpm --filter ./src/web typecheck` — errors only in
   implementers (T4.5.3+).
 - **Commit:** `feat(web/ports)!: switch tool methods to v2 envelope return type`.
@@ -946,9 +957,14 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
      `PROCESSED_QUERY_MODEL`, `mb_search` from the zod enum, and the entire
      mode/model branch.
   2. New body:
+
      ```ts
      import { z } from "zod";
-     import type { QueryRequest, QueryResponse, ToolResponseEnvelope } from "@/lib/domain";
+     import type {
+       QueryRequest,
+       QueryResponse,
+       ToolResponseEnvelope,
+     } from "@/lib/domain";
      import type { OrchestratorClient } from "@/lib/ports/orchestrator-client.port";
 
      const queryRequestSchema = z.object({
@@ -972,7 +988,12 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
            } else {
              const query = asOptionalString(request.params.query)?.trim();
              if (!query) {
-               return emptyErrorResponse(startedAt, request, "query is required", 400);
+               return emptyErrorResponse(
+                 startedAt,
+                 request,
+                 "query is required",
+                 400,
+               );
              }
              envelope = await this.client.recall(
                query,
@@ -1001,8 +1022,10 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
        }
      }
      ```
+
   3. Add helpers `emptyErrorResponse` and `asOptionalString` in the same
      file.
+
 - **Verification:** `pnpm --filter ./src/web test run-query.usecase` passes
   after T4.5.8 test updates.
 - **Commit:** `feat(web/application)!: simplify RunQueryUseCase to envelope shape`.
@@ -1057,27 +1080,33 @@ This plan complies with `~/.claude/rules/code-change-workflow.md`:
      body: JSON.stringify({
        tool,
        params: { query, scope, type },
-     })
+     });
      ```
   5. Render a **Summary card** above the JSON tree whenever `result.summary`
      is non-empty:
      ```tsx
-     {result?.summary ? (
-       <section className="ds-card p-4 border-l-4 border-emerald-500">
-         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
-           LLM summary
-         </h2>
-         <p className="mt-2 text-base leading-relaxed text-slate-900">
-           {result.summary}
-         </p>
-         {result.synthesis ? (
-           <p className="mt-2 text-xs text-slate-500">
-             {result.synthesis.status === "ok" ? "synthesized" : "fallback (raw data only)"} · model {result.synthesis.model} · {result.synthesis.latency_ms}ms
-             {result.synthesis.error ? ` · ${result.synthesis.error}` : ""}
+     {
+       result?.summary ? (
+         <section className="ds-card p-4 border-l-4 border-emerald-500">
+           <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+             LLM summary
+           </h2>
+           <p className="mt-2 text-base leading-relaxed text-slate-900">
+             {result.summary}
            </p>
-         ) : null}
-       </section>
-     ) : null}
+           {result.synthesis ? (
+             <p className="mt-2 text-xs text-slate-500">
+               {result.synthesis.status === "ok"
+                 ? "synthesized"
+                 : "fallback (raw data only)"}{" "}
+               · model {result.synthesis.model} · {result.synthesis.latency_ms}
+               ms
+               {result.synthesis.error ? ` · ${result.synthesis.error}` : ""}
+             </p>
+           ) : null}
+         </section>
+       ) : null;
+     }
      ```
   6. When `result.synthesis?.status === "fallback"`, show a yellow banner
      with the `error` string.

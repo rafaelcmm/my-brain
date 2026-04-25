@@ -16,6 +16,7 @@ import { allowRequest } from "../../policies/rate-limit.js";
 import { incrementMetric } from "../../observability/metrics.js";
 import { sanitizeText } from "../../domain/memory-validation.js";
 import { voteBias } from "../../domain/scoring.js";
+import { wrapWithSynthesis } from "./_envelope.js";
 
 /** Adapter type matching the rate-limit module's socket expectation. */
 type AllowRequestReq = Parameters<typeof allowRequest>[0];
@@ -104,12 +105,12 @@ export async function handleMemoryVote(
   );
   incrementMetric("mb_vote_total", { direction });
 
-  sendJson(res, 200, {
-    success: true,
+  const envelope = await wrapWithSynthesis(ctx, "mb_vote", null, {
     memory_id: memoryId,
     direction,
     vote_bias: bias,
     votes_up: up,
     votes_down: down,
   });
+  sendJson(res, 200, envelope);
 }

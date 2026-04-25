@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "a0e1f2b3-0000-4000-8000-200000000001",
-    "name": "my-brain (minimal)",
-    "description": "Minimal general smoke tests for local my-brain stack.",
+    "name": "my-brain (v2 envelope)",
+    "description": "Smoke and contract checks for my-brain v2 envelope APIs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -17,7 +17,7 @@
   },
   "item": [
     {
-      "name": "General Smoke",
+      "name": "Smoke",
       "item": [
         {
           "name": "Health check",
@@ -28,11 +28,503 @@
               "raw": "{{rest_base_url}}/health",
               "host": ["{{rest_base_url}}"],
               "path": ["health"]
-            },
-            "description": "Checks orchestrator liveness through gateway."
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('health is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
+        {
+          "name": "Capabilities envelope",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/capabilities",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "capabilities"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('capabilities returns envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Memory lifecycle (REST)",
+      "item": [
+        {
+          "name": "Remember memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Postman envelope smoke memory\",\n  \"type\": \"note\",\n  \"scope\": \"repo\",\n  \"metadata\": {\n    \"repo\": \"my-brain\",\n    \"language\": \"typescript\",\n    \"source\": \"postman\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('remember returns envelope with id', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body.data).to.have.property('id');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});",
+                  "if (body.data && body.data.id) {",
+                  "  pm.environment.set('memory_id', String(body.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recall memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"envelope smoke memory\",\n  \"top_k\": 5,\n  \"scope\": \"repo\",\n  \"repo\": \"my-brain\",\n  \"language\": \"typescript\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/recall",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "recall"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('recall returns envelope and no mode/model contract', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject legacy recall mode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"legacy mode should fail\",\n  \"mode\": \"raw\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/recall",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "recall"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('legacy mode is rejected with invalid input', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(body.success).to.eql(false);",
+                  "  pm.expect(body.error).to.eql('INVALID_INPUT');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forget memory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{memory_id}}\",\n  \"mode\": \"soft\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/forget",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "forget"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('forget returns envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Aggregation",
+      "item": [
+        {
+          "name": "Memory summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/summary",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "summary"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Memory list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/list?limit=5",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "list"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Memory graph",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/graph?limit=5",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "graph"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Memory digest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"since\": \"7 days\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/digest",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "digest"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Session",
+      "item": [
+        {
+          "name": "Session open",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent\": \"postman-smoke\",\n  \"context\": {\n    \"source\": \"postman\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/session/open",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "session", "open"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});",
+                  "if (body.data && body.data.session_id) {",
+                  "  pm.environment.set('session_id', String(body.data.session_id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Session close",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"success\": true,\n  \"quality\": 0.9,\n  \"reason\": \"postman validation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/session/close",
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "session", "close"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MCP tools",
+      "item": [
         {
           "name": "Initialize MCP session",
           "request": {
@@ -49,7 +541,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2024-11-05\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"2.0.0\"\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -60,24 +552,23 @@
               "raw": "{{mcp_base_url}}/mcp",
               "host": ["{{mcp_base_url}}"],
               "path": ["mcp"]
-            },
-            "description": "Creates MCP session and stores Mcp-Session-Id in environment."
+            }
           },
           "response": [],
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const sessionId = pm.response.headers.get('Mcp-Session-Id') || pm.response.headers.get('mcp-session-id');",
                   "pm.test('initialize returns Mcp-Session-Id header', function () {",
-                  "  pm.expect(sessionId, 'Mcp-Session-Id response header').to.be.a('string').and.not.empty;",
+                  "  pm.expect(sessionId).to.be.a('string').and.not.empty;",
                   "});",
                   "if (sessionId) {",
                   "  pm.environment.set('mcp_session_id', sessionId.trim());",
                   "}"
-                ],
-                "type": "text/javascript"
+                ]
               }
             }
           ]
@@ -113,13 +604,28 @@
               "raw": "{{mcp_base_url}}/mcp",
               "host": ["{{mcp_base_url}}"],
               "path": ["mcp"]
-            },
-            "description": "Verifies MCP bridge works with active session."
+            }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('tools/list returns tool array', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('tools');",
+                  "  pm.expect(body.result.tools).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
-          "name": "LLM generate",
+          "name": "Call mb_capabilities",
           "request": {
             "method": "POST",
             "header": [
@@ -129,12 +635,16 @@
               },
               {
                 "key": "Accept",
-                "value": "application/json"
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_capabilities\",\n    \"arguments\": {}\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -142,42 +652,194 @@
               }
             },
             "url": {
-              "raw": "{{rest_base_url}}/llm/api/generate",
-              "host": ["{{rest_base_url}}"],
-              "path": ["llm", "api", "generate"]
-            },
-            "description": "Runs minimal model generation through gateway llm proxy."
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
+            }
           },
           "response": [],
           "event": [
             {
-              "listen": "prerequest",
+              "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
-                  "const model = pm.environment.get('llm_model') || 'qwen3.5:0.8b';",
-                  "const prompt = pm.environment.get('llm_prompt') || 'Reply with one word: ready';",
-                  "const payload = {",
-                  "  model,",
-                  "  prompt,",
-                  "  stream: false,",
-                  "  think: false,",
-                  "  options: { temperature: 0, num_predict: 24 }",
-                  "};",
-                  "pm.request.body.update(JSON.stringify(payload, null, 2));"
-                ],
-                "type": "text/javascript"
+                  "const body = pm.response.json();",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Call mb_context_probe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_context_probe\",\n    \"arguments\": {\n      \"cwd\": \"/workspace/my-brain\",\n      \"repo_hint\": \"my-brain\",\n      \"project_hint\": \"my-brain\",\n      \"language_hint\": \"typescript\",\n      \"framework_hints\": [\n        \"nextjs\",\n        \"node\"\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
             },
+            "url": {
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
+            }
+          },
+          "response": [],
+          "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const body = pm.response.json();",
-                  "pm.test('generate returns response text', function () {",
-                  "  pm.expect(body.response, 'Ollama response').to.be.a('string').and.not.empty;",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
                   "});"
-                ],
-                "type": "text/javascript"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Call mb_digest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_digest\",\n    \"arguments\": {\n      \"since\": \"30 days\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Call mb_vote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_vote\",\n    \"arguments\": {\n      \"memory_id\": \"{{memory_id}}\",\n      \"direction\": \"up\",\n      \"reason\": \"postman flow validation\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
+                  "});"
+                ]
               }
             }
           ]

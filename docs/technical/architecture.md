@@ -1,66 +1,77 @@
-# my-brain Architecture
+# Architecture (v2)
 
-This document describes runtime architecture for local my-brain deployments.
+## Topology
 
-## Components
+my-brain runs five services through Docker Compose:
 
-1. Gateway (Caddy): ingress auth, routing, header sanitization.
-2. MCP bridge: streamable MCP endpoint and tool facade.
-3. Orchestrator: REST API, runtime bootstrap, memory/learning services.
-4. Postgres: durable storage for vectors and metadata.
-5. Ollama: local LLM and embedding backends.
-6. Web app (Next.js): authenticated operator UI for dashboard, memory workflows, query runner, and graph explorer.
+- `my-brain-db` (`src/db/`): Postgres + ruvector extension.
+- `my-brain-orchestrator` (`src/orchestrator/`): policy + memory runtime + synthesis envelope producer.
+- `my-brain-mcp` (`src/mcp-bridge/`): MCP tool surface mapped to orchestrator HTTP APIs.
+- `my-brain-web` (`src/web/`): Next.js operator UI consuming envelope APIs.
+- `my-brain-gateway` (`src/gateway/`): ingress, bearer auth, internal key injection.
 
-## Data model
+Only gateway binds host port by default.
 
-1. Vector memory remains managed by runtime engine internals.
-2. Metadata sidecar table `my_brain_memory_metadata` stores scoped fields used by filtered recall.
-3. ADR schemas `policy_memory`, `session_memory`, and `witness_memory` are created on orchestrator bootstrap.
+## Data Flow
 
-## Request flow
+1. Client calls gateway (`Authorization: Bearer <token>`).
+2. Gateway strips external auth header before upstream forward, injects `MYBRAIN_INTERNAL_API_KEY`.
+3. Orchestrator validates schema, auth, and rate limit before expensive synthesis.
+4. Domain executes persistence/query logic against Postgres/ruvector.
+5. Orchestrator attempts synthesis summary and returns envelope.
+6. MCP bridge and web consume `data` + `summary` + `synthesis.status`.
 
-1. Client calls gateway on `:3333/mcp` or `:8080/*` with bearer token.
-2. Gateway validates token and strips `Authorization` before upstream.
-3. MCP requests route to bridge; REST requests route to orchestrator/ollama.
-4. Orchestrator coordinates model, vector, metadata, and learning paths.
+## Hexagonal Boundaries
 
-## Web auth flow
+### Orchestrator
 
-1. User opens `/login` and submits bearer token to `POST /api/auth/login`.
-2. Route validates token via orchestrator capabilities and creates encrypted server-side session.
-3. Browser receives httpOnly `session` cookie; bearer token never stored client-side.
-4. Protected routes resolve session server-side and proxy to orchestrator through composition ports.
-5. Mutating web routes enforce CSRF token (`x-csrf-token`) and per-session rate limits.
-6. `POST /api/auth/logout` destroys session and expires cookie.
+- Domain: `src/orchestrator/src/domain/`
+- Application: `src/orchestrator/src/application/`
+- HTTP adapters: `src/orchestrator/src/http/`
+- Infra adapters: `src/orchestrator/src/infrastructure/`
 
-## Web API endpoints
+### MCP Bridge
 
-1. `GET /api/health`: web readiness endpoint used by compose healthcheck.
-2. `POST /api/auth/login`: token-to-session exchange.
-3. `POST /api/auth/logout`: session invalidation.
-4. `POST /api/memory/create`: authenticated memory creation proxy.
-5. `POST /api/memory/forget`: authenticated memory deletion proxy.
-6. `POST /api/memory/query`: authenticated query runner (`mb_recall`, `mb_digest`, `mb_search`) with raw or processed query mode. Processed mode pins model `qwen3.5:0.8b` and returns `original_query` + `processed_query` metadata.
+- Domain contracts: `src/mcp-bridge/src/domain/`
+- Tool handlers: `src/mcp-bridge/src/mcp/handlers/`
+- Upstream adapter: `src/mcp-bridge/src/infrastructure/orchestrator-client.ts`
 
-## Runtime modes
+### Web
 
-Single full runtime profile is supported. Degraded capability signaling is exposed through orchestrator capabilities APIs so clients can adjust trust level.
+- Domain + ports: `src/web/src/lib/domain/`, `src/web/src/lib/ports/`
+- Infra adapters: `src/web/src/lib/infrastructure/`
+- Use cases: `src/web/src/lib/application/`
+- Routes/UI: `src/web/src/app/`
 
-## Repository layout
+## v2 Envelope Contract
 
-1. `src/orchestrator/` — runtime process, HTTP API, memory and learning services.
-2. `src/mcp-bridge/` — Streamable HTTP MCP facade over orchestrator tools.
-3. `src/web/` — Next.js operator UI (dashboard, memory CRUD, query, graph).
-4. `src/gateway/` — Caddy ingress, bearer auth, reverse proxy.
-5. `src/db/` — database bootstrap SQL and schema init.
-6. `src/scripts/` — install, rotate, smoke, backfill, security-check automation.
-7. `postman/` — minimal sanity collection for MCP and LLM flows.
-8. `.github/workflows/` — CI and release pipelines.
-9. `docs/` — technical docs and runbooks.
-10. `.claude/` — model-invoked skills and curator agent templates.
+For successful tool-like operations, orchestrator emits:
 
-## Design constraints
+```json
+{
+  "success": true,
+  "summary": "String",
+  "data": {},
+  "synthesis": {
+    "status": "ok|fallback",
+    "model": "qwen3.5:0.8b",
+    "latency_ms": 123,
+    "error": "optional"
+  }
+}
+```
 
-1. Default bind host remains `127.0.0.1`.
-2. Secrets remain local-only and never committed.
-3. Public endpoint changes require matching updates in reference docs.
+Rate limit and validation run before synthesis for abuse resistance.
+
+## Reliability Paths
+
+- LLM timeout or failure produces `synthesis.status="fallback"` and empty/compact summary, while preserving `data`.
+- Envelope shape checks in web and bridge reject malformed legacy payloads.
+- Metrics expose synthesis latency/outcomes and endpoint policy counters.
+
+## Removed Legacy Surface
+
+- No per-call recall mode/model toggles.
+- No `/v1/memory/backfill` API.
+- No `hooks_stats` passthrough tool path in bridge.
+- No synthesized "processed model" routing in clients.

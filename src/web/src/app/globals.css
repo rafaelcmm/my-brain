@@ -93,7 +93,8 @@ textarea::placeholder {
 
 .ds-input:focus-visible {
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand-secondary) 40%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--brand-secondary) 40%, transparent);
   outline: none;
 }
 
@@ -194,4 +195,118 @@ textarea::placeholder {
 .ds-card-masonry-item {
   break-inside: avoid;
   margin-bottom: 1rem;
+}
+
+.markdown-content {
+  color: inherit;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content h1 {
+  font-size: 1.5rem;
+}
+
+.markdown-content h2 {
+  font-size: 1.25rem;
+}
+
+.markdown-content h3 {
+  font-size: 1.125rem;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content pre,
+.markdown-content table,
+.markdown-content blockquote {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.25rem;
+}
+
+.markdown-content ul {
+  list-style: disc;
+}
+
+.markdown-content ol {
+  list-style: decimal;
+}
+
+.markdown-content code {
+  background: rgb(15 23 42 / 0.08);
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+  padding: 0.1rem 0.3rem;
+}
+
+.markdown-content pre {
+  background: rgb(15 23 42 / 0.06);
+  border: 1px solid rgb(148 163 184 / 0.45);
+  border-radius: 0.5rem;
+  overflow: auto;
+  padding: 0.75rem;
+}
+
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  display: block;
+  overflow: auto;
+  width: 100%;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #cbd5e1;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+.markdown-content-inverse h1,
+.markdown-content-inverse h2,
+.markdown-content-inverse h3,
+.markdown-content-inverse h4,
+.markdown-content-inverse h5,
+.markdown-content-inverse h6 {
+  color: #e2e8f0;
+}
+
+.markdown-content-inverse code {
+  background: rgb(148 163 184 / 0.22);
+  color: #f8fafc;
+}
+
+.markdown-content-inverse pre {
+  background: rgb(15 23 42 / 0.55);
+  border-color: rgb(148 163 184 / 0.45);
+  color: #f8fafc;
+}
+
+.markdown-content-inverse th,
+.markdown-content-inverse td {
+  border-color: rgb(148 163 184 / 0.55);
 }

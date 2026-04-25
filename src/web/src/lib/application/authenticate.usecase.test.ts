@@ -23,7 +23,37 @@ describe("AuthenticateUseCase", () => {
   it("creates session after capabilities check succeeds", async () => {
     const sessionStore = createSessionStoreMock();
     const client: OrchestratorClient = {
-      getCapabilities: vi.fn(async () => ({ version: "x", mode: "engine" })),
+      getCapabilities: vi.fn(async () => ({
+        success: true as const,
+        summary: "capabilities ok",
+        data: {
+          capabilities: {
+            engine: true,
+            vectorDb: true,
+            sona: true,
+            attention: true,
+            embeddingDim: 1024,
+          },
+          features: {
+            vectorDb: true,
+            sona: true,
+            attention: true,
+            embeddingDim: 1024,
+          },
+          degradedReasons: [],
+          db: {
+            extensionVersion: "x",
+            adrSchemasReady: true,
+            embeddingProvider: "ollama",
+            embeddingReady: true,
+          },
+        },
+        synthesis: {
+          status: "ok" as const,
+          model: "qwen3.5:0.8b",
+          latency_ms: 10,
+        },
+      })),
       health: vi.fn(async () => true),
       getBrainSummary: vi.fn(),
       listMemories: vi.fn(),

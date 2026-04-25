@@ -43,8 +43,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     publicBaseUrl:
       process.env.MYBRAIN_WEB_PUBLIC_BASE_URL ?? request.nextUrl.origin,
     nodeEnv:
-      process.env.NODE_ENV === "development" ||
-      process.env.NODE_ENV === "test"
+      process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
         ? process.env.NODE_ENV
         : "production",
   });

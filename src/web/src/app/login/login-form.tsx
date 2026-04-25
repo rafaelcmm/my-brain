@@ -100,14 +100,6 @@ export function LoginForm() {
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
-
-          <p className="text-xs text-gray-600 text-center">
-            Lost token? See{" "}
-            <a className="ds-link-primary" href="/docs/runbooks/local-operations.md">
-              local operations runbook
-            </a>
-            .
-          </p>
         </form>
       </div>
     </div>

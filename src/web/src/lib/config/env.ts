@@ -6,6 +6,7 @@ import { z } from "zod";
 export interface Environment {
   MYBRAIN_WEB_SESSION_SECRET: string;
   MYBRAIN_WEB_ORCHESTRATOR_URL: string;
+  MYBRAIN_WEB_AUTH_TOKEN_FILE: string;
   MYBRAIN_INTERNAL_API_KEY: string;
   MYBRAIN_WEB_RATE_LIMIT_LOGIN: number;
   MYBRAIN_WEB_PUBLIC_BASE_URL: string;
@@ -16,6 +17,10 @@ export interface Environment {
 const environmentSchema = z.object({
   MYBRAIN_WEB_SESSION_SECRET: z.string().min(16),
   MYBRAIN_WEB_ORCHESTRATOR_URL: z.string().min(1),
+  MYBRAIN_WEB_AUTH_TOKEN_FILE: z
+    .string()
+    .min(1)
+    .default("/run/secrets/auth-token"),
   MYBRAIN_INTERNAL_API_KEY: z.string().min(1),
   MYBRAIN_WEB_PUBLIC_BASE_URL: z.string().min(1),
   MYBRAIN_WEB_RATE_LIMIT_LOGIN: z.coerce.number().int().positive().default(5),

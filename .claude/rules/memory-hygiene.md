@@ -1,7 +1,7 @@
 ---
 description: Ensure durable memory capture quality, metadata completeness, dedup discipline, and correct scope selection.
 paths:
-	- "**"
+  - "**"
 ---
 
 # Memory Hygiene
@@ -58,7 +58,7 @@ Use these thresholds for dedup and recall trust:
 
 1. For capture workflows call `mb_context_probe` before any write.
 2. Run dedup recall (`mb_recall`) before `mb_remember`.
-3. Skip write when best similarity is `>0.85`.
+3. Skip write when best similarity is above active threshold (`0.6` healthy, `0.85` degraded).
 4. Never bypass dedup even for explicit "remember this" requests.
 
 ## Scope policy
@@ -71,7 +71,7 @@ Use these thresholds for dedup and recall trust:
 
 Each memory should include:
 
-1. `repo` / `repo_name` / `project`
+1. `repo` and `project` (with `repo_name` allowed only as upstream probe source)
 2. `language`
 3. `frameworks`
 4. `tags`
@@ -84,3 +84,31 @@ If a field cannot be derived, provide explicit fallback values:
 1. `source=agent`
 2. `author=unknown`
 3. `agent` from active runtime identity
+
+## Metadata normalization and fallback contract
+
+Before dedup or save, normalize and validate metadata in this order:
+
+1. Build defaults from `mb_context_probe`.
+2. Merge runtime identity (`agent`, `source`) and user metadata.
+3. Normalize blanks (`""` and whitespace-only strings are missing).
+4. Apply fallback values.
+5. Enforce non-empty validation gate.
+
+Required non-empty fields after fallback:
+
+1. Scalars: `repo`, `project`, `language`, `source`, `author`, `agent`.
+2. Arrays: `frameworks`, `tags` must have at least one item.
+
+Fallback matrix (deterministic defaults):
+
+1. `repo = context.repo || context.repo_name || "unknown-repo"`
+2. `project = context.project || "unknown"`
+3. `language = context.language || "unknown"`
+4. `frameworks = context.frameworks || ["unknown"]`
+5. `tags = user.tags || ["memory"]`
+6. `source = context.source || "agent"`
+7. `author = context.author || "unknown"`
+8. `agent = runtime_agent_id`
+
+If validation still fails after fallback, block `mb_remember` and repair metadata first.

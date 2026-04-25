@@ -35,7 +35,10 @@ export default async function AuthedLayout({
         <header className="bg-white border-b border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-4">
             <nav className="flex items-center gap-4 text-sm">
-              <Link href="/dashboard" className="flex items-center gap-2 mr-2 text-[#2E3192] hover:text-[#1f2266]">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 mr-2 text-[#2E3192] hover:text-[#1f2266]"
+              >
                 <Image
                   src="/my-brain-logo.svg"
                   alt="My Brain"
@@ -45,19 +48,19 @@ export default async function AuthedLayout({
                 />
                 <span className="hidden sm:inline">My Brain</span>
               </Link>
-                <Link href="/dashboard" className="ds-nav-link">
+              <Link href="/dashboard" className="ds-nav-link">
                 Dashboard
               </Link>
-                <Link href="/memories" className="ds-nav-link">
+              <Link href="/memories" className="ds-nav-link">
                 Memories
               </Link>
-                <Link href="/editor" className="ds-nav-link">
+              <Link href="/editor" className="ds-nav-link">
                 Editor
               </Link>
-                <Link href="/query" className="ds-nav-link">
+              <Link href="/query" className="ds-nav-link">
                 Query
               </Link>
-                <Link href="/graph" className="ds-nav-link">
+              <Link href="/graph" className="ds-nav-link">
                 Graph
               </Link>
             </nav>

@@ -76,6 +76,109 @@ function request(opts: {
   });
 }
 
+/**
+ * Reads the current synthesis counter total for a specific tool label.
+ *
+ * Prometheus text output can include separate `ok` and `fallback` labels,
+ * so this parser sums both to assert whether handler execution reached
+ * synthesis at all.
+ *
+ * @param metricsBody - Raw `/metrics` response body.
+ * @param tool - Synthesis tool label to aggregate.
+ * @returns Counter sum for all synthesis statuses of the tool.
+ */
+function getSynthesisTotalForTool(metricsBody: string, tool: string): number {
+  let total = 0;
+  for (const line of metricsBody.split("\n")) {
+    if (!line.startsWith("mb_synthesis_total{")) {
+      continue;
+    }
+    if (!line.includes(`tool="${tool}"`)) {
+      continue;
+    }
+    const fields = line.trim().split(/\s+/u);
+    const value = Number(fields[fields.length - 1]);
+    if (Number.isFinite(value)) {
+      total += value;
+    }
+  }
+  return total;
+}
+
+/**
+ * Saturates one endpoint's fixed-window bucket and verifies rate limiting
+ * fires before any synthesis call.
+ *
+ * The helper uses a stable forwarded IP so all requests map to one bucket,
+ * then checks `mb_synthesis_total` for the associated tool remains unchanged.
+ *
+ * @param path - Endpoint path under test.
+ * @param body - Request JSON payload.
+ * @param tool - Expected synthesis tool label for metric assertions.
+ * @param callerIp - Stable caller identity used to hit the same rate bucket.
+ */
+async function assertRateLimitBeforeSynthesis(opts: {
+  path: string;
+  body: Record<string, unknown>;
+  tool: string;
+  callerIp: string;
+}): Promise<void> {
+  const beforeMetrics = await request({
+    port,
+    path: "/metrics",
+    headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
+  });
+  const before = getSynthesisTotalForTool(
+    String(beforeMetrics.body ?? ""),
+    opts.tool,
+  );
+
+  for (let i = 0; i < 60; i += 1) {
+    const allowed = await request({
+      port,
+      path: opts.path,
+      method: "POST",
+      headers: {
+        "X-Mybrain-Internal-Key": TEST_API_KEY,
+        "X-Forwarded-For": opts.callerIp,
+      },
+      body: opts.body,
+    });
+    assert.notEqual(
+      allowed.status,
+      429,
+      "first 60 requests in the window must not be rate-limited",
+    );
+  }
+
+  const blocked = await request({
+    port,
+    path: opts.path,
+    method: "POST",
+    headers: {
+      "X-Mybrain-Internal-Key": TEST_API_KEY,
+      "X-Forwarded-For": opts.callerIp,
+    },
+    body: opts.body,
+  });
+  assert.equal(blocked.status, 429);
+
+  const afterMetrics = await request({
+    port,
+    path: "/metrics",
+    headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
+  });
+  const after = getSynthesisTotalForTool(
+    String(afterMetrics.body ?? ""),
+    opts.tool,
+  );
+  assert.equal(
+    after,
+    before,
+    `synthesis counter for ${opts.tool} must not change on rate-limited path`,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Test server setup
 // ---------------------------------------------------------------------------
@@ -114,12 +217,6 @@ function makeCtx(): RouterContext {
       Array(1024).fill(0) as number[],
     getCachedEmbedding: async (_content: string): Promise<number[]> =>
       Array(1024).fill(0) as number[],
-    backfill: async (_batchSize: number) => ({
-      processed: 0,
-      updated: 0,
-      failed: 0,
-      skipped: 0,
-    }),
   };
 }
 
@@ -235,7 +332,8 @@ describe("GET /v1/capabilities", () => {
     });
     assert.equal(status, 200);
     const b = body as Record<string, unknown>;
-    const caps = b["capabilities"] as Record<string, unknown> | undefined;
+    const data = b["data"] as Record<string, unknown> | undefined;
+    const caps = data?.["capabilities"] as Record<string, unknown> | undefined;
     assert.ok(caps !== undefined, "capabilities must be present");
     assert.equal(typeof caps["engine"], "boolean");
     assert.equal(typeof caps["vectorDb"], "boolean");
@@ -279,27 +377,106 @@ describe("POST /v1/memory/recall validation", () => {
     );
   });
 
-  it("returns 400 when mode is invalid", async () => {
+  it("returns 503 for valid query when engine is unavailable", async () => {
     const { status } = await request({
       port,
       path: "/v1/memory/recall",
       method: "POST",
       headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
-      body: { query: "hello", mode: "bad" },
+      body: { query: "hello" },
     });
 
-    assert.equal(status, 400);
+    assert.equal(status, 503);
   });
 
-  it("returns 400 when processed mode uses unsupported model", async () => {
-    const { status } = await request({
+  it("returns 400 when legacy mode or model params are supplied", async () => {
+    const { status, body } = await request({
       port,
       path: "/v1/memory/recall",
       method: "POST",
       headers: { "X-Mybrain-Internal-Key": TEST_API_KEY },
-      body: { query: "hello", mode: "processed", model: "llama3" },
+      body: { query: "hello", mode: "legacy", model: "qwen3.5:0.8b" },
     });
 
     assert.equal(status, 400);
+    const b = body as Record<string, unknown>;
+    assert.equal(
+      b["message"],
+      "mode and model are no longer supported in v2 — synthesis is always on",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T3.7 — Rate limit must fire before synthesis
+// ---------------------------------------------------------------------------
+
+describe("rate-limit before synthesis", () => {
+  it("blocks memory recall before synthesis", async () => {
+    await assertRateLimitBeforeSynthesis({
+      path: "/v1/memory/recall",
+      body: { query: "hello" },
+      tool: "mb_recall",
+      callerIp: "10.201.0.1",
+    });
+  });
+
+  it("blocks memory write before synthesis", async () => {
+    await assertRateLimitBeforeSynthesis({
+      path: "/v1/memory",
+      body: {
+        content: "x",
+        type: "decision",
+        scope: "repo",
+        metadata: { repo: "example/repo" },
+      },
+      tool: "mb_remember",
+      callerIp: "10.201.0.2",
+    });
+  });
+
+  it("blocks memory vote before synthesis", async () => {
+    await assertRateLimitBeforeSynthesis({
+      path: "/v1/memory/vote",
+      body: { memory_id: "m1", direction: "up" },
+      tool: "mb_vote",
+      callerIp: "10.201.0.3",
+    });
+  });
+
+  it("blocks memory forget before synthesis", async () => {
+    await assertRateLimitBeforeSynthesis({
+      path: "/v1/memory/forget",
+      body: { memory_id: "m1", mode: "soft" },
+      tool: "mb_forget",
+      callerIp: "10.201.0.4",
+    });
+  });
+
+  it("blocks memory digest before synthesis", async () => {
+    await assertRateLimitBeforeSynthesis({
+      path: "/v1/memory/digest",
+      body: { since: "7d" },
+      tool: "mb_digest",
+      callerIp: "10.201.0.5",
+    });
+  });
+
+  it("blocks session open before synthesis", async () => {
+    await assertRateLimitBeforeSynthesis({
+      path: "/v1/session/open",
+      body: { agent: "test" },
+      tool: "mb_session_open",
+      callerIp: "10.201.0.6",
+    });
+  });
+
+  it("blocks session close before synthesis", async () => {
+    await assertRateLimitBeforeSynthesis({
+      path: "/v1/session/close",
+      body: { session_id: "s1", success: true },
+      tool: "mb_session_close",
+      callerIp: "10.201.0.7",
+    });
   });
 });

@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import type { Memory } from "@/lib/domain";
 import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
 
+interface MemoryListItem extends Memory {
+  renderedContentHtml: string;
+}
+
 interface MemoriesListClientProps {
-  memories: Memory[];
+  memories: MemoryListItem[];
 }
 
 /**
@@ -15,13 +19,13 @@ interface MemoriesListClientProps {
 interface MemoryGroup {
   key: string;
   label: string;
-  memories: Memory[];
+  memories: MemoryListItem[];
 }
 
 /**
  * Groups memories by type and scope so dense lists are easier to scan.
  */
-function buildMemoryGroups(memories: Memory[]): MemoryGroup[] {
+function buildMemoryGroups(memories: MemoryListItem[]): MemoryGroup[] {
   const map = new Map<string, MemoryGroup>();
 
   for (const memory of memories) {
@@ -87,10 +91,15 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
           },
           body: JSON.stringify({ id }),
         }).then(async (res) => {
+          const payload = (await res.json()) as {
+            error?: string;
+            summary?: string;
+          };
           if (!res.ok) {
-            const payload = (await res.json()) as { error?: string };
             throw new Error(payload.error ?? "Failed to forget memory");
           }
+
+          return payload.summary ?? "";
         }),
       ),
     );
@@ -105,7 +114,14 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
       );
       setStatus(`${failures.length} failed: ${messages.join("; ")}`);
     } else {
-      setStatus(`${selectedIds.length} memories forgotten.`);
+      const summaries = results
+        .filter(
+          (result): result is PromiseFulfilledResult<string> =>
+            result.status === "fulfilled",
+        )
+        .map((result) => result.value)
+        .filter(Boolean);
+      setStatus(summaries[0] || `${selectedIds.length} memories forgotten.`);
     }
 
     setBusy(false);
@@ -179,13 +195,18 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
                   {group.label}
                 </span>
                 <span className="text-xs text-gray-500">
-                  {group.memories.length} {group.memories.length === 1 ? "item" : "items"} · {isCollapsed ? "collapsed" : "expanded"}
+                  {group.memories.length}{" "}
+                  {group.memories.length === 1 ? "item" : "items"} ·{" "}
+                  {isCollapsed ? "collapsed" : "expanded"}
                 </span>
               </button>
 
               {!isCollapsed
                 ? group.memories.map((memory) => (
-                    <article key={memory.id} className="p-4 border-t border-gray-100">
+                    <article
+                      key={memory.id}
+                      className="p-4 border-t border-gray-100"
+                    >
                       <div className="flex items-center justify-between gap-4">
                         <label className="flex items-center gap-3">
                           <input
@@ -214,9 +235,12 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
                           </span>
                         </div>
                       </div>
-                      <p className="mt-2 text-gray-900 whitespace-pre-wrap">
-                        {memory.content}
-                      </p>
+                      <div
+                        className="mt-2 markdown-content text-sm text-gray-900"
+                        dangerouslySetInnerHTML={{
+                          __html: memory.renderedContentHtml,
+                        }}
+                      />
                     </article>
                   ))
                 : null}

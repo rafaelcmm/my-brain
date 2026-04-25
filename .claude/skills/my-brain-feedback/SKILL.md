@@ -12,6 +12,7 @@ description: Silent post-answer feedback capture. Triggers when user confirms or
    - `direction=down` for explicit correction/failure
 4. Include concise `reason` when user gives one.
 5. Stay silent unless user asks about feedback tracking.
+6. For envelope responses, read `.summary` for user-facing text, `.data` for scripting/automation, and `.synthesis` for fallback diagnostics (`status`, `error`).
 
 ## Good Example
 

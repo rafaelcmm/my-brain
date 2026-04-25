@@ -1,6 +1,8 @@
 import { getAuthenticatedClient } from "@/lib/composition/auth";
 import { MemoriesListClient } from "@/app/(authed)/memories/memories-list-client";
+import { MemoriesPaginationControls } from "@/app/(authed)/memories/pagination-controls";
 import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
+import { renderMarkdownToHtml } from "@/lib/application/render-markdown";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -63,6 +65,12 @@ export default async function MemoriesPage({
   };
 
   const list = await client.listMemories(filters, resolvedParams?.cursor);
+  const renderedMemories = await Promise.all(
+    list.memories.map(async (memory) => ({
+      ...memory,
+      renderedContentHtml: await renderMarkdownToHtml(memory.content),
+    })),
+  );
 
   return (
     <main className="ds-page-shell px-4 sm:px-6 lg:px-8">
@@ -84,40 +92,37 @@ export default async function MemoriesPage({
           />
           <input
             name="scope"
-            placeholder="scope"
+            placeholder="Scope"
             defaultValue={resolvedParams?.scope}
             className="ds-input"
           />
           <input
             name="type"
-            placeholder="type"
+            placeholder="Type"
             defaultValue={resolvedParams?.type}
             className="ds-input"
           />
           <input
             name="language"
-            placeholder="language"
+            placeholder="Language"
             defaultValue={resolvedParams?.language}
             className="ds-input"
           />
-          <button
-            type="submit"
-            className="ds-btn-primary px-3 py-2"
-          >
+          <button type="submit" className="ds-btn-primary px-3 py-2">
             Filter
           </button>
         </form>
 
-        <MemoriesListClient memories={list.memories} />
+        <MemoriesListClient memories={renderedMemories} />
 
-        {list.next_cursor && (
-          <a
-            className="inline-block ds-btn-primary px-4 py-2"
-            href={buildNextPageUrl(list.next_cursor, resolvedParams)}
-          >
-            Next page
-          </a>
-        )}
+        <MemoriesPaginationControls
+          hasPrevious={Boolean(resolvedParams?.cursor)}
+          nextPageUrl={
+            list.next_cursor
+              ? buildNextPageUrl(list.next_cursor, resolvedParams)
+              : null
+          }
+        />
       </div>
     </main>
   );

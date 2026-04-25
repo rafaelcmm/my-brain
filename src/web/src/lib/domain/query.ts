@@ -1,17 +1,7 @@
 /**
  * Supported query tools proxied by webapp.
  */
-export type QueryTool = "mb_recall" | "mb_digest" | "mb_search";
-
-/**
- * Query execution mode for recall-like tools.
- */
-export type QueryMode = "raw" | "processed";
-
-/**
- * Processed mode currently supports one pinned model to keep evaluation deterministic.
- */
-export type ProcessedQueryModel = "qwen3.5:0.8b";
+export type QueryTool = "mb_recall" | "mb_digest";
 
 /**
  * Query request envelope.
@@ -27,7 +17,9 @@ export interface QueryRequest {
 export interface QueryResponse {
   status: number;
   latency_ms: number;
+  summary: string;
   data: unknown;
+  synthesis: import("@/lib/domain/synthesis").SynthesisOutcome | null;
   raw: Record<string, unknown>;
   error?: string;
 }

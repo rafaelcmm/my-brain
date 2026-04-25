@@ -18,6 +18,21 @@ my-brain is a self-hosted memory and orchestration stack for MCP-capable clients
 
 All services are private except the gateway, which is the only surface bound to the host.
 
+## API Contract Baseline
+
+All successful `mb_*` responses are envelope-shaped in v2:
+
+```json
+{
+  "success": true,
+  "summary": "...",
+  "data": {},
+  "synthesis": { "status": "ok|fallback" }
+}
+```
+
+Do not reintroduce per-request recall `mode`/`model` behavior.
+
 ## Toolchain
 
 - **Package manager:** `pnpm@9.15.4` (declared in `package.json`). Do not use `npm` or `yarn`.

@@ -227,10 +227,16 @@ function sanitizeSynthesisAnswer(value: string | undefined): string {
   return value.trim().replace(/\s+/g, " ").slice(0, 4096);
 }
 
-function resolveGenerateEndpoint(llmUrl: string): string {
+/**
+ * Resolves the Ollama generate endpoint from a configured base URL.
+ *
+ * @param llmUrl - Base Ollama URL or explicit /api/generate endpoint.
+ * @returns Fully qualified /api/generate endpoint URL.
+ */
+export function resolveGenerateEndpoint(llmUrl: string): string {
   const normalized = llmUrl.trim();
   if (!normalized) {
-    throw new Error("MYBRAIN_LLM_URL is required for processed query mode");
+    throw new Error("MYBRAIN_LLM_URL is required for synthesis");
   }
 
   if (normalized.endsWith("/api/generate")) {

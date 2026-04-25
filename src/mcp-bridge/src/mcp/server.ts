@@ -29,7 +29,7 @@ export function createBridgeServer(
         tools: {},
       },
       instructions:
-        "Use mb_* tools for memory operations. Legacy passthrough is restricted to supported compatibility tools only.",
+        "Use mb_* tools for memory operations and mb_capabilities for runtime capability checks.",
     },
   );
 

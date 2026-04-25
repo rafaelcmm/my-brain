@@ -1,6 +1,7 @@
 import { GetBrainSummaryUseCase } from "@/lib/application/get-brain-summary.usecase";
 import { getAuthenticatedClient } from "@/lib/composition/auth";
 import { Breadcrumbs } from "@/app/(authed)/breadcrumbs";
+import Link from "next/link";
 import type { TopEntry } from "@/lib/domain";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -11,11 +12,22 @@ export const metadata: Metadata = {
   title: "Dashboard",
 };
 
+/**
+ * Returns the current one-based page slice for dashboard insight entries.
+ *
+ * Uses a shared page size so feed slicing and pager counts stay consistent.
+ */
 function paginate<T>(items: T[], page: number): T[] {
   const start = (page - 1) * ITEMS_PER_PAGE;
   return items.slice(start, start + ITEMS_PER_PAGE);
 }
 
+/**
+ * Parses query-string page values into a safe one-based page index.
+ *
+ * Invalid, missing, or non-positive values fall back to page 1 so route
+ * rendering remains deterministic for malformed URLs.
+ */
 function parsePage(value?: string): number {
   if (!value) {
     return 1;
@@ -29,12 +41,13 @@ function parsePage(value?: string): number {
   return numeric;
 }
 
+/**
+ * Computes total page count with a minimum of one page.
+ *
+ * Minimum-one behavior keeps pager UI stable even when no insights exist.
+ */
 function totalPages(items: unknown[]): number {
   return Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
-}
-
-function hasEngineFailureMode(mode: string): boolean {
-  return mode.toLowerCase() !== "engine";
 }
 
 /**
@@ -48,6 +61,12 @@ function toTitleLabel(value: string): string {
     .join(" ");
 }
 
+/**
+ * Renders compact top-entry list with an empty-state fallback.
+ *
+ * Shared renderer keeps list cards aligned across tags, frameworks, and
+ * languages without duplicating conditional markup.
+ */
 function renderTopEntryList(
   entries: Array<TopEntry & { label: string }>,
   emptyLabel: string,
@@ -80,9 +99,9 @@ function renderTopEntryList(
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     page?: string;
-  };
+  }>;
 }) {
   const client = await getAuthenticatedClient();
   if (!client) {
@@ -95,7 +114,8 @@ export default async function DashboardPage({
     client.getCapabilities(),
   ]);
 
-  const page = parsePage(searchParams?.page);
+  const resolvedParams = await searchParams;
+  const page = parsePage(resolvedParams?.page);
   const topTags = summary.top_tags.map((entry) => ({
     label: entry.tag,
     count: entry.count,
@@ -120,7 +140,7 @@ export default async function DashboardPage({
   const insightSlice = paginate(combinedInsights, clampedPage);
 
   const learningEntries = Object.entries(summary.learning_stats);
-  const degraded = hasEngineFailureMode(capabilities.mode);
+  const degraded = !capabilities.data.capabilities.engine;
   const cardLabelClass = "ds-card-title";
   const cardMetricClass = "ds-card-metric";
 
@@ -142,80 +162,92 @@ export default async function DashboardPage({
         <div className="ds-card-masonry md:columns-2 xl:columns-3">
           <div className="ds-card-masonry-item">
             <div className="ds-card">
-            <p className={cardLabelClass}>Total memories</p>
-            <p className={`${cardMetricClass} text-[#2E3192]`}>
-              {summary.total_memories}
-            </p>
+              <p className={cardLabelClass}>Total memories</p>
+              <p className={`${cardMetricClass} text-[#2E3192]`}>
+                {summary.total_memories}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card">
-            <p className={cardLabelClass}>Scopes tracked</p>
-            <p className={`${cardMetricClass} text-[#00ADEF]`}>
-              {Object.keys(summary.by_scope).length}
-            </p>
+              <p className={cardLabelClass}>Scopes tracked</p>
+              <p className={`${cardMetricClass} text-[#00ADEF]`}>
+                {Object.keys(summary.by_scope).length}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card">
-            <p className={cardLabelClass}>Types tracked</p>
-            <p className={`${cardMetricClass} text-slate-900`}>
-              {Object.keys(summary.by_type).length}
-            </p>
+              <p className={cardLabelClass}>Types tracked</p>
+              <p className={`${cardMetricClass} text-slate-900`}>
+                {Object.keys(summary.by_type).length}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Top tags</p>
-            {renderTopEntryList(topTags.slice(0, 5), "No tags yet")}
+              <p className={cardLabelClass}>Top tags</p>
+              {renderTopEntryList(topTags.slice(0, 5), "No tags yet")}
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Top frameworks</p>
-            {renderTopEntryList(topFrameworks.slice(0, 5), "No frameworks yet")}
+              <p className={cardLabelClass}>Top frameworks</p>
+              {renderTopEntryList(
+                topFrameworks.slice(0, 5),
+                "No frameworks yet",
+              )}
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Top languages</p>
-            {renderTopEntryList(topLanguages.slice(0, 5), "No languages yet")}
+              <p className={cardLabelClass}>Top languages</p>
+              {renderTopEntryList(topLanguages.slice(0, 5), "No languages yet")}
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card space-y-2">
-            <p className={cardLabelClass}>Capabilities</p>
-            <p className="text-sm text-slate-700">
-              Version: {capabilities.version}
-            </p>
-            <p className="text-sm text-slate-700">Mode: {capabilities.mode}</p>
-            <p className="text-sm text-slate-700">
-              Distinct scopes: {Object.keys(summary.by_scope).length}
-            </p>
+              <p className={cardLabelClass}>Capabilities</p>
+              <p className="text-sm text-slate-700">
+                Engine: {capabilities.data.capabilities.engine ? "on" : "off"}
+              </p>
+              <p className="text-sm text-slate-700">
+                Vector DB: {capabilities.data.features.vectorDb ? "on" : "off"}
+              </p>
+              <p className="text-sm text-slate-700">
+                SONA: {capabilities.data.features.sona ? "on" : "off"}
+              </p>
+              <p className="text-sm text-slate-700">
+                Attention: {capabilities.data.features.attention ? "on" : "off"}
+              </p>
             </div>
           </div>
 
           <div className="ds-card-masonry-item">
             <div className="ds-card ds-card-accent space-y-2">
-            <p className={cardLabelClass}>Learning stats</p>
-            {learningEntries.length === 0 ? (
-              <p className="text-sm text-slate-600">No learning signals yet</p>
-            ) : (
-              <ul className="space-y-2 text-sm text-slate-800">
-                {learningEntries.map(([label, count]) => (
-                  <li key={label} className="flex justify-between gap-3">
-                    <span className="truncate">{toTitleLabel(label)}</span>
-                    <span className="font-semibold text-slate-900">{count}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+              <p className={cardLabelClass}>Learning stats</p>
+              {learningEntries.length === 0 ? (
+                <p className="text-sm text-slate-600">
+                  No learning signals yet
+                </p>
+              ) : (
+                <ul className="space-y-2 text-sm text-slate-800">
+                  {learningEntries.map(([label, count]) => (
+                    <li key={label} className="flex justify-between gap-3">
+                      <span className="truncate">{toTitleLabel(label)}</span>
+                      <span className="font-semibold text-slate-900">
+                        {count}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>
@@ -254,18 +286,18 @@ export default async function DashboardPage({
           )}
 
           <div className="flex items-center justify-between gap-2 text-sm">
-            <a
+            <Link
               className={`px-3 py-1 rounded ${clampedPage > 1 ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-400 pointer-events-none"}`}
               href={`?page=${clampedPage - 1}`}
             >
               Previous
-            </a>
-            <a
+            </Link>
+            <Link
               className={`px-3 py-1 rounded ${clampedPage < insightPages ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-400 pointer-events-none"}`}
               href={`?page=${clampedPage + 1}`}
             >
               Next
-            </a>
+            </Link>
           </div>
         </section>
       </div>
