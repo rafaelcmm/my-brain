@@ -56,6 +56,43 @@ Common checks:
 - Check `synthesis.status` and `synthesis.error`.
 - Review LLM URL/model/timeout vars.
 
+### Synthesis metrics and fallback drill
+
+Use these checks to validate synthesis health with explicit metric evidence:
+
+```bash
+# Gateway exposes Prometheus metrics on the REST surface.
+curl -s -H "Authorization: Bearer $(cat .secrets/auth-token)" \
+	http://127.0.0.1:8080/metrics | grep '^mb_synthesis_total'
+
+curl -s -H "Authorization: Bearer $(cat .secrets/auth-token)" \
+	http://127.0.0.1:8080/metrics | grep '^mb_synthesis_latency_ms'
+```
+
+Expected shape includes `mb_synthesis_total{tool="mb_*",status="ok|fallback"}`.
+
+Fake-Ollama workflow (force fallback, then restore):
+
+```bash
+# 1) Force synthesis transport failure by stopping local Ollama service.
+docker compose stop my-brain-llm
+
+# 2) Run smoke request while LLM is unreachable.
+./src/scripts/smoke-test.sh
+
+# 3) Confirm fallback increments in metrics.
+curl -s -H "Authorization: Bearer $(cat .secrets/auth-token)" \
+	http://127.0.0.1:8080/metrics | grep 'mb_synthesis_total{.*status="fallback"}'
+
+# 4) Restore Ollama and wait for healthy state.
+docker compose up -d my-brain-llm my-brain-llm-init
+
+# 5) Re-run smoke and confirm synthesis returns to ok path.
+./src/scripts/smoke-test.sh
+curl -s -H "Authorization: Bearer $(cat .secrets/auth-token)" \
+	http://127.0.0.1:8080/metrics | grep 'mb_synthesis_total{.*status="ok"}'
+```
+
 ### Auth failures between services
 
 - Validate token file mount and permissions.
