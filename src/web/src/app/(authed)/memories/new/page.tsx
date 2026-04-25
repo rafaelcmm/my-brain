@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CodeMirror from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
+import { EditorView } from "@codemirror/view";
 import { z } from "zod";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
@@ -60,10 +61,10 @@ interface MetadataField {
 
 const metadataFields: readonly MetadataField[] = [
   { key: "repo", label: "Repository" },
-  { key: "repo_name", label: "Repo name" },
+  { key: "repo_name", label: "Repository Name" },
   { key: "language", label: "Language" },
-  { key: "frameworks", label: "Frameworks (csv)" },
-  { key: "tags", label: "Tags (csv)" },
+  { key: "frameworks", label: "Frameworks (CSV)" },
+  { key: "tags", label: "Tags (CSV)" },
   { key: "path", label: "Path" },
   { key: "symbol", label: "Symbol" },
   { key: "source", label: "Source" },
@@ -88,6 +89,12 @@ const initialForm: FormState = {
   customMetadataJson: "{}",
 };
 
+/**
+ * Loads initial editor state from session draft storage when available.
+ *
+ * Falls back to defaults during SSR and clears corrupted drafts so invalid
+ * persisted state does not break page initialization.
+ */
 function getInitialFormState(): FormState {
   if (typeof window === "undefined") {
     return initialForm;
@@ -107,6 +114,11 @@ function getInitialFormState(): FormState {
   }
 }
 
+/**
+ * Normalizes comma-separated metadata input into trimmed value arrays.
+ *
+ * Empty tokens are removed to avoid writing noisy empty strings.
+ */
 function splitCsv(value?: string): string[] {
   return (value ?? "")
     .split(",")
@@ -165,6 +177,7 @@ export default function NewMemoryPage() {
   }, [form]);
 
   useEffect(() => {
+    // Prevent stale async preview writes during rapid typing or unmount.
     let cancelled = false;
 
     const run = async () => {
@@ -208,6 +221,12 @@ export default function NewMemoryPage() {
     };
   }, [customMetadata.value, form]);
 
+  /**
+   * Validates form state, submits memory creation request, and routes on success.
+   *
+   * Submission halts on validation errors so the API receives a well-formed
+   * metadata envelope and content payload.
+   */
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
@@ -300,7 +319,7 @@ export default function NewMemoryPage() {
             <p className="ds-card-title">Markdown editor</p>
             <CodeMirror
               value={form.content}
-              extensions={[markdown()]}
+              extensions={[markdown(), EditorView.lineWrapping]}
               height="320px"
               onChange={(value) =>
                 setForm((current) => ({ ...current, content: value }))
@@ -308,7 +327,10 @@ export default function NewMemoryPage() {
             />
 
             <div className="bg-gray-900 text-gray-100 rounded p-4 min-h-56 overflow-auto">
-              <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+              <div
+                className="markdown-content markdown-content-inverse"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
             </div>
           </section>
 
@@ -322,13 +344,13 @@ export default function NewMemoryPage() {
               }
               className="w-full ds-input"
             >
-              <option value="decision">decision</option>
-              <option value="fix">fix</option>
-              <option value="convention">convention</option>
-              <option value="gotcha">gotcha</option>
-              <option value="tradeoff">tradeoff</option>
-              <option value="pattern">pattern</option>
-              <option value="reference">reference</option>
+              <option value="decision">Decision</option>
+              <option value="fix">Fix</option>
+              <option value="convention">Convention</option>
+              <option value="gotcha">Gotcha</option>
+              <option value="tradeoff">Tradeoff</option>
+              <option value="pattern">Pattern</option>
+              <option value="reference">Reference</option>
             </select>
 
             <select
@@ -341,9 +363,9 @@ export default function NewMemoryPage() {
               }
               className="w-full ds-input"
             >
-              <option value="repo">repo</option>
-              <option value="project">project</option>
-              <option value="global">global</option>
+              <option value="repo">Repo</option>
+              <option value="project">Project</option>
+              <option value="global">Global</option>
             </select>
 
             {metadataFields.map(({ key, label }) => (

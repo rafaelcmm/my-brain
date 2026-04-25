@@ -5,8 +5,12 @@ import { useRouter } from "next/navigation";
 import type { Memory } from "@/lib/domain";
 import { readCsrfTokenFromMeta } from "@/lib/application/csrf-client";
 
+interface MemoryListItem extends Memory {
+  renderedContentHtml: string;
+}
+
 interface MemoriesListClientProps {
-  memories: Memory[];
+  memories: MemoryListItem[];
 }
 
 /**
@@ -15,13 +19,13 @@ interface MemoriesListClientProps {
 interface MemoryGroup {
   key: string;
   label: string;
-  memories: Memory[];
+  memories: MemoryListItem[];
 }
 
 /**
  * Groups memories by type and scope so dense lists are easier to scan.
  */
-function buildMemoryGroups(memories: Memory[]): MemoryGroup[] {
+function buildMemoryGroups(memories: MemoryListItem[]): MemoryGroup[] {
   const map = new Map<string, MemoryGroup>();
 
   for (const memory of memories) {
@@ -231,9 +235,12 @@ export function MemoriesListClient({ memories }: MemoriesListClientProps) {
                           </span>
                         </div>
                       </div>
-                      <p className="mt-2 text-gray-900 whitespace-pre-wrap">
-                        {memory.content}
-                      </p>
+                      <div
+                        className="mt-2 markdown-content text-sm text-gray-900"
+                        dangerouslySetInnerHTML={{
+                          __html: memory.renderedContentHtml,
+                        }}
+                      />
                     </article>
                   ))
                 : null}
