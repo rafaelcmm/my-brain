@@ -17,7 +17,7 @@
   },
   "item": [
     {
-      "name": "Service Health",
+      "name": "Smoke",
       "item": [
         {
           "name": "Health check",
@@ -26,8 +26,12 @@
             "header": [],
             "url": {
               "raw": "{{rest_base_url}}/health",
-              "host": ["{{rest_base_url}}"],
-              "path": ["health"]
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
             }
           },
           "response": [],
@@ -57,8 +61,13 @@
             ],
             "url": {
               "raw": "{{rest_base_url}}/v1/capabilities",
-              "host": ["{{rest_base_url}}"],
-              "path": ["v1", "capabilities"]
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "capabilities"
+              ]
             }
           },
           "response": [],
@@ -84,7 +93,7 @@
       ]
     },
     {
-      "name": "Memory v2",
+      "name": "Memory lifecycle (REST)",
       "item": [
         {
           "name": "Remember memory",
@@ -107,8 +116,13 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory",
-              "host": ["{{rest_base_url}}"],
-              "path": ["v1", "memory"]
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory"
+              ]
             }
           },
           "response": [],
@@ -153,8 +167,14 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/recall",
-              "host": ["{{rest_base_url}}"],
-              "path": ["v1", "memory", "recall"]
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory",
+                "recall"
+              ]
             }
           },
           "response": [],
@@ -198,8 +218,14 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/recall",
-              "host": ["{{rest_base_url}}"],
-              "path": ["v1", "memory", "recall"]
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory",
+                "recall"
+              ]
             }
           },
           "response": [],
@@ -241,8 +267,14 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/forget",
-              "host": ["{{rest_base_url}}"],
-              "path": ["v1", "memory", "forget"]
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory",
+                "forget"
+              ]
             }
           },
           "response": [],
@@ -267,7 +299,299 @@
       ]
     },
     {
-      "name": "MCP Bridge",
+      "name": "Aggregation",
+      "item": [
+        {
+          "name": "Memory summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/summary",
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory",
+                "summary"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Memory list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/list?limit=5",
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory",
+                "list"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Memory graph",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/graph?limit=5",
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory",
+                "graph"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Memory digest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"since\": \"7 days\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/memory/digest",
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "memory",
+                "digest"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Session",
+      "item": [
+        {
+          "name": "Session open",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent\": \"postman-smoke\",\n  \"context\": {\n    \"source\": \"postman\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/session/open",
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "session",
+                "open"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});",
+                  "if (body.data && body.data.session_id) {",
+                  "  pm.environment.set('session_id', String(body.data.session_id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Session close",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"{{session_id}}\",\n  \"success\": true,\n  \"quality\": 0.9,\n  \"reason\": \"postman validation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{rest_base_url}}/v1/session/close",
+              "host": [
+                "{{rest_base_url}}"
+              ],
+              "path": [
+                "v1",
+                "session",
+                "close"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('returns v2 envelope', function () {",
+                  "  pm.expect(body.success).to.eql(true);",
+                  "  pm.expect(body).to.have.property('summary');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "  pm.expect(body).to.have.property('synthesis');",
+                  "  pm.expect(body.synthesis).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MCP tools",
       "item": [
         {
           "name": "Initialize MCP session",
@@ -294,8 +618,12 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": ["{{mcp_base_url}}"],
-              "path": ["mcp"]
+              "host": [
+                "{{mcp_base_url}}"
+              ],
+              "path": [
+                "mcp"
+              ]
             }
           },
           "response": [],
@@ -346,8 +674,12 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": ["{{mcp_base_url}}"],
-              "path": ["mcp"]
+              "host": [
+                "{{mcp_base_url}}"
+              ],
+              "path": [
+                "mcp"
+              ]
             }
           },
           "response": [],
@@ -362,6 +694,242 @@
                   "  pm.expect(body).to.have.property('result');",
                   "  pm.expect(body.result).to.have.property('tools');",
                   "  pm.expect(body.result.tools).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Call mb_capabilities",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_capabilities\",\n    \"arguments\": {}\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": [
+                "{{mcp_base_url}}"
+              ],
+              "path": [
+                "mcp"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Call mb_context_probe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 4,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_context_probe\",\n    \"arguments\": {\n      \"cwd\": \"/workspace/my-brain\",\n      \"repo_hint\": \"my-brain\",\n      \"project_hint\": \"my-brain\",\n      \"language_hint\": \"typescript\",\n      \"framework_hints\": [\n        \"nextjs\",\n        \"node\"\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": [
+                "{{mcp_base_url}}"
+              ],
+              "path": [
+                "mcp"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Call mb_digest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_digest\",\n    \"arguments\": {\n      \"since\": \"30 days\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": [
+                "{{mcp_base_url}}"
+              ],
+              "path": [
+                "mcp"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Call mb_vote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              },
+              {
+                "key": "Mcp-Session-Id",
+                "value": "{{mcp_session_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 6,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"mb_vote\",\n    \"arguments\": {\n      \"memory_id\": \"{{memory_id}}\",\n      \"direction\": \"up\",\n      \"reason\": \"postman flow validation\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mcp_base_url}}/mcp",
+              "host": [
+                "{{mcp_base_url}}"
+              ],
+              "path": [
+                "mcp"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('mcp call returns result payload', function () {",
+                  "  pm.expect(body).to.have.property('result');",
+                  "  pm.expect(body.result).to.have.property('structuredContent');",
+                  "});",
+                  "const sc = body.result && body.result.structuredContent;",
+                  "pm.test('structuredContent uses v2 envelope fields', function () {",
+                  "  pm.expect(sc).to.have.property('summary');",
+                  "  pm.expect(sc).to.have.property('data');",
                   "});"
                 ]
               }
