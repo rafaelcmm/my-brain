@@ -6,11 +6,14 @@ description: Automatically invoked when user explicitly asks about prior project
 # my-brain Recall
 
 1. Call `mb_context_probe` for scoped defaults.
-2. Call `mb_recall` with `top_k=10`, `scope=repo`, `repo=context.repo_name`, `include_expired=false`.
-3. Group response by `type` and `tags` when presenting.
-4. Return concise factual bullets only.
-5. If results are empty, explicitly say no memory found and do not invent or pad.
-6. For envelope responses, read `.summary` for user-facing text and `.data` for scripting/automation.
+2. Normalize probe defaults before recall:
+   - `repo = context.repo || context.repo_name || "unknown-repo"`
+   - `language = context.language || "unknown"`
+3. Call `mb_recall` with `top_k=10`, `scope=repo`, `repo=normalized repo`, `language=normalized language`, `include_expired=false`.
+4. Group response by `type` and `tags` when presenting.
+5. Return concise factual bullets only.
+6. If results are empty, explicitly say no memory found and do not invent or pad.
+7. For envelope responses, read `.summary` for user-facing text, `.data` for scripting/automation, and `.synthesis` for fallback diagnostics (`status`, `error`).
 
 ## Good Example
 

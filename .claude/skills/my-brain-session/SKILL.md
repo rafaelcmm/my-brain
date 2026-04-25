@@ -17,7 +17,7 @@ description: Automatically invoked to open and close tracked sessions in my-brai
 5. Cache `session_id` internally.
 6. Close with `mb_session_close` on completion cues and include `success/quality` when available.
 7. Keep session ids internal and invisible to user-facing output.
-8. For envelope responses, read `.summary` for user-facing text and `.data` for scripting/automation.
+8. For envelope responses, read `.summary` for user-facing text, `.data` for scripting/automation, and `.synthesis` for fallback diagnostics (`status`, `error`).
 
 ## Good Example
 

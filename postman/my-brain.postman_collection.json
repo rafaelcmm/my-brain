@@ -26,12 +26,8 @@
             "header": [],
             "url": {
               "raw": "{{rest_base_url}}/health",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "health"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["health"]
             }
           },
           "response": [],
@@ -61,13 +57,8 @@
             ],
             "url": {
               "raw": "{{rest_base_url}}/v1/capabilities",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "capabilities"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "capabilities"]
             }
           },
           "response": [],
@@ -116,13 +107,8 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory"]
             }
           },
           "response": [],
@@ -167,14 +153,8 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/recall",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory",
-                "recall"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "recall"]
             }
           },
           "response": [],
@@ -218,14 +198,8 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/recall",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory",
-                "recall"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "recall"]
             }
           },
           "response": [],
@@ -267,14 +241,8 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/forget",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory",
-                "forget"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "forget"]
             }
           },
           "response": [],
@@ -313,14 +281,8 @@
             ],
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/summary",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory",
-                "summary"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "summary"]
             }
           },
           "response": [],
@@ -355,14 +317,8 @@
             ],
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/list?limit=5",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory",
-                "list"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "list"]
             }
           },
           "response": [],
@@ -397,14 +353,8 @@
             ],
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/graph?limit=5",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory",
-                "graph"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "graph"]
             }
           },
           "response": [],
@@ -448,14 +398,8 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/memory/digest",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "memory",
-                "digest"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "memory", "digest"]
             }
           },
           "response": [],
@@ -504,14 +448,8 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/session/open",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "session",
-                "open"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "session", "open"]
             }
           },
           "response": [],
@@ -558,14 +496,8 @@
             },
             "url": {
               "raw": "{{rest_base_url}}/v1/session/close",
-              "host": [
-                "{{rest_base_url}}"
-              ],
-              "path": [
-                "v1",
-                "session",
-                "close"
-              ]
+              "host": ["{{rest_base_url}}"],
+              "path": ["v1", "session", "close"]
             }
           },
           "response": [],
@@ -618,12 +550,8 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": [
-                "{{mcp_base_url}}"
-              ],
-              "path": [
-                "mcp"
-              ]
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
             }
           },
           "response": [],
@@ -674,12 +602,8 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": [
-                "{{mcp_base_url}}"
-              ],
-              "path": [
-                "mcp"
-              ]
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
             }
           },
           "response": [],
@@ -729,12 +653,8 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": [
-                "{{mcp_base_url}}"
-              ],
-              "path": [
-                "mcp"
-              ]
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
             }
           },
           "response": [],
@@ -788,12 +708,8 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": [
-                "{{mcp_base_url}}"
-              ],
-              "path": [
-                "mcp"
-              ]
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
             }
           },
           "response": [],
@@ -847,12 +763,8 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": [
-                "{{mcp_base_url}}"
-              ],
-              "path": [
-                "mcp"
-              ]
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
             }
           },
           "response": [],
@@ -906,12 +818,8 @@
             },
             "url": {
               "raw": "{{mcp_base_url}}/mcp",
-              "host": [
-                "{{mcp_base_url}}"
-              ],
-              "path": [
-                "mcp"
-              ]
+              "host": ["{{mcp_base_url}}"],
+              "path": ["mcp"]
             }
           },
           "response": [],
