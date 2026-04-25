@@ -12,11 +12,22 @@ export const metadata: Metadata = {
   title: "Dashboard",
 };
 
+/**
+ * Returns the current one-based page slice for dashboard insight entries.
+ *
+ * Uses a shared page size so feed slicing and pager counts stay consistent.
+ */
 function paginate<T>(items: T[], page: number): T[] {
   const start = (page - 1) * ITEMS_PER_PAGE;
   return items.slice(start, start + ITEMS_PER_PAGE);
 }
 
+/**
+ * Parses query-string page values into a safe one-based page index.
+ *
+ * Invalid, missing, or non-positive values fall back to page 1 so route
+ * rendering remains deterministic for malformed URLs.
+ */
 function parsePage(value?: string): number {
   if (!value) {
     return 1;
@@ -30,6 +41,11 @@ function parsePage(value?: string): number {
   return numeric;
 }
 
+/**
+ * Computes total page count with a minimum of one page.
+ *
+ * Minimum-one behavior keeps pager UI stable even when no insights exist.
+ */
 function totalPages(items: unknown[]): number {
   return Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
 }
@@ -45,6 +61,12 @@ function toTitleLabel(value: string): string {
     .join(" ");
 }
 
+/**
+ * Renders compact top-entry list with an empty-state fallback.
+ *
+ * Shared renderer keeps list cards aligned across tags, frameworks, and
+ * languages without duplicating conditional markup.
+ */
 function renderTopEntryList(
   entries: Array<TopEntry & { label: string }>,
   emptyLabel: string,
@@ -77,9 +99,9 @@ function renderTopEntryList(
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams?: Promise<{
     page?: string;
-  };
+  }>;
 }) {
   const client = await getAuthenticatedClient();
   if (!client) {
@@ -92,7 +114,8 @@ export default async function DashboardPage({
     client.getCapabilities(),
   ]);
 
-  const page = parsePage(searchParams?.page);
+  const resolvedParams = await searchParams;
+  const page = parsePage(resolvedParams?.page);
   const topTags = summary.top_tags.map((entry) => ({
     label: entry.tag,
     count: entry.count,

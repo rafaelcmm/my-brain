@@ -19,6 +19,11 @@ export const metadata: Metadata = {
     template: "%s | My Brain",
   },
   description: "Private memory and orchestration dashboard.",
+  icons: {
+    icon: "/my-brain-logo.svg",
+    shortcut: "/my-brain-logo.svg",
+    apple: "/my-brain-logo.svg",
+  },
 };
 
 export default function RootLayout({
