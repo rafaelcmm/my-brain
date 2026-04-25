@@ -16,6 +16,7 @@
     "docker:down": "docker compose down",
     "docker:down:cpu": "docker compose -f docker-compose.yml down",
     "docker:restart": "docker compose restart",
+    "auth:refresh": "docker compose up -d --build --force-recreate my-brain-orchestrator my-brain-web && for i in $(seq 1 30); do code=$(curl -s -o /tmp/mybrain-health.out -w '%{http_code}' http://127.0.0.1:3000/api/health || true); [ \"$code\" = \"200\" ] && break; sleep 2; done && token=$(cat .secrets/auth-token) && curl -s -o /tmp/mybrain-login.out -w '%{http_code}' -X POST http://127.0.0.1:3000/api/auth/login -H 'content-type: application/json' --data \"{\\\"token\\\":\\\"$token\\\"}\" && printf '\n' && cat /tmp/mybrain-login.out",
     "docker:logs": "docker compose logs -f",
     "build": "pnpm -r --if-present run build",
     "typecheck": "pnpm -r --if-present run typecheck",
