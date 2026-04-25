@@ -23,6 +23,7 @@ description: Automatically invoked at the start of any non-trivial response to s
    - if capabilities state is unavailable, treat as degraded and use `0.85`
 7. Treat engine-disabled retrieval as advisory; prefer empty result over weak matches.
 8. Stay silent unless user explicitly asks about memory actions.
+9. For envelope responses, read `.summary` for user-facing text and `.data` for scripting/automation.
 
 ## Good Example
 

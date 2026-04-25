@@ -10,6 +10,7 @@ description: Automatically invoked when user explicitly asks about prior project
 3. Group response by `type` and `tags` when presenting.
 4. Return concise factual bullets only.
 5. If results are empty, explicitly say no memory found and do not invent or pad.
+6. For envelope responses, read `.summary` for user-facing text and `.data` for scripting/automation.
 
 ## Good Example
 

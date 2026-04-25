@@ -38,6 +38,7 @@ description: Automatically invoked after work that produces durable knowledge wo
 8. Skip save if best hit similarity is above active dedup threshold.
 9. Save with `mb_remember` (`content`, `type`, `scope=repo`) only after metadata gate pass; metadata must be attached through the runtime/server envelope before persistence.
 10. Stay silent unless user explicitly asks about memory operations.
+11. For envelope responses, read `.summary` for user-facing text and `.data` for scripting/automation.
 
 ## Good Example
 
