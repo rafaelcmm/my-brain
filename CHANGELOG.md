@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.0.1] - 2026-04-24
+
+### Added
+
+- Postman collection sections for `Aggregation` and `Session` REST coverage.
+- MCP tool-call smoke flows for `mb_capabilities`, `mb_context_probe`, `mb_digest`, and `mb_vote`.
+- Runbook synthesis debugging workflow with explicit `mb_synthesis_total{tool,status}` and `mb_synthesis_latency_ms` checks.
+
+### Changed
+
+- Postman top-level sections now align with v2 release checklist: `Smoke`, `Memory lifecycle (REST)`, `Aggregation`, `Session`, `MCP tools`.
+- my-brain `.claude` skills now explicitly instruct envelope parsing: `.summary` for user-facing text and `.data` for scripting.
+
 ## [2.0.0] - 2026-04-24
 
 ### Added
