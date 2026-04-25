@@ -49,14 +49,26 @@ When `mcp_my-brain_mb_capabilities` reports `engine=false`:
 ## Invocation Contracts
 
 1. Retrieval calls must include scoped filters by default: `scope=repo`, `repo`, and `language` when available.
-2. Capture calls must include metadata envelope fields whenever derivable: `repo`, `project`, `language`, `frameworks`, `tags`, `source`, `author`, `agent`.
-3. Dedup is mandatory before `mb_remember`; skip save when best hit similarity is `>0.85`.
-4. Tools must stay silent by default unless user explicitly asks about memory operations.
-5. `mb_remember` content must use concise Markdown format:
-   - Heading `## <short lesson title>`
-   - `4-7` bullets (recommended: Context, Rule, Why, Apply)
-   - Optional one fenced code block with `<=8` lines
-   - Preferred length `80-220` words; compress if `>300`
+2. Capture calls must build metadata in this order: context probe -> runtime identity defaults -> user metadata merge -> blank normalization -> fallback matrix -> validation gate.
+3. Capture calls must include metadata envelope fields whenever derivable: `repo`, `project`, `language`, `frameworks`, `tags`, `source`, `author`, `agent`.
+4. Required non-empty contract before `mb_remember`:
+   - Scalars: `repo`, `project`, `language`, `source`, `author`, `agent` must be non-empty strings after trim.
+   - Arrays: `frameworks`, `tags` must be arrays with length `>=1`.
+5. Fallback matrix defaults when missing after normalization:
+   - `repo=unknown-repo`, `project=unknown`, `language=unknown`
+   - `frameworks=[unknown]`, `tags=[memory]`
+   - `source=agent`, `author=unknown`, `agent=<runtime-agent-id>`
+6. Pre-write gate is mandatory: if required fields remain invalid after fallback, block write and repair metadata before `mb_remember`.
+7. Dedup is mandatory before `mb_remember`; active threshold is `0.6` when `engine=true`, else `0.85` when `engine=false` or capabilities are unavailable.
+8. Skip save when best hit similarity is above active dedup threshold.
+9. `mb_remember` transport must remain executable: send `content`, `type`, and `scope`, and attach metadata through runtime/server envelope before persistence.
+10. Tools must stay silent by default unless user explicitly asks about memory operations.
+11. `mb_remember` content must use concise Markdown format:
+
+- Heading `## <short lesson title>`
+- `4-7` bullets (recommended: Context, Rule, Why, Apply)
+- Optional one fenced code block with `<=8` lines
+- Preferred length `80-220` words; compress if `>300`
 
 ## Validation Gate
 
@@ -65,6 +77,8 @@ Before finalizing customization changes:
 1. Verify each `allowed-tools` or `tools` entry in `.claude/skills/*` and `.claude/agents/*` exists in catalog or allowlist.
 2. Verify trigger descriptions contain concrete discovery phrases in "Use when" style.
 3. Verify no rule/skill contradicts degraded-mode behavior.
+4. Verify metadata pipeline order is consistent in all memory skills and rules.
+5. Verify no capture path can call `mb_remember` before metadata gate pass.
 
 ## Good Examples
 
